@@ -210,3 +210,4 @@ resolve: {
 Proyecto académico del Semillero de Investigación Softlab.  
 Corporación Universitaria Autónoma del Cauca — Facultad de Ingeniería de Software y Computación.
 "# MANUAL-CAPACITACIONES-SOFTLAB" 
+"# MANUAL-CAPACITACIONES-SOFTLAB" 
