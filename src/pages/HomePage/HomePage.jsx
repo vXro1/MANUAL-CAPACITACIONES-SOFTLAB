@@ -1,16 +1,18 @@
-import { HeroSection } from '@/widgets/HeroSection/HeroSection';
+
+
+import { HeroSection }     from '@/widgets/HeroSection/HeroSection';
 import { FeaturedSection } from '@/widgets/FeaturedSection/FeaturedSection';
-import { AboutSection } from '@/widgets/AboutSection/AboutSection';
-import { ParticipantsSection } from '@/widgets/ParticipantsSection/ParticipantsSection';
-import { CtaSection } from './CtaSection';
+import { AboutSection }    from '@/widgets/AboutSection/AboutSection';
+import { GallerySection }  from '@/widgets/GallerySection/GallerySection';
+import { CtaSection } from "./CtaSection";
 
 export function HomePage() {
   return (
-    <main>
+    <main id="main-content" style={{ minHeight: '100vh' }}>
       <HeroSection />
       <FeaturedSection />
       <AboutSection />
-      <ParticipantsSection />
+      <GallerySection />
       <CtaSection />
     </main>
   );

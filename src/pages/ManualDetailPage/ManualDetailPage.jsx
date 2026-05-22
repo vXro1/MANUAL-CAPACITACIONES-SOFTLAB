@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Calendar,
@@ -13,6 +13,7 @@ import {
   Edit3,
   Building2,
   List,
+  ExternalLink,
 } from 'lucide-react';
 import { manualsRepository, speakersRepository, participantsRepository } from '@/storage/localStorageRepository';
 import { resolvePDFUrl } from '@/storage/pdfStorageService';
@@ -22,9 +23,49 @@ import { useResolvedGallery } from '@/shared/hooks/useResolvedGallery';
 import { Modal } from '@/shared/ui/Modal';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
-import { Spinner } from '@/shared/ui/Spinner';
 import { formatDate, formatTime } from '@/shared/lib/formatDate';
 
+/* ─── animation variants ─── */
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] },
+  }),
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.07 } },
+};
+
+/* ─── tiny helpers ─── */
+function MetaChip({ icon: Icon, children }) {
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-slate-500">
+      <Icon size={13} className="text-slate-400 shrink-0" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function SectionCard({ children, className = '' }) {
+  return (
+    <div className={`rounded-2xl border border-slate-100 bg-white p-5 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+      {children}
+    </p>
+  );
+}
+
+/* ─── main component ─── */
 export function ManualDetailPage() {
   const { id } = useParams();
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -41,8 +82,7 @@ export function ManualDetailPage() {
       const url = await resolvePDFUrl(manual.pdf);
       setResolvedPdfUrl(url);
       setPdfOpen(true);
-    } catch (err) {
-      console.error('Error resolviendo PDF:', err);
+    } catch {
       setResolvedPdfUrl(manual.pdf);
       setPdfOpen(true);
     } finally {
@@ -52,9 +92,7 @@ export function ManualDetailPage() {
 
   const handleClosePdf = () => {
     setPdfOpen(false);
-    if (resolvedPdfUrl && resolvedPdfUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(resolvedPdfUrl);
-    }
+    if (resolvedPdfUrl?.startsWith('blob:')) URL.revokeObjectURL(resolvedPdfUrl);
     setResolvedPdfUrl(null);
   };
 
@@ -70,311 +108,365 @@ export function ManualDetailPage() {
     : null;
 
   return (
-    <main id="main-content" className="min-h-screen bg-white pt-16">
-      {/* Back nav */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+    <main id="main-content" className="min-h-screen bg-slate-50 pt-16">
+
+      {/* ── Back nav ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <Link
           to="/manuales"
-          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-brand-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
         >
-          <ArrowLeft size={15} />
-          Volver a manuales
+          <ArrowLeft size={14} />
+          Manuales
         </Link>
       </div>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-brand-950 via-brand-900 to-brand-700 mt-4">
-        <div className="absolute inset-0 opacity-15">
+      {/* ── Hero card (sin fondo azul) ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          className="relative overflow-hidden rounded-3xl bg-white border border-slate-100 shadow-sm"
+        >
+          {/* subtle cover texture */}
           {manual.cover && (
-            <img src={manual.cover} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 opacity-[0.06]">
+              <img src={manual.cover} alt="" className="w-full h-full object-cover" />
+            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-950/70 to-brand-900/95" />
-        </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col gap-5 max-w-3xl"
-          >
-            <div className="flex flex-wrap gap-2">
-              <Badge className="bg-white/15 text-white border-white/20">
+          <div className="relative p-8 md:p-10">
+            <div className="flex flex-wrap gap-2 mb-5">
+              <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-3 py-0.5 text-xs font-medium text-brand-700">
                 {manual.category}
-              </Badge>
+              </span>
               {manual.featured && (
-                <Badge className="bg-yellow-400/20 text-yellow-200 border-yellow-300/20">
+                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-0.5 text-xs font-medium text-amber-700">
                   Destacado
-                </Badge>
+                </span>
               )}
             </div>
 
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
-                {manual.title}
-              </h1>
-              {manual.subtitle && (
-                <p className="text-brand-300 text-base mt-2 leading-relaxed">
-                  {manual.subtitle}
-                </p>
-              )}
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
+              {/* left: title + meta */}
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight tracking-tight">
+                    {manual.title}
+                  </h1>
+                  {manual.subtitle && (
+                    <p className="mt-1.5 text-base text-brand-600 font-medium">
+                      {manual.subtitle}
+                    </p>
+                  )}
+                </div>
 
-            <p className="text-brand-200 text-base leading-relaxed">{manual.description}</p>
+                {manual.description && (
+                  <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
+                    {manual.description}
+                  </p>
+                )}
 
-            <div className="flex flex-wrap gap-4 text-sm text-brand-300">
-              {manual.institution && (
-                <div className="flex items-center gap-1.5">
-                  <Building2 size={14} />
-                  <span>{manual.institution}</span>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  {manual.institution && (
+                    <MetaChip icon={Building2}>{manual.institution}</MetaChip>
+                  )}
+                  {manual.date && (
+                    <MetaChip icon={Calendar}>{formatDate(manual.date)}</MetaChip>
+                  )}
+                  {manual.time && (
+                    <MetaChip icon={Clock}>{formatTime(manual.time)}</MetaChip>
+                  )}
+                  {manual.duration && (
+                    <MetaChip icon={Clock}>{manual.duration}</MetaChip>
+                  )}
                 </div>
-              )}
-              {manual.date && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={14} />
-                  <span>{formatDate(manual.date)}</span>
-                </div>
-              )}
-              {manual.time && (
-                <div className="flex items-center gap-1.5">
-                  <Clock size={14} />
-                  <span>{formatTime(manual.time)}</span>
-                </div>
-              )}
-              {manual.duration && (
-                <div className="flex items-center gap-1.5">
-                  <Clock size={14} />
-                  <span>{manual.duration}</span>
-                </div>
-              )}
-            </div>
-
-            {manual.pdf && (
-              <div className="mt-2">
-                <Button
-                  onClick={handleOpenPdf}
-                  size="lg"
-                  loading={resolvingPdf}
-                  icon={BookOpen}
-                  className="bg-white text-brand-700 hover:bg-brand-50 border-0 shadow-lg"
-                >
-                  {resolvingPdf ? 'Cargando...' : 'Abrir manual PDF'}
-                </Button>
               </div>
-            )}
-          </motion.div>
-        </div>
+
+              {/* right: PDF button */}
+              {manual.pdf && (
+                <motion.button
+                  onClick={handleOpenPdf}
+                  disabled={resolvingPdf}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group flex items-center gap-3 rounded-2xl bg-brand-600 px-5 py-4 text-white shadow-md shadow-brand-200 hover:bg-brand-700 transition-colors disabled:opacity-60 shrink-0 self-start"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
+                    {resolvingPdf ? (
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <BookOpen size={18} />
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold leading-tight">
+                      {resolvingPdf ? 'Cargando…' : 'Abrir manual'}
+                    </p>
+                    <p className="text-xs text-white/60 mt-0.5">Ver en PDF</p>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="ml-1 text-white/50 group-hover:translate-x-0.5 transition-transform"
+                  />
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Main content */}
-          <div className="lg:col-span-2 flex flex-col gap-10">
+      {/* ── Body ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+
+          {/* ── Left column ── */}
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col gap-8"
+          >
             {/* Introduction */}
             {manual.introduction && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Introducción</h2>
+              <motion.section variants={fadeUp}>
+                <h2 className="text-base font-semibold text-slate-900 mb-3">Introducción</h2>
                 <div className="flex flex-col gap-3">
-                  {manual.introduction.split('\n\n').map((paragraph, i) => (
-                    <p key={i} className="text-slate-600 leading-relaxed">
-                      {paragraph}
-                    </p>
+                  {manual.introduction.split('\n\n').map((p, i) => (
+                    <p key={i} className="text-slate-500 text-sm leading-relaxed">{p}</p>
                   ))}
                 </div>
               </motion.section>
             )}
 
             {/* Table of Contents */}
-            {manual.tableOfContents && manual.tableOfContents.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.05 }}
-                className="p-5 rounded-2xl bg-brand-50/50 border border-brand-100"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <List size={16} className="text-brand-600" />
-                  <h3 className="font-semibold text-slate-800">Tabla de contenido</h3>
+            {manual.tableOfContents?.length > 0 && (
+              <motion.section variants={fadeUp}>
+                <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <List size={15} className="text-brand-500" />
+                    <h3 className="text-sm font-semibold text-slate-800">Tabla de contenido</h3>
+                  </div>
+                  <ol className="flex flex-col gap-2">
+                    {manual.tableOfContents.map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span className="text-slate-600 leading-relaxed">{item}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <ul className="flex flex-col gap-1.5">
-                  {manual.tableOfContents.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                      <span className="text-brand-400 shrink-0 mt-0.5">&#8250;</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </motion.section>
             )}
 
             {/* Objectives */}
-            {manual.objectives && manual.objectives.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-              >
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Objetivos</h2>
-                <ul className="flex flex-col gap-3">
+            {manual.objectives?.length > 0 && (
+              <motion.section variants={fadeUp}>
+                <h2 className="text-base font-semibold text-slate-900 mb-4">Objetivos</h2>
+                <div className="grid gap-3">
                   {manual.objectives.map((obj, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-[10px] font-bold text-brand-700">{i + 1}</span>
-                      </div>
+                    <motion.div
+                      key={i}
+                      variants={fadeUp}
+                      custom={i}
+                      className="flex items-start gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
+                    >
+                      <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center text-[10px] font-bold text-white">
+                        {i + 1}
+                      </span>
                       <span className="text-slate-600 text-sm leading-relaxed">{obj}</span>
-                    </li>
+                    </motion.div>
                   ))}
-                </ul>
+                </div>
               </motion.section>
             )}
 
             {/* Gallery */}
             {resolvedGallery.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              >
-                <Gallery images={resolvedGallery} />
+              <motion.section variants={fadeUp}>
+                <h2 className="text-base font-semibold text-slate-900 mb-4">Galería</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {resolvedGallery.map((img, i) => (
+                    <motion.div
+                      key={i}
+                      variants={fadeUp}
+                      custom={i}
+                      className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-100 bg-slate-50"
+                    >
+                      <img
+                        src={typeof img === 'string' ? img : img.url ?? img.src}
+                        alt={img.caption ?? `Imagen ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {img.caption && (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <p className="text-white text-xs leading-tight">{img.caption}</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
               </motion.section>
             )}
-          </div>
+          </motion.div>
 
-          {/* Sidebar */}
-          <div className="flex flex-col gap-5">
-            {/* PDF CTA */}
-            {manual.pdf ? (
-              <button
+          {/* ── Sidebar ── */}
+          <motion.aside
+            variants={stagger}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col gap-4"
+          >
+            {/* PDF CTA — si no hay botón arriba */}
+            {!manual.pdf && (
+              <motion.div
+                variants={fadeUp}
+                className="rounded-2xl border border-dashed border-slate-200 bg-white p-5 flex flex-col items-center gap-2 text-center"
+              >
+                <FileText size={22} className="text-slate-300" />
+                <p className="text-xs text-slate-400">PDF no disponible aún</p>
+              </motion.div>
+            )}
+
+            {manual.pdf && (
+              <motion.button
+                variants={fadeUp}
                 onClick={handleOpenPdf}
                 disabled={resolvingPdf}
-                className="group p-5 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white flex flex-col gap-3 text-left hover:shadow-brand-lg transition-all disabled:opacity-70"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className="group w-full rounded-2xl border border-brand-100 bg-brand-50 p-4 flex items-center gap-3 hover:bg-brand-100 transition-colors text-left disabled:opacity-60"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shrink-0">
                   {resolvingPdf ? (
-                    <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <BookOpen size={20} />
+                    <BookOpen size={18} />
                   )}
                 </div>
-                <div>
-                  <p className="font-semibold">Ver PDF</p>
-                  <p className="text-xs text-brand-200 mt-0.5">
-                    Visor normal o modo libro animado
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-brand-800 leading-tight">
+                    {resolvingPdf ? 'Cargando…' : 'Ver manual PDF'}
                   </p>
+                  <p className="text-xs text-brand-500 mt-0.5">Visor interactivo</p>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-brand-200 group-hover:gap-2 transition-all">
-                  Abrir <ChevronRight size={14} />
-                </div>
-              </button>
-            ) : (
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-3 text-center">
-                <FileText size={28} className="text-slate-300" />
-                <p className="text-sm text-slate-500">PDF no disponible aún</p>
-              </div>
+                <ExternalLink size={14} className="text-brand-400 shrink-0 group-hover:text-brand-600 transition-colors" />
+              </motion.button>
             )}
 
             {/* Speaker */}
             {speaker && (
-              <div className="p-5 rounded-2xl border border-slate-100 bg-white flex flex-col gap-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                  Ponente
-                </h3>
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-brand-100 border border-brand-200 flex items-center justify-center shrink-0">
-                    {speaker.photo ? (
-                      <img src={speaker.photo} alt={speaker.name} className="w-full h-full object-cover rounded-xl" />
-                    ) : (
-                      <User size={18} className="text-brand-400" />
-                    )}
+              <motion.div variants={fadeUp}>
+                <SectionCard>
+                  <SectionLabel>Ponente</SectionLabel>
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-brand-50 border border-brand-100 overflow-hidden shrink-0">
+                      {speaker.photo ? (
+                        <img src={speaker.photo} alt={speaker.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User size={16} className="text-brand-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{speaker.name}</p>
+                      <p className="text-xs text-brand-600 font-medium mt-0.5">{speaker.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{speaker.institution}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm text-slate-900">{speaker.name}</p>
-                    <p className="text-xs text-brand-600 font-medium">{speaker.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{speaker.institution}</p>
-                  </div>
-                </div>
-              </div>
+                </SectionCard>
+              </motion.div>
             )}
 
             {/* Authors */}
             {authors.length > 0 && (
-              <div className="p-5 rounded-2xl border border-slate-100 bg-white flex flex-col gap-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                  Autores
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {authors.map((author) => (
-                    <div key={author.id} className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center shrink-0">
-                        {author.photo ? (
-                          <img src={author.photo} alt={author.name} className="w-full h-full object-cover rounded-lg" />
-                        ) : (
-                          <span className="text-xs font-bold text-brand-500">
-                            {author.name[0]}
-                          </span>
-                        )}
+              <motion.div variants={fadeUp}>
+                <SectionCard>
+                  <SectionLabel>Autores</SectionLabel>
+                  <div className="flex flex-col gap-3">
+                    {authors.map((author) => (
+                      <div key={author.id} className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                          {author.photo ? (
+                            <img src={author.photo} alt={author.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
+                              {author.name[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-800 leading-tight">{author.name}</p>
+                          <p className="text-xs text-slate-400">{author.career}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{author.name}</p>
-                        <p className="text-xs text-slate-400">{author.career}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    ))}
+                  </div>
+                </SectionCard>
+              </motion.div>
             )}
 
             {/* Institution */}
             {manual.institution && (
-              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-start gap-3">
-                <Building2 size={15} className="text-slate-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500">Institución</p>
-                  <p className="text-sm font-medium text-slate-800">{manual.institution}</p>
-                  {manual.faculty && (
-                    <p className="text-xs text-slate-400 mt-0.5">{manual.faculty}</p>
-                  )}
-                </div>
-              </div>
+              <motion.div variants={fadeUp}>
+                <SectionCard>
+                  <SectionLabel>Institución</SectionLabel>
+                  <div className="flex items-start gap-2">
+                    <Building2 size={14} className="text-slate-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{manual.institution}</p>
+                      {manual.faculty && (
+                        <p className="text-xs text-slate-400 mt-0.5">{manual.faculty}</p>
+                      )}
+                    </div>
+                  </div>
+                </SectionCard>
+              </motion.div>
             )}
 
             {/* Editor */}
             {editor && (
-              <div className="p-4 rounded-xl border border-slate-100 bg-white flex items-center gap-3">
-                <Edit3 size={14} className="text-slate-400 shrink-0" />
-                <div>
-                  <p className="text-xs text-slate-500">Editor</p>
-                  <p className="text-sm font-medium text-slate-800">{editor.name}</p>
-                </div>
-              </div>
+              <motion.div variants={fadeUp}>
+                <SectionCard>
+                  <SectionLabel>Editor</SectionLabel>
+                  <div className="flex items-center gap-2">
+                    <Edit3 size={13} className="text-slate-400" />
+                    <p className="text-sm font-medium text-slate-800">{editor.name}</p>
+                  </div>
+                </SectionCard>
+              </motion.div>
             )}
 
             {/* Tags */}
-            {manual.tags && manual.tags.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Tag size={12} />
-                  Etiquetas
+            {manual.tags?.length > 0 && (
+              <motion.div variants={fadeUp} className="flex flex-col gap-2 px-1">
+                <div className="flex items-center gap-1.5">
+                  <Tag size={12} className="text-slate-400" />
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                    Etiquetas
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {manual.tags.map((tag) => (
-                    <Badge key={tag} variant="slate">
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs text-slate-600"
+                    >
                       {tag}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.aside>
         </div>
       </div>
 
-      {/* PDF Modal */}
+      {/* ── PDF Modal ── */}
       <Modal
         isOpen={pdfOpen}
         onClose={handleClosePdf}
