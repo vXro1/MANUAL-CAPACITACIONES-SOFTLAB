@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Shield } from 'lucide-react';
-import { adminAuthRepository } from '@/storage/localStorageRepository';
+import { authApi } from '@/services/apiService';
+import { syncAll } from '@/services/dataSync';
 import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
 
 export function AdminAuth({ onSuccess }) {
   const [password, setPassword] = useState('');
@@ -11,21 +11,21 @@ export function AdminAuth({ onSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
-      const ok = adminAuthRepository.login(password);
-      if (ok) {
-        onSuccess?.();
-      } else {
-        setError('Clave incorrecta. Intenta de nuevo.');
-        setPassword('');
-      }
+    try {
+      await authApi.login(password);
+      await syncAll();
+      onSuccess?.();
+    } catch (err) {
+      setError(err.message === 'Contraseña incorrecta' ? 'Clave incorrecta. Intenta de nuevo.' : 'Error al conectar con el servidor.');
+      setPassword('');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (

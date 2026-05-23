@@ -7,6 +7,7 @@ const KEYS = {
   PARTICIPANTS: 'softlab_participants',
   SPEAKERS: 'softlab_speakers',
   ADMIN_AUTH: 'softlab_admin_auth',
+  GALLERY: 'softlab_gallery',
 };
 
 function getItem(key, fallback) {
@@ -99,6 +100,41 @@ export const speakersRepository = {
 
   getById(id) {
     return this.getAll().find((s) => s.id === id) ?? null;
+  },
+};
+
+export const galleryRepository = {
+  getAll() {
+    return getItem(KEYS.GALLERY, []);
+  },
+
+  getFeatured() {
+    return this.getAll().filter((img) => img.featured);
+  },
+
+  save(image) {
+    const all = this.getAll();
+    const index = all.findIndex((i) => i.id === image.id);
+    if (index >= 0) {
+      all[index] = image;
+    } else {
+      all.unshift({ ...image, id: Date.now().toString(), uploadedAt: new Date().toISOString() });
+    }
+    return setItem(KEYS.GALLERY, all);
+  },
+
+  delete(id) {
+    const filtered = this.getAll().filter((i) => i.id !== id);
+    return setItem(KEYS.GALLERY, filtered);
+  },
+
+  toggleFeatured(id) {
+    const all = this.getAll();
+    const index = all.findIndex((i) => i.id === id);
+    if (index >= 0) {
+      all[index] = { ...all[index], featured: !all[index].featured };
+      setItem(KEYS.GALLERY, all);
+    }
   },
 };
 

@@ -1,13 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { Save, Plus, X, Camera, User, Trash2, CheckCircle } from 'lucide-react';
+import { Save, Plus, X, Camera, User, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input, Textarea, Select } from '@/shared/ui/Input';
-import { Avatar } from '@/shared/ui/Avatar';
-import { participantsRepository } from '@/storage/localStorageRepository';
-import { storeImage, isImageIDBKey, deleteImage, getRawKey } from '@/storage/imageStorageService';
-import { useResolvedImage } from '@/shared/hooks/useResolvedImage';
+import { participantesApi } from '@/services/apiService';
+import { syncParticipantes } from '@/services/dataSync';
 import { cn } from '@/shared/lib/cn';
 
 export const PARTICIPANT_ROLES = [
@@ -24,12 +22,22 @@ export const PARTICIPANT_ROLES = [
   'Colaborador Externo',
 ];
 
-function PhotoUploadField({ participantId, value, onChange }) {
-  const [uploading, setUploading] = useState(false);
+function PhotoUploadField({ value, onChange }) {
   const inputRef = useRef(null);
-  const resolvedUrl = useResolvedImage(value);
 
-  const handleFileChange = async (e) => {
+  const previewUrl = useMemo(() => {
+    if (!value) return null;
+    if (value instanceof File) return URL.createObjectURL(value);
+    return value;
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (value instanceof File && previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [value, previewUrl]);
+
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -38,32 +46,16 @@ function PhotoUploadField({ participantId, value, onChange }) {
       alert('Solo se permiten imágenes JPG, PNG, WebP o GIF.');
       return;
     }
-
     if (file.size > 5 * 1024 * 1024) {
       alert('La imagen no puede superar 5 MB.');
       return;
     }
 
-    setUploading(true);
-    try {
-      const imageKey = `participant_${participantId || Date.now()}`;
-      const idbKey = await storeImage(imageKey, file);
-      onChange(idbKey);
-    } catch (err) {
-      console.error('Error al guardar imagen:', err);
-      alert('No se pudo guardar la imagen.');
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
+    onChange(file);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
-  const handleRemove = async () => {
-    if (value && isImageIDBKey(value)) {
-      await deleteImage(getRawKey(value)).catch(() => {});
-    }
-    onChange(null);
-  };
+  const handleRemove = () => onChange(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -73,17 +65,12 @@ function PhotoUploadField({ participantId, value, onChange }) {
         {/* Preview */}
         <div className="relative shrink-0">
           <div className="w-24 h-24 rounded-2xl overflow-hidden bg-brand-50 border-2 border-brand-100 flex items-center justify-center">
-            {resolvedUrl ? (
-              <img src={resolvedUrl} alt="Vista previa" className="w-full h-full object-cover" />
+            {previewUrl ? (
+              <img src={previewUrl} alt="Vista previa" className="w-full h-full object-cover" />
             ) : (
               <User size={32} className="text-brand-200" />
             )}
           </div>
-          {uploading && (
-            <div className="absolute inset-0 rounded-2xl bg-white/80 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
         </div>
 
         {/* Controls */}
@@ -94,23 +81,20 @@ function PhotoUploadField({ participantId, value, onChange }) {
             accept="image/jpeg,image/png,image/webp,image/gif"
             className="sr-only"
             onChange={handleFileChange}
-            disabled={uploading}
             id="photo-upload-input"
           />
           <label
             htmlFor="photo-upload-input"
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-medium',
-              uploading
-                ? 'opacity-50 cursor-not-allowed border-slate-200 text-slate-400'
-                : 'border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 hover:border-brand-300'
+              'border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 hover:border-brand-300'
             )}
           >
             <Camera size={15} />
-            {resolvedUrl ? 'Cambiar foto' : 'Subir foto'}
+            {previewUrl ? 'Cambiar foto' : 'Subir foto'}
           </label>
 
-          {resolvedUrl && (
+          {previewUrl && (
             <button
               type="button"
               onClick={handleRemove}
@@ -122,15 +106,14 @@ function PhotoUploadField({ participantId, value, onChange }) {
           )}
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            JPG, PNG o WebP. Máx 5 MB.<br />
-            La imagen se guarda en el navegador.
+            JPG, PNG o WebP. Máx 5 MB.
           </p>
 
-          {value && isImageIDBKey(value) && (
-            <div className="flex items-center gap-1.5 text-xs text-green-600">
-              <CheckCircle size={12} />
-              Guardada localmente
-            </div>
+          {value instanceof File && (
+            <p className="text-xs text-green-600">{value.name}</p>
+          )}
+          {typeof value === 'string' && value && (
+            <p className="text-xs text-green-600">Foto guardada en el servidor</p>
           )}
         </div>
       </div>
@@ -193,7 +176,8 @@ function SkillsField({ value, onChange }) {
 
 export function ParticipantForm({ participant, onSuccess, onCancel }) {
   const isEdit = Boolean(participant?.id);
-  const participantId = participant?.id ?? `new_${Date.now()}`;
+  const [skills, setSkills] = useState(participant?.skills ?? []);
+  const [apiError, setApiError] = useState('');
 
   const {
     register,
@@ -216,26 +200,40 @@ export function ParticipantForm({ participant, onSuccess, onCancel }) {
   });
 
   const photoValue = watch('photo');
-  const [skills, setSkills] = useState(participant?.skills ?? []);
 
-  const onSubmit = (data) => {
-    const saved = {
-      ...participant,
-      ...data,
-      skills,
-      id: participant?.id ?? Date.now().toString(),
-      manualsAsAuthor: participant?.manualsAsAuthor ?? [],
-      manualsAsEditor: participant?.manualsAsEditor ?? null,
+  const onSubmit = async (data) => {
+    setApiError('');
+    // photoValue (watched) es más fiable que data.photo para campos no registrados con register()
+    const fotoFile = photoValue instanceof File ? photoValue : undefined;
+    const payload = {
+      nombre: data.name,
+      rol: data.role,
+      carrera: data.career,
+      semestre: data.semester || null,
+      bio: data.bio,
+      email: data.email,
+      linkedin: data.linkedin,
+      github: data.github,
+      habilidades: skills,
     };
-    participantsRepository.save(saved);
-    onSuccess?.(saved);
+    try {
+      let saved;
+      if (isEdit) {
+        saved = await participantesApi.update(participant.id, payload, fotoFile);
+      } else {
+        saved = await participantesApi.create(payload, fotoFile);
+      }
+      await syncParticipantes();
+      onSuccess?.(saved);
+    } catch (err) {
+      setApiError(err.message ?? 'Error al guardar.');
+    }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
       {/* Photo */}
       <PhotoUploadField
-        participantId={participantId}
         value={photoValue}
         onChange={(val) => setValue('photo', val, { shouldDirty: true })}
       />
@@ -303,6 +301,16 @@ export function ParticipantForm({ participant, onSuccess, onCancel }) {
           {...register('github')}
         />
       </div>
+
+      {apiError && (
+        <motion.p
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2"
+        >
+          {apiError}
+        </motion.p>
+      )}
 
       <div className="flex gap-3 pt-2 border-t border-slate-100">
         {onCancel && (

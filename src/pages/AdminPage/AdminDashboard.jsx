@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import {
   BookOpen, Users, Star, FileText, ArrowRight,
   Plus, UserPlus, TrendingUp, Clock, CheckCircle2, AlertCircle,
-  ChevronRight, Layers,
+  ChevronRight, Layers, Images,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { manualsRepository, participantsRepository } from '@/storage/localStorageRepository';
+import { manualsRepository, participantsRepository, galleryRepository } from '@/storage/localStorageRepository';
 import { formatDate } from '@/shared/lib/formatDate';
 
 // ─── Easing ───────────────────────────────────────────────────────────────────
@@ -237,6 +237,7 @@ function ManualRow({ manual, index }) {
 export function AdminDashboard() {
   const manuals = useMemo(() => manualsRepository.getAll(), []);
   const participants = useMemo(() => participantsRepository.getAll(), []);
+  const gallery = useMemo(() => galleryRepository.getAll(), []);
   const featured = manuals.filter(m => m.featured);
   const withPDF = manuals.filter(m => m.pdf);
 
@@ -256,6 +257,10 @@ export function AdminDashboard() {
     {
       icon: FileText, label: 'Con PDF', value: withPDF.length,
       accent: '#7C3AED', bg: '#F3E8FF', delay: 0.26,
+    },
+    {
+      icon: Images, label: 'Fotos galería', value: gallery.length,
+      accent: '#0891B2', bg: '#ECFEFF', delay: 0.33,
     },
   ];
 
@@ -451,6 +456,11 @@ export function AdminDashboard() {
                 icon={UserPlus} title="Nuevo participante" sub="Agregar al equipo"
                 delay={0.62}
               />
+              <QuickAction
+                to="/panel-softlab-admin/galeria"
+                icon={Images} title="Galería de fotos" sub="Subir y gestionar imágenes"
+                delay={0.68}
+              />
             </div>
           </motion.div>
 
@@ -552,11 +562,6 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 900px) {
-          .dash-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }

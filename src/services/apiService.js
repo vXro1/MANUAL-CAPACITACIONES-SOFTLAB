@@ -1,0 +1,170 @@
+const API_BASE = 'https://semillerosoftlab.com/api';
+
+// ─── Token admin ───────────────────────────────────────────────────────────────
+const TOKEN_KEY = 'softlab_api_token';
+
+export function getToken()          { return localStorage.getItem(TOKEN_KEY); }
+export function setToken(t)         { localStorage.setItem(TOKEN_KEY, t); }
+export function removeToken()       { localStorage.removeItem(TOKEN_KEY); }
+
+// ─── Cliente base ──────────────────────────────────────────────────────────────
+
+// Si el servidor devuelve 401 limpiamos el token para que AdminLayout muestre login
+function handleUnauth(json) {
+  if (json.error?.toLowerCase().includes('sesión') || json.error?.toLowerCase().includes('token') || json.error?.toLowerCase().includes('autorizado')) {
+    removeToken();
+    // Recargar para que AdminLayout detecte token=null y muestre el login
+    if (window.location.pathname.startsWith('/panel-softlab-admin')) {
+      window.location.reload();
+    }
+  }
+}
+
+async function request(path, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers ?? {}) };
+  if (token) headers['X-Admin-Token'] = token;
+
+  const res  = await fetch(API_BASE + path, { ...options, headers });
+  const json = await res.json();
+  if (!json.ok) {
+    handleUnauth(json);
+    throw new Error(json.error ?? 'Error del servidor');
+  }
+  return json.data;
+}
+
+// Petición con FormData (para subir archivos)
+async function requestForm(path, formData, method = 'POST') {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['X-Admin-Token'] = token;
+
+  const res  = await fetch(API_BASE + path, { method, body: formData, headers });
+  const json = await res.json();
+  if (!json.ok) {
+    handleUnauth(json);
+    throw new Error(json.error ?? 'Error del servidor');
+  }
+  return json.data;
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────────
+export const authApi = {
+  async login(password) {
+    const data = await request('/auth.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', password }),
+    });
+    setToken(data.token);
+    return data;
+  },
+
+  async logout() {
+    await request('/auth.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logout' }),
+    }).catch(() => {});
+    removeToken();
+  },
+
+  async check() {
+    return request('/auth.php?action=check');
+  },
+};
+
+// ─── Manuales ──────────────────────────────────────────────────────────────────
+export const manualesApi = {
+  getAll()    { return request('/manuales.php'); },
+  getById(id) { return request(`/manuales.php?id=${id}`); },
+
+  create(datos, pdfFile, imagenFile) {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(datos));
+    if (pdfFile)    fd.append('pdf',    pdfFile);
+    if (imagenFile) fd.append('imagen', imagenFile);
+    return requestForm('/manuales.php', fd, 'POST');
+  },
+
+  update(id, datos, pdfFile, imagenFile) {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(datos));
+    if (pdfFile)    fd.append('pdf',    pdfFile);
+    if (imagenFile) fd.append('imagen', imagenFile);
+    // PHP no parsea $_POST/$_FILES en PUT multipart; usamos POST + _method override
+    return requestForm(`/manuales.php?id=${id}&_method=PUT`, fd, 'POST');
+  },
+
+  delete(id) {
+    return request(`/manuales.php?id=${id}`, { method: 'DELETE' });
+  },
+};
+
+// ─── Participantes ─────────────────────────────────────────────────────────────
+export const participantesApi = {
+  getAll()    { return request('/participantes.php'); },
+  getById(id) { return request(`/participantes.php?id=${id}`); },
+
+  create(datos, fotoFile) {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(datos));
+    if (fotoFile) fd.append('foto', fotoFile);
+    return requestForm('/participantes.php', fd, 'POST');
+  },
+
+  update(id, datos, fotoFile) {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(datos));
+    if (fotoFile) fd.append('foto', fotoFile);
+    // PHP no parsea $_POST/$_FILES en PUT multipart; usamos POST + _method override
+    return requestForm(`/participantes.php?id=${id}&_method=PUT`, fd, 'POST');
+  },
+
+  delete(id) {
+    return request(`/participantes.php?id=${id}`, { method: 'DELETE' });
+  },
+};
+
+// ─── Evidencias (fotos de manuales) ───────────────────────────────────────────
+export const evidenciasApi = {
+  upload(imagenFile) {
+    const fd = new FormData();
+    fd.append('imagen', imagenFile);
+    return requestForm('/evidencias.php', fd, 'POST');
+  },
+
+  delete(url) {
+    return request('/evidencias.php', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+  },
+};
+
+// ─── Galería ───────────────────────────────────────────────────────────────────
+export const galeriaApi = {
+  getAll()        { return request('/galeria.php'); },
+  getFeatured()   { return request('/galeria.php?featured'); },
+
+  upload(imagenFile, titulo = '') {
+    const fd = new FormData();
+    fd.append('imagen', imagenFile);
+    fd.append('data', JSON.stringify({ title: titulo }));
+    return requestForm('/galeria.php', fd, 'POST');
+  },
+
+  toggleFeatured(id) {
+    return request(`/galeria.php?id=${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toggle_featured: true }),
+    });
+  },
+
+  delete(id) {
+    return request(`/galeria.php?id=${id}`, { method: 'DELETE' });
+  },
+};

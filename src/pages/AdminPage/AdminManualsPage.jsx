@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, BookOpen, Star, Search, Eye } from 'lucide-react';
 import { manualsRepository } from '@/storage/localStorageRepository';
+import { manualesApi } from '@/services/apiService';
+import { syncManuales } from '@/services/dataSync';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Modal } from '@/shared/ui/Modal';
@@ -24,15 +26,32 @@ export function AdminManualsPage() {
       m.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = (id) => {
-    manualsRepository.delete(id);
-    reload();
+  const handleDelete = async (id) => {
+    try {
+      await manualesApi.delete(id);
+      await syncManuales();
+      reload();
+    } catch (err) {
+      console.error('Error al eliminar manual:', err);
+    }
     setDeleteId(null);
   };
 
-  const handleToggleFeatured = (manual) => {
-    manualsRepository.save({ ...manual, featured: !manual.featured });
-    reload();
+  const handleToggleFeatured = async (manual) => {
+    try {
+      await manualesApi.update(manual.id, {
+        titulo: manual.title,
+        categoria: manual.category,
+        descripcion: manual.description,
+        autor_ids: manual.authorIds,
+        fecha: manual.date,
+        destacado: !manual.featured,
+      });
+      await syncManuales();
+      reload();
+    } catch (err) {
+      console.error('Error al actualizar manual:', err);
+    }
   };
 
   return (

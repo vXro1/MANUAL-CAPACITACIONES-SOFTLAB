@@ -34,12 +34,18 @@ export function Navbar() {
       ref={mobileNavRef}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        transition: 'all 0.3s ease',
-        background: scrolled ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: scrolled ? '1px solid rgba(26,63,170,0.10)' : '1px solid transparent',
-        boxShadow: scrolled ? '0 2px 24px rgba(26,63,170,0.07)' : 'none',
+        transition: 'background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease',
+        background: scrolled
+          ? 'rgba(252,253,255,0.88)'
+          : 'rgba(255,255,255,0.60)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: scrolled
+          ? '1px solid rgba(26,63,170,0.09)'
+          : '1px solid rgba(255,255,255,0.50)',
+        boxShadow: scrolled
+          ? '0 1px 0 rgba(147,197,253,0.18), 0 4px 28px rgba(26,63,170,0.07)'
+          : 'none',
       }}
     >
       <a
@@ -93,13 +99,16 @@ export function Navbar() {
                 to={link.href}
                 end={link.href === '/'}
                 style={({ isActive }) => ({
-                  padding: '8px 16px', borderRadius: 8,
+                  padding: '8px 16px', borderRadius: 9,
                   fontSize: 14, fontWeight: 500,
                   fontFamily: 'DM Sans, sans-serif',
                   textDecoration: 'none',
                   transition: 'all 0.2s',
                   color: isActive ? '#1A3FAA' : '#4B5563',
-                  background: isActive ? '#EEF3FF' : 'transparent',
+                  background: isActive
+                    ? 'rgba(238,243,255,0.85)'
+                    : 'transparent',
+                  backdropFilter: isActive ? 'blur(8px)' : 'none',
                 })}
               >
                 {link.label}
@@ -165,7 +174,13 @@ export function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            style={{ overflow: 'hidden', background: '#fff', borderTop: '1px solid #EEF1F8' }}
+            style={{
+              overflow: 'hidden',
+              background: 'rgba(252,253,255,0.95)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              borderTop: '1px solid rgba(226,232,240,0.7)',
+            }}
           >
             <nav style={{ padding: '12px 20px 20px', display: 'flex', flexDirection: 'column', gap: 4 }} aria-label="Navegación móvil">
               {NAV_LINKS.map((link, i) => (
@@ -204,14 +219,6 @@ export function Navbar() {
         )}
       </AnimatePresence>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .nav-inner { padding: 0 20px !important; }
-          .nav-desktop { display: none !important; }
-          .nav-cta { display: none !important; }
-          .nav-hamburger { display: flex !important; }
-        }
-      `}</style>
     </header>
   );
 }

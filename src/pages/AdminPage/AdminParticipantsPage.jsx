@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, X, Users, BookOpen, Mail } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Users } from 'lucide-react';
 import { participantsRepository } from '@/storage/localStorageRepository';
-import { isImageIDBKey, deleteImage, getRawKey } from '@/storage/imageStorageService';
+import { participantesApi } from '@/services/apiService';
+import { syncParticipantes } from '@/services/dataSync';
 import { ParticipantForm, PARTICIPANT_ROLES } from '@/features/participant-form/ParticipantForm';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
@@ -154,11 +155,11 @@ export function AdminParticipantsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      if (deleteTarget.photo && isImageIDBKey(deleteTarget.photo)) {
-        await deleteImage(getRawKey(deleteTarget.photo)).catch(() => {});
-      }
-      participantsRepository.delete(deleteTarget.id);
+      await participantesApi.delete(deleteTarget.id);
+      await syncParticipantes();
       reload();
+    } catch (err) {
+      console.error('Error al eliminar participante:', err);
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -262,17 +263,6 @@ export function AdminParticipantsPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* Info banner */}
-      {participants.length > 0 && (
-        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-brand-50 border border-brand-100 text-xs text-brand-700">
-          <BookOpen size={14} className="shrink-0 mt-0.5 text-brand-500" />
-          <p>
-            Las imágenes de perfil se almacenan directamente en el navegador mediante IndexedDB.
-            Son persistentes mientras no se limpie el almacenamiento del navegador.
-          </p>
         </div>
       )}
 

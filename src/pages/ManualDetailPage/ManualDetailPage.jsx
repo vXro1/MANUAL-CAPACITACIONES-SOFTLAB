@@ -1,37 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  User,
-  BookOpen,
-  FileText,
-  ChevronRight,
-  Tag,
-  Edit3,
-  Building2,
-  List,
-  ExternalLink,
+  ArrowLeft, Calendar, Clock, User, BookOpen, FileText,
+  ChevronRight, Tag, Building2, List, Mic, Users, UserCheck, ZoomIn, X,
 } from 'lucide-react';
-import { manualsRepository, speakersRepository, participantsRepository } from '@/storage/localStorageRepository';
-import { resolvePDFUrl } from '@/storage/pdfStorageService';
+import { manualsRepository, participantsRepository } from '@/storage/localStorageRepository';
 import { PDFViewer } from '@/features/manual-viewer/PDFViewer';
-import { Gallery } from '@/features/gallery/Gallery';
-import { useResolvedGallery } from '@/shared/hooks/useResolvedGallery';
 import { Modal } from '@/shared/ui/Modal';
-import { Badge } from '@/shared/ui/Badge';
-import { Button } from '@/shared/ui/Button';
 import { formatDate, formatTime } from '@/shared/lib/formatDate';
 
-/* ─── animation variants ─── */
+/* ─── Category palette ──────────────────────────────────────── */
+const CATEGORY_PALETTE = {
+  'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
+  'DevOps':                 { bg: '#FFF7ED', accent: '#C2410C', border: '#FED7AA' },
+  'Control de Versiones':   { bg: '#F0FDF4', accent: '#15803D', border: '#BBF7D0' },
+  'Desarrollo Frontend':    { bg: '#FDF4FF', accent: '#9333EA', border: '#E9D5FF' },
+  'Desarrollo Backend':     { bg: '#FFF1F2', accent: '#E11D48', border: '#FECDD3' },
+  'Bases de Datos':         { bg: '#F0F9FF', accent: '#0369A1', border: '#BAE6FD' },
+  'Gestión de Proyectos':   { bg: '#FEFCE8', accent: '#CA8A04', border: '#FDE68A' },
+  'Seguridad':              { bg: '#F8FAFC', accent: '#475569', border: '#CBD5E1' },
+  'Inteligencia Artificial':{ bg: '#ECFDF5', accent: '#059669', border: '#A7F3D0' },
+  default:                  { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
+};
+function getCategoryPalette(cat) {
+  return CATEGORY_PALETTE[cat] || CATEGORY_PALETTE.default;
+}
+
+/* ─── Animation variants ────────────────────────────────────── */
+const EASE = [0.22, 1, 0.36, 1];
+
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 22 },
   visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] },
+    opacity: 1, y: 0,
+    transition: { duration: 0.52, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] },
   }),
 };
 
@@ -39,177 +42,421 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.07 } },
 };
 
-/* ─── tiny helpers ─── */
+/* ─── Helpers ───────────────────────────────────────────────── */
 function MetaChip({ icon: Icon, children }) {
   return (
-    <div className="flex items-center gap-1.5 text-sm text-slate-500">
-      <Icon size={13} className="text-slate-400 shrink-0" />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#64748b' }}>
+      <Icon size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
       <span>{children}</span>
     </div>
   );
 }
 
-function SectionCard({ children, className = '' }) {
+function SectionCard({ children, palette }) {
   return (
-    <div className={`rounded-2xl border border-slate-100 bg-white p-5 ${className}`}>
+    <div
+      style={{
+        borderRadius: 16,
+        border: `1px solid ${palette ? palette.border : '#f1f5f9'}`,
+        background: palette ? palette.bg : '#fff',
+        padding: 20,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function SectionLabel({ children }) {
+function SectionLabel({ icon: Icon, children }) {
   return (
-    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-      {children}
-    </p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+      {Icon && <Icon size={13} style={{ color: '#1A3FAA' }} />}
+      <p
+        style={{
+          fontSize: 11, fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          color: '#94a3b8', margin: 0, fontFamily: 'DM Sans, sans-serif',
+        }}
+      >
+        {children}
+      </p>
+    </div>
   );
 }
 
-/* ─── main component ─── */
+function PersonCard({ person }) {
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 12px', borderRadius: 10,
+        background: 'rgba(255,255,255,0.7)',
+        border: '1px solid #e5e7eb',
+        transition: 'background 0.18s, border-color 0.18s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#eef3ff'; e.currentTarget.style.borderColor = '#c7d7f8'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
+    >
+      <div
+        style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: '#EEF3FF', border: '1px solid #C7D7F8',
+          overflow: 'hidden', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        {person.photo ? (
+          <img src={person.photo} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1A3FAA' }}>
+            {person.name?.[0] ?? '?'}
+          </span>
+        )}
+      </div>
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#0A0F1E', margin: 0, lineHeight: 1.3 }}>
+          {person.name}
+        </p>
+        <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
+          {person.career ?? person.role ?? ''}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Image gallery with zoom lightbox ─────────────────────── */
+function EvidenceLightbox({ images, startIndex, onClose }) {
+  const [current, setCurrent] = useState(startIndex);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') setCurrent(c => (c - 1 + images.length) % images.length);
+      if (e.key === 'ArrowRight') setCurrent(c => (c + 1) % images.length);
+    };
+    window.addEventListener('keydown', handler);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = '';
+    };
+  }, [images.length, onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(3,7,18,0.97)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        backdropFilter: 'blur(6px)', padding: 32,
+      }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Visor de evidencias"
+    >
+      <button
+        onClick={onClose}
+        aria-label="Cerrar"
+        style={{
+          position: 'absolute', top: 16, right: 16,
+          width: 40, height: 40, borderRadius: 10,
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+          color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+      >
+        <X size={18} />
+      </button>
+
+      {/* Counter */}
+      <div
+        style={{
+          position: 'absolute', top: 16, left: 16,
+          padding: '6px 14px', borderRadius: 99,
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+        }}
+      >
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: 'DM Sans, sans-serif' }}>
+          {current + 1} / {images.length}
+        </span>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={current}
+          src={images[current]}
+          alt={`Evidencia ${current + 1}`}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.22, ease: EASE }}
+          onClick={e => e.stopPropagation()}
+          style={{
+            maxWidth: '100%', maxHeight: '80vh',
+            objectFit: 'contain', borderRadius: 12,
+            boxShadow: '0 40px 100px rgba(0,0,0,0.7)',
+          }}
+          draggable={false}
+        />
+      </AnimatePresence>
+
+      {/* Thumbnail strip */}
+      {images.length > 1 && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', bottom: 16,
+            display: 'flex', gap: 6, padding: '8px 16px',
+            background: 'rgba(0,0,0,0.5)', borderRadius: 12,
+          }}
+        >
+          {images.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              style={{
+                width: 48, height: 34, borderRadius: 6, overflow: 'hidden',
+                border: `2px solid ${i === current ? '#fff' : 'transparent'}`,
+                opacity: i === current ? 1 : 0.38,
+                transition: 'all 0.2s', cursor: 'pointer', padding: 0,
+                transform: i === current ? 'scale(1.06)' : 'scale(1)',
+              }}
+            >
+              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+/* ─── Evidence image card ───────────────────────────────────── */
+function EvidenceCard({ src, index, onOpen }) {
+  return (
+    <motion.div
+      variants={fadeUp}
+      custom={index}
+      onClick={() => onOpen(index)}
+      style={{
+        position: 'relative', aspectRatio: '4/3',
+        overflow: 'hidden', borderRadius: 12,
+        border: '1px solid #f1f5f9', background: '#F8FAFC',
+        cursor: 'pointer',
+      }}
+    >
+      <img
+        src={src}
+        alt={`Evidencia ${index + 1}`}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.55s cubic-bezier(0.22,1,0.36,1)' }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+      />
+      {/* Zoom overlay */}
+      <div
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(10,15,30,0)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 12, transition: 'background 0.28s',
+        }}
+        className="evidence-overlay"
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,15,30,0.38)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(10,15,30,0)'; }}
+      >
+        <div
+          style={{
+            width: 40, height: 40, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 0, transform: 'scale(0.8)',
+            transition: 'opacity 0.22s, transform 0.22s',
+          }}
+          className="evidence-zoom-btn"
+        >
+          <ZoomIn size={16} color="#1A3FAA" />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Main component ─────────────────────────────────────────── */
 export function ManualDetailPage() {
   const { id } = useParams();
   const [pdfOpen, setPdfOpen] = useState(false);
-  const [resolvedPdfUrl, setResolvedPdfUrl] = useState(null);
-  const [resolvingPdf, setResolvingPdf] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   const manual = manualsRepository.getById(id);
-  const resolvedGallery = useResolvedGallery(manual?.gallery ?? []);
+  const evidenceGallery = (manual?.gallery ?? []).filter(
+    s => typeof s === 'string' && s.startsWith('http')
+  );
 
-  const handleOpenPdf = async () => {
-    if (!manual?.pdf) return;
-    setResolvingPdf(true);
-    try {
-      const url = await resolvePDFUrl(manual.pdf);
-      setResolvedPdfUrl(url);
-      setPdfOpen(true);
-    } catch {
-      setResolvedPdfUrl(manual.pdf);
-      setPdfOpen(true);
-    } finally {
-      setResolvingPdf(false);
-    }
-  };
+  const allParticipants = participantsRepository.getAll();
+  const palette = getCategoryPalette(manual?.category);
 
-  const handleClosePdf = () => {
-    setPdfOpen(false);
-    if (resolvedPdfUrl?.startsWith('blob:')) URL.revokeObjectURL(resolvedPdfUrl);
-    setResolvedPdfUrl(null);
-  };
+  const speakerIds = manual?.speakerIds?.length
+    ? manual.speakerIds
+    : manual?.speakerId ? [manual.speakerId] : [];
+  const speakers = speakerIds.map(sid => allParticipants.find(p => p.id === sid)).filter(Boolean);
+  const authors = (manual?.authorIds ?? []).map(aid => allParticipants.find(p => p.id === aid)).filter(Boolean);
+  const auxiliares = (manual?.auxiliaresIds ?? []).map(aid => allParticipants.find(p => p.id === aid)).filter(Boolean);
 
   if (!manual) return <Navigate to="/manuales" replace />;
 
-  const speaker = manual.speakerId ? speakersRepository.getById(manual.speakerId) : null;
-  const allParticipants = participantsRepository.getAll();
-  const authors = (manual.authorIds ?? [])
-    .map((aid) => allParticipants.find((p) => p.id === aid))
-    .filter(Boolean);
-  const editor = manual.editorId
-    ? allParticipants.find((p) => p.id === manual.editorId)
-    : null;
-
   return (
-    <main id="main-content" className="min-h-screen bg-slate-50 pt-16">
+    <main id="main-content" style={{ minHeight: '100vh', background: '#F8FAFC', paddingTop: 64 }}>
 
       {/* ── Back nav ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px clamp(16px,4vw,48px) 0' }}>
         <Link
           to="/manuales"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 13, color: '#94a3b8', textDecoration: 'none',
+            fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
+            transition: 'color 0.18s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#1A3FAA'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; }}
         >
-          <ArrowLeft size={14} />
-          Manuales
+          <ArrowLeft size={14} /> Manuales
         </Link>
       </div>
 
-      {/* ── Hero card (sin fondo azul) ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+      {/* ── Hero card ── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px clamp(16px,4vw,48px) 0' }}>
         <motion.div
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="relative overflow-hidden rounded-3xl bg-white border border-slate-100 shadow-sm"
+          style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 24,
+            background: `linear-gradient(145deg, ${palette.bg} 0%, #fff 55%)`,
+            border: `1px solid ${palette.border}`,
+            boxShadow: `0 4px 32px rgba(0,0,0,0.06), 0 0 0 1px ${palette.border}40`,
+          }}
         >
-          {/* subtle cover texture */}
           {manual.cover && (
-            <div className="absolute inset-0 opacity-[0.06]">
-              <img src={manual.cover} alt="" className="w-full h-full object-cover" />
+            <div style={{ position: 'absolute', inset: 0, opacity: 0.045 }}>
+              <img src={manual.cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           )}
 
-          <div className="relative p-8 md:p-10">
-            <div className="flex flex-wrap gap-2 mb-5">
-              <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-3 py-0.5 text-xs font-medium text-brand-700">
-                {manual.category}
-              </span>
+          <div style={{ position: 'relative', padding: 'clamp(24px,5vw,40px)' }}>
+            {/* Badges */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+              {manual.category && (
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '3px 12px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 700,
+                    background: palette.bg, color: palette.accent,
+                    border: `1.5px solid ${palette.border}`,
+                    fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {manual.category}
+                </span>
+              )}
               {manual.featured && (
-                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-0.5 text-xs font-medium text-amber-700">
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '3px 12px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 700,
+                    background: '#FEFCE8', color: '#CA8A04',
+                    border: '1.5px solid #FDE68A',
+                    fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
                   Destacado
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
-              {/* left: title + meta */}
-              <div className="flex flex-col gap-4">
+            <div
+              style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 32, alignItems: 'start' }}
+              className="manual-hero-grid"
+            >
+              {/* Left: title + meta */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight tracking-tight">
+                  <h1
+                    style={{
+                      fontFamily: 'Syne, sans-serif',
+                      fontSize: 'clamp(22px, 3vw, 34px)',
+                      fontWeight: 800, color: '#0A0F1E',
+                      margin: 0, lineHeight: 1.2, letterSpacing: '-0.5px',
+                    }}
+                  >
                     {manual.title}
                   </h1>
                   {manual.subtitle && (
-                    <p className="mt-1.5 text-base text-brand-600 font-medium">
+                    <p style={{ marginTop: 6, fontSize: 15, color: palette.accent, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}>
                       {manual.subtitle}
                     </p>
                   )}
                 </div>
 
                 {manual.description && (
-                  <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
+                  <p style={{ fontSize: 14, color: '#64748b', margin: 0, lineHeight: 1.7, fontFamily: 'DM Sans, sans-serif', maxWidth: 600 }}>
                     {manual.description}
                   </p>
                 )}
 
-                <div className="flex flex-wrap gap-3 pt-1">
-                  {manual.institution && (
-                    <MetaChip icon={Building2}>{manual.institution}</MetaChip>
-                  )}
-                  {manual.date && (
-                    <MetaChip icon={Calendar}>{formatDate(manual.date)}</MetaChip>
-                  )}
-                  {manual.time && (
-                    <MetaChip icon={Clock}>{formatTime(manual.time)}</MetaChip>
-                  )}
-                  {manual.duration && (
-                    <MetaChip icon={Clock}>{manual.duration}</MetaChip>
-                  )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                  {manual.institution && <MetaChip icon={Building2}>{manual.institution}</MetaChip>}
+                  {manual.date && <MetaChip icon={Calendar}>{formatDate(manual.date)}</MetaChip>}
+                  {manual.time && <MetaChip icon={Clock}>{formatTime(manual.time)}</MetaChip>}
+                  {manual.duration && <MetaChip icon={Clock}>{manual.duration}</MetaChip>}
                 </div>
               </div>
 
-              {/* right: PDF button */}
+              {/* Right: PDF button */}
               {manual.pdf && (
                 <motion.button
-                  onClick={handleOpenPdf}
-                  disabled={resolvingPdf}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="group flex items-center gap-3 rounded-2xl bg-brand-600 px-5 py-4 text-white shadow-md shadow-brand-200 hover:bg-brand-700 transition-colors disabled:opacity-60 shrink-0 self-start"
+                  onClick={() => setPdfOpen(true)}
+                  whileHover={{ y: -2, boxShadow: `0 16px 40px ${palette.accent}28` }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.2, ease: EASE }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    borderRadius: 16, background: palette.accent,
+                    padding: '14px 20px', color: '#fff',
+                    border: 'none', cursor: 'pointer',
+                    boxShadow: `0 6px 24px ${palette.accent}30`,
+                    flexShrink: 0, alignSelf: 'flex-start',
+                    fontFamily: 'DM Sans, sans-serif',
+                    willChange: 'transform',
+                  }}
                 >
-                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
-                    {resolvingPdf ? (
-                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <BookOpen size={18} />
-                    )}
+                  <div
+                    style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: 'rgba(255,255,255,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <BookOpen size={18} />
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold leading-tight">
-                      {resolvingPdf ? 'Cargando…' : 'Abrir manual'}
-                    </p>
-                    <p className="text-xs text-white/60 mt-0.5">Ver en PDF</p>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>Abrir manual</p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.62)', margin: 0 }}>Ver en PDF</p>
                   </div>
-                  <ChevronRight
-                    size={16}
-                    className="ml-1 text-white/50 group-hover:translate-x-0.5 transition-transform"
-                  />
+                  <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.5)', marginLeft: 4 }} />
                 </motion.button>
               )}
             </div>
@@ -218,268 +465,286 @@ export function ManualDetailPage() {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+      <div
+        style={{
+          maxWidth: 1200, margin: '0 auto',
+          padding: 'clamp(32px,5vw,56px) clamp(16px,4vw,48px)',
+          display: 'grid', gridTemplateColumns: '1fr 300px', gap: 32,
+        }}
+        className="manual-body-grid"
+      >
 
-          {/* ── Left column ── */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-col gap-8"
-          >
-            {/* Introduction */}
-            {manual.introduction && (
-              <motion.section variants={fadeUp}>
-                <h2 className="text-base font-semibold text-slate-900 mb-3">Introducción</h2>
-                <div className="flex flex-col gap-3">
-                  {manual.introduction.split('\n\n').map((p, i) => (
-                    <p key={i} className="text-slate-500 text-sm leading-relaxed">{p}</p>
-                  ))}
-                </div>
-              </motion.section>
-            )}
+        {/* ── Left column ── */}
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+          style={{ display: 'flex', flexDirection: 'column', gap: 32 }}
+        >
+          {/* Introduction */}
+          {manual.introduction && (
+            <motion.section variants={fadeUp}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0A0F1E', marginBottom: 12, fontFamily: 'Syne, sans-serif' }}>
+                Introducción
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {manual.introduction.split('\n\n').map((p, i) => (
+                  <p key={i} style={{ fontSize: 14, color: '#64748b', margin: 0, lineHeight: 1.75, fontFamily: 'DM Sans, sans-serif' }}>{p}</p>
+                ))}
+              </div>
+            </motion.section>
+          )}
 
-            {/* Table of Contents */}
-            {manual.tableOfContents?.length > 0 && (
-              <motion.section variants={fadeUp}>
-                <div className="rounded-2xl border border-slate-100 bg-white p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <List size={15} className="text-brand-500" />
-                    <h3 className="text-sm font-semibold text-slate-800">Tabla de contenido</h3>
-                  </div>
-                  <ol className="flex flex-col gap-2">
-                    {manual.tableOfContents.map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <span className="shrink-0 w-5 h-5 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 mt-0.5">
-                          {i + 1}
-                        </span>
-                        <span className="text-slate-600 leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </motion.section>
-            )}
-
-            {/* Objectives */}
-            {manual.objectives?.length > 0 && (
-              <motion.section variants={fadeUp}>
-                <h2 className="text-base font-semibold text-slate-900 mb-4">Objetivos</h2>
-                <div className="grid gap-3">
-                  {manual.objectives.map((obj, i) => (
-                    <motion.div
-                      key={i}
-                      variants={fadeUp}
-                      custom={i}
-                      className="flex items-start gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
-                    >
-                      <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center text-[10px] font-bold text-white">
-                        {i + 1}
-                      </span>
-                      <span className="text-slate-600 text-sm leading-relaxed">{obj}</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-
-            {/* Gallery */}
-            {resolvedGallery.length > 0 && (
-              <motion.section variants={fadeUp}>
-                <h2 className="text-base font-semibold text-slate-900 mb-4">Galería</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {resolvedGallery.map((img, i) => (
-                    <motion.div
-                      key={i}
-                      variants={fadeUp}
-                      custom={i}
-                      className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-100 bg-slate-50"
-                    >
-                      <img
-                        src={typeof img === 'string' ? img : img.url ?? img.src}
-                        alt={img.caption ?? `Imagen ${i + 1}`}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      {img.caption && (
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <p className="text-white text-xs leading-tight">{img.caption}</p>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-          </motion.div>
-
-          {/* ── Sidebar ── */}
-          <motion.aside
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-col gap-4"
-          >
-            {/* PDF CTA — si no hay botón arriba */}
-            {!manual.pdf && (
-              <motion.div
-                variants={fadeUp}
-                className="rounded-2xl border border-dashed border-slate-200 bg-white p-5 flex flex-col items-center gap-2 text-center"
-              >
-                <FileText size={22} className="text-slate-300" />
-                <p className="text-xs text-slate-400">PDF no disponible aún</p>
-              </motion.div>
-            )}
-
-            {manual.pdf && (
-              <motion.button
-                variants={fadeUp}
-                onClick={handleOpenPdf}
-                disabled={resolvingPdf}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="group w-full rounded-2xl border border-brand-100 bg-brand-50 p-4 flex items-center gap-3 hover:bg-brand-100 transition-colors text-left disabled:opacity-60"
-              >
-                <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shrink-0">
-                  {resolvingPdf ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <BookOpen size={18} />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-brand-800 leading-tight">
-                    {resolvingPdf ? 'Cargando…' : 'Ver manual PDF'}
-                  </p>
-                  <p className="text-xs text-brand-500 mt-0.5">Visor interactivo</p>
-                </div>
-                <ExternalLink size={14} className="text-brand-400 shrink-0 group-hover:text-brand-600 transition-colors" />
-              </motion.button>
-            )}
-
-            {/* Speaker */}
-            {speaker && (
-              <motion.div variants={fadeUp}>
-                <SectionCard>
-                  <SectionLabel>Ponente</SectionLabel>
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-brand-50 border border-brand-100 overflow-hidden shrink-0">
-                      {speaker.photo ? (
-                        <img src={speaker.photo} alt={speaker.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <User size={16} className="text-brand-400" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{speaker.name}</p>
-                      <p className="text-xs text-brand-600 font-medium mt-0.5">{speaker.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{speaker.institution}</p>
-                    </div>
-                  </div>
-                </SectionCard>
-              </motion.div>
-            )}
-
-            {/* Authors */}
-            {authors.length > 0 && (
-              <motion.div variants={fadeUp}>
-                <SectionCard>
-                  <SectionLabel>Autores</SectionLabel>
-                  <div className="flex flex-col gap-3">
-                    {authors.map((author) => (
-                      <div key={author.id} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                          {author.photo ? (
-                            <img src={author.photo} alt={author.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
-                              {author.name[0]}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-800 leading-tight">{author.name}</p>
-                          <p className="text-xs text-slate-400">{author.career}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </SectionCard>
-              </motion.div>
-            )}
-
-            {/* Institution */}
-            {manual.institution && (
-              <motion.div variants={fadeUp}>
-                <SectionCard>
-                  <SectionLabel>Institución</SectionLabel>
-                  <div className="flex items-start gap-2">
-                    <Building2 size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{manual.institution}</p>
-                      {manual.faculty && (
-                        <p className="text-xs text-slate-400 mt-0.5">{manual.faculty}</p>
-                      )}
-                    </div>
-                  </div>
-                </SectionCard>
-              </motion.div>
-            )}
-
-            {/* Editor */}
-            {editor && (
-              <motion.div variants={fadeUp}>
-                <SectionCard>
-                  <SectionLabel>Editor</SectionLabel>
-                  <div className="flex items-center gap-2">
-                    <Edit3 size={13} className="text-slate-400" />
-                    <p className="text-sm font-medium text-slate-800">{editor.name}</p>
-                  </div>
-                </SectionCard>
-              </motion.div>
-            )}
-
-            {/* Tags */}
-            {manual.tags?.length > 0 && (
-              <motion.div variants={fadeUp} className="flex flex-col gap-2 px-1">
-                <div className="flex items-center gap-1.5">
-                  <Tag size={12} className="text-slate-400" />
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                    Etiquetas
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {manual.tags.map((tag) => (
+          {/* Objectives */}
+          {manual.objectives?.length > 0 && (
+            <motion.section variants={fadeUp}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0A0F1E', marginBottom: 16, fontFamily: 'Syne, sans-serif' }}>
+                Objetivos
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {manual.objectives.map((obj, i) => (
+                  <motion.div
+                    key={i}
+                    variants={fadeUp}
+                    custom={i}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 12,
+                      borderRadius: 12, border: '1px solid #f1f5f9',
+                      background: '#fff', padding: '12px 16px',
+                      boxShadow: '0 1px 6px rgba(0,0,0,0.03)',
+                      transition: 'border-color 0.18s, box-shadow 0.18s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = palette.border; e.currentTarget.style.boxShadow = `0 4px 16px ${palette.accent}0A`; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#f1f5f9'; e.currentTarget.style.boxShadow = '0 1px 6px rgba(0,0,0,0.03)'; }}
+                  >
                     <span
-                      key={tag}
-                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs text-slate-600"
+                      style={{
+                        flexShrink: 0, marginTop: 2,
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: palette.accent,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 800, color: '#fff',
+                      }}
                     >
-                      {tag}
+                      {i + 1}
                     </span>
-                  ))}
+                    <span style={{ fontSize: 14, color: '#475569', lineHeight: 1.65, fontFamily: 'DM Sans, sans-serif' }}>{obj}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* Evidence Gallery */}
+          {evidenceGallery.length > 0 && (
+            <motion.section variants={fadeUp}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0A0F1E', marginBottom: 16, fontFamily: 'Syne, sans-serif' }}>
+                Galería de evidencias
+              </h2>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: 12,
+                }}
+              >
+                {evidenceGallery.map((src, i) => (
+                  <EvidenceCard key={i} src={src} index={i} onOpen={setLightboxIdx} />
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* Empty state */}
+          {!manual.introduction && !manual.objectives?.length && !evidenceGallery.length && (
+            <motion.div
+              variants={fadeUp}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 12, padding: '48px 0', textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: palette.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 4px 16px ${palette.accent}18`,
+                }}
+              >
+                <FileText size={24} style={{ color: palette.accent, opacity: 0.5 }} />
+              </div>
+              <p style={{ fontSize: 14, color: '#94a3b8', fontFamily: 'DM Sans, sans-serif', margin: 0 }}>
+                El contenido de este manual aún no ha sido cargado.
+              </p>
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* ── Sidebar ── */}
+        <motion.aside
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
+          {/* PDF CTA */}
+          {manual.pdf ? (
+            <motion.button
+              variants={fadeUp}
+              onClick={() => setPdfOpen(true)}
+              whileHover={{ y: -2, boxShadow: `0 12px 32px ${palette.accent}22` }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                borderRadius: 16, border: `1.5px solid ${palette.border}`,
+                background: palette.bg, padding: '14px 16px',
+                cursor: 'pointer', textAlign: 'left',
+                fontFamily: 'DM Sans, sans-serif',
+                transition: 'background 0.2s',
+                willChange: 'transform',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = palette.bg.replace('#', '#') + 'cc' || '#dce8ff'; }}
+            >
+              <div
+                style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  background: palette.accent, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                }}
+              >
+                <BookOpen size={18} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: palette.accent, margin: 0, lineHeight: 1.3 }}>
+                  Ver manual PDF
+                </p>
+                <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Visor interactivo</p>
+              </div>
+            </motion.button>
+          ) : (
+            <motion.div
+              variants={fadeUp}
+              style={{
+                borderRadius: 16, border: '1.5px dashed #E2E8F0',
+                background: '#fff', padding: 20,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center',
+              }}
+            >
+              <FileText size={22} style={{ color: '#CBD5E1' }} />
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                PDF no disponible aún
+              </p>
+            </motion.div>
+          )}
+
+          {/* Ponentes */}
+          {speakers.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <SectionCard palette={null}>
+                <SectionLabel icon={Mic}>{speakers.length === 1 ? 'Ponente' : 'Ponentes'}</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {speakers.map(s => <PersonCard key={s.id} person={s} />)}
                 </div>
-              </motion.div>
-            )}
-          </motion.aside>
-        </div>
+              </SectionCard>
+            </motion.div>
+          )}
+
+          {/* Autores */}
+          {authors.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <SectionCard palette={null}>
+                <SectionLabel icon={Users}>{authors.length === 1 ? 'Autor' : 'Autores'}</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {authors.map(a => <PersonCard key={a.id} person={a} />)}
+                </div>
+              </SectionCard>
+            </motion.div>
+          )}
+
+          {/* Auxiliares */}
+          {auxiliares.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <SectionCard palette={null}>
+                <SectionLabel icon={UserCheck}>Auxiliares externos</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {auxiliares.map(a => <PersonCard key={a.id} person={a} />)}
+                </div>
+              </SectionCard>
+            </motion.div>
+          )}
+
+          {/* Institution */}
+          {manual.institution && (
+            <motion.div variants={fadeUp}>
+              <SectionCard palette={null}>
+                <SectionLabel icon={Building2}>Institución</SectionLabel>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#0A0F1E', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                  {manual.institution}
+                </p>
+              </SectionCard>
+            </motion.div>
+          )}
+
+          {/* Tags */}
+          {manual.tags?.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Tag size={12} style={{ color: '#94a3b8' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>
+                  Etiquetas
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {manual.tags.map(tag => (
+                  <span
+                    key={tag}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      padding: '3px 10px', borderRadius: 999,
+                      border: '1px solid #E2E8F0', background: '#fff',
+                      fontSize: 11, color: '#64748b', fontFamily: 'DM Sans, sans-serif',
+                      transition: 'border-color 0.18s, color 0.18s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = palette.border; e.currentTarget.style.color = palette.accent; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748b'; }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </motion.aside>
       </div>
+
+      {/* ── Evidence Lightbox ── */}
+      <AnimatePresence>
+        {lightboxIdx !== null && (
+          <EvidenceLightbox
+            images={evidenceGallery}
+            startIndex={lightboxIdx}
+            onClose={() => setLightboxIdx(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── PDF Modal ── */}
       <Modal
         isOpen={pdfOpen}
-        onClose={handleClosePdf}
+        onClose={() => setPdfOpen(false)}
         size="full"
         className="!max-w-[95vw] !h-[95vh]"
       >
         <PDFViewer
-          url={resolvedPdfUrl}
+          url={manual.pdf}
           title={manual.title}
           cover={manual.cover}
           institution={manual.institution}
         />
       </Modal>
+
     </main>
   );
 }

@@ -3,10 +3,11 @@ import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu, X, LayoutDashboard, BookOpen, Plus,
-  Users, UserPlus, LogOut, FlaskConical, ChevronRight, Bell,
+  Users, UserPlus, LogOut, FlaskConical, ChevronRight,
+  Images, ExternalLink,
 } from 'lucide-react';
 import { AdminAuth } from '@/features/admin-auth/AdminAuth';
-import { adminAuthRepository } from '@/storage/localStorageRepository';
+import { getToken, removeToken } from '@/services/apiService';
 import { cn } from '@/shared/lib/cn';
 
 // ─── Constantes de navegación ─────────────────────────────────────────────────
@@ -26,6 +27,13 @@ const NAV_GROUPS = [
       { label: 'Agregar participante', href: '/panel-softlab-admin/participantes/nuevo', icon: UserPlus },
     ],
   },
+  {
+    label: 'Galería',
+    items: [
+      { label: 'Imágenes',          href: '/panel-softlab-admin/galeria', icon: Images },
+      { label: 'Ver galería pública', href: '/galeria', icon: ExternalLink, external: true },
+    ],
+  },
 ];
 
 // ─── Mapa de títulos por ruta ─────────────────────────────────────────────────
@@ -35,11 +43,32 @@ const PAGE_TITLES = {
   '/panel-softlab-admin/manuales/nuevo':     { title: 'Nuevo manual',          sub: 'Crea una nueva capacitación' },
   '/panel-softlab-admin/participantes':      { title: 'Participantes',         sub: 'Equipo del semillero' },
   '/panel-softlab-admin/participantes/nuevo':{ title: 'Nuevo participante',    sub: 'Agregar miembro al equipo' },
+  '/panel-softlab-admin/galeria':            { title: 'Galería de imágenes',   sub: 'Gestiona las fotos del semillero' },
 };
 
 // ─── SidebarItem ──────────────────────────────────────────────────────────────
 function SidebarItem({ item, onClose }) {
   const Icon = item.icon;
+
+  if (item.external) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, textDecoration: 'none', color: '#94A3B8', fontSize: 13.5, fontWeight: 500, fontFamily: 'DM Sans, sans-serif', transition: 'all 0.15s' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFF'; e.currentTarget.style.color = '#1A3FAA'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}
+      >
+        <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: '#F8FAFF', border: '1px solid #EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={15} aria-hidden="true" />
+        </div>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+      </a>
+    );
+  }
+
   return (
     <NavLink
       to={item.href}
@@ -74,7 +103,7 @@ function SidebarItem({ item, onClose }) {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 function AdminSidebar({ isOpen, onClose, onLogout }) {
   const handleLogout = () => {
-    adminAuthRepository.logout();
+    removeToken();
     onLogout?.();
   };
 
@@ -183,7 +212,8 @@ function AdminSidebar({ isOpen, onClose, onLogout }) {
 
 // ─── AdminLayout ──────────────────────────────────────────────────────────────
 export function AdminLayout() {
-  const [authenticated, setAuthenticated] = useState(adminAuthRepository.isAuthenticated());
+  // Usa el token de API como fuente de verdad — persiste entre recargas
+  const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const pageInfo = PAGE_TITLES[location.pathname] || { title: 'Panel', sub: '' };

@@ -1,149 +1,310 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Clock, User, BookOpen, ArrowRight, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Badge } from '@/shared/ui/Badge';
+import { motion } from 'framer-motion';
+import { Calendar, Clock, BookOpen, ArrowRight, User } from 'lucide-react';
 import { formatDate } from '@/shared/lib/formatDate';
-import { speakersRepository } from '@/storage/localStorageRepository';
-import { cn } from '@/shared/lib/cn';
+import { participantsRepository } from '@/storage/localStorageRepository';
 
+const CATEGORY_PALETTE = {
+  'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
+  'DevOps':                 { bg: '#FFF7ED', accent: '#C2410C', border: '#FED7AA' },
+  'Control de Versiones':   { bg: '#F0FDF4', accent: '#15803D', border: '#BBF7D0' },
+  'Desarrollo Frontend':    { bg: '#FDF4FF', accent: '#9333EA', border: '#E9D5FF' },
+  'Desarrollo Backend':     { bg: '#FFF1F2', accent: '#E11D48', border: '#FECDD3' },
+  'Bases de Datos':         { bg: '#F0F9FF', accent: '#0369A1', border: '#BAE6FD' },
+  'Gestión de Proyectos':   { bg: '#FEFCE8', accent: '#CA8A04', border: '#FDE68A' },
+  'Seguridad':              { bg: '#F8FAFC', accent: '#475569', border: '#CBD5E1' },
+  'Inteligencia Artificial':{ bg: '#ECFDF5', accent: '#059669', border: '#A7F3D0' },
+  default:                  { bg: '#F8FAFF', accent: '#1A3FAA', border: '#C7D7F8' },
+};
+
+function getCategoryPalette(cat) {
+  return CATEGORY_PALETTE[cat] || CATEGORY_PALETTE.default;
+}
+
+const EASE = [0.22, 1, 0.36, 1];
+
+/* ─── ManualCard ──────────────────────────────────────────────────── */
 export function ManualCard({ manual, index = 0 }) {
   const [imgError, setImgError] = useState(false);
-  const speaker = manual.speakerId ? speakersRepository.getById(manual.speakerId) : null;
+  const coverSrc = manual.cover || manual.coverImage || null;
+  const speakerId = manual.speakerIds?.[0] ?? manual.speakerId ?? null;
+  const speaker = speakerId ? participantsRepository.getById(speakerId) : null;
+  const palette = getCategoryPalette(manual.category);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.52, delay: Math.min(index * 0.06, 0.42), ease: EASE }}
+      style={{ height: '100%' }}
     >
-      <Link to={`/manuales/${manual.id}`} className="group block h-full">
-        <div className="h-full bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-brand hover:border-brand-200 transition-all duration-300 flex flex-col">
-          {/* Cover */}
-          <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-brand-100 to-brand-200">
-            {manual.cover && !imgError ? (
-              <img
-                src={manual.cover}
+      <Link
+        to={`/manuales/${manual.id}`}
+        style={{ textDecoration: 'none', display: 'block', height: '100%' }}
+        aria-label={`Ver manual: ${manual.title}`}
+      >
+        {/* Variant propagation: parent "hover" state flows to all motion children */}
+        <motion.div
+          initial="rest"
+          animate="rest"
+          whileHover="hover"
+          transition={{ duration: 0.28, ease: EASE }}
+          variants={{
+            rest: {
+              y: 0,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04), 0 0 0 1.5px #F1F5F9',
+            },
+            hover: {
+              y: -8,
+              boxShadow: `0 24px 56px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05), 0 0 0 1.5px ${palette.border}`,
+            },
+          }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            background: '#fff',
+            borderRadius: 18,
+            overflow: 'hidden',
+            willChange: 'transform',
+          }}
+        >
+          {/* ── Cover image ── */}
+          <div
+            style={{
+              position: 'relative',
+              height: 200,
+              overflow: 'hidden',
+              background: `linear-gradient(135deg, ${palette.accent}18, ${palette.accent}30)`,
+              flexShrink: 0,
+            }}
+          >
+            {coverSrc && !imgError ? (
+              <motion.img
+                src={coverSrc}
                 alt={manual.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                variants={{ rest: { scale: 1 }, hover: { scale: 1.07 } }}
+                transition={{ duration: 0.6, ease: EASE }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={() => setImgError(true)}
                 loading="lazy"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <FileText size={36} className="text-brand-300" />
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BookOpen size={44} color={palette.accent} style={{ opacity: 0.3 }} aria-hidden="true" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent" />
-            <div className="absolute top-3 left-3">
-              <Badge variant="blue" className="bg-white/90 backdrop-blur-sm border-0 text-brand-700 shadow-sm">
+
+            {/* Static base overlay */}
+            <div
+              style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(to top, rgba(10,15,30,0.38) 0%, transparent 55%)',
+              }}
+            />
+
+            {/* Deepens on hover for cinematic effect */}
+            <motion.div
+              variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(to top, rgba(10,15,30,0.20) 0%, transparent 55%)',
+              }}
+            />
+
+            {/* Category badge */}
+            <div style={{ position: 'absolute', top: 12, left: 12 }}>
+              <span
+                style={{
+                  display: 'inline-block', padding: '4px 12px', borderRadius: 999,
+                  fontSize: 11, fontWeight: 700,
+                  background: 'rgba(255,255,255,0.88)',
+                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  color: palette.accent, border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.03em',
+                }}
+              >
                 {manual.category}
-              </Badge>
+              </span>
             </div>
+
+            {/* PDF badge */}
             {manual.pdf && (
-              <div className="absolute top-3 right-3">
-                <div className="w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm">
-                  <BookOpen size={13} className="text-brand-600" />
-                </div>
+              <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                <span
+                  style={{
+                    display: 'inline-block', padding: '3px 9px', borderRadius: 999,
+                    fontSize: 10, fontWeight: 700,
+                    background: 'rgba(21,128,61,0.9)', backdropFilter: 'blur(6px)',
+                    color: '#fff', fontFamily: 'DM Sans, sans-serif',
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                  }}
+                >
+                  PDF
+                </span>
               </div>
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex flex-col gap-3 p-5 flex-1">
-            <h3 className="font-semibold text-slate-900 text-base leading-snug line-clamp-2 group-hover:text-brand-700 transition-colors">
+          {/* ── Content ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '18px 20px 20px', flex: 1 }}>
+
+            {/* Title — color flows from parent hover variant */}
+            <motion.h3
+              variants={{ rest: { color: '#0A0F1E' }, hover: { color: palette.accent } }}
+              transition={{ duration: 0.22 }}
+              style={{
+                fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 700,
+                margin: 0, lineHeight: 1.3, letterSpacing: '-0.2px',
+                overflow: 'hidden', display: '-webkit-box',
+                WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              }}
+            >
               {manual.title}
-            </h3>
-            <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 flex-1">
-              {manual.description}
-            </p>
-            <div className="flex flex-col gap-2 pt-2 border-t border-slate-50">
-              {speaker && (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <User size={12} className="text-brand-400 shrink-0" />
-                  <span className="truncate">{speaker.name}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-4">
-                {manual.date && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Calendar size={12} />
-                    <span>{formatDate(manual.date, { month: 'short' })}</span>
-                  </div>
-                )}
-                {manual.duration && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Clock size={12} />
-                    <span>{manual.duration}</span>
-                  </div>
-                )}
+            </motion.h3>
+
+            {/* Description */}
+            {manual.description && (
+              <p
+                style={{
+                  fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.65,
+                  fontFamily: 'DM Sans, sans-serif',
+                  overflow: 'hidden', display: '-webkit-box',
+                  WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', flex: 1,
+                }}
+              >
+                {manual.description}
+              </p>
+            )}
+
+            <div style={{ borderTop: '1px solid #F1F5F9', marginTop: 4 }} />
+
+            {/* Speaker */}
+            {speaker && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', fontFamily: 'DM Sans, sans-serif' }}>
+                <User size={12} color={palette.accent} aria-hidden="true" />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {speaker.name}
+                </span>
               </div>
+            )}
+
+            {/* Meta row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              {manual.date && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>
+                  <Calendar size={12} aria-hidden="true" />
+                  {formatDate(manual.date, { month: 'short' })}
+                </span>
+              )}
+              {manual.duration && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>
+                  <Clock size={12} aria-hidden="true" />
+                  {manual.duration}
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-1 text-xs font-medium text-brand-600 group-hover:gap-2 transition-all">
+
+            {/* CTA — arrow slides right on hover */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: palette.accent, fontFamily: 'DM Sans, sans-serif' }}>
               Ver manual
-              <ArrowRight size={13} />
+              <motion.span
+                variants={{ rest: { x: 0 }, hover: { x: 5 } }}
+                transition={{ duration: 0.22, ease: EASE }}
+                style={{ display: 'flex', alignItems: 'center' }}
+              >
+                <ArrowRight size={13} aria-hidden="true" />
+              </motion.span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </Link>
     </motion.div>
   );
 }
 
+/* ─── ManualCardFeatured ──────────────────────────────────────────── */
 export function ManualCardFeatured({ manual }) {
   const [imgError, setImgError] = useState(false);
-  const speaker = manual.speakerId ? speakersRepository.getById(manual.speakerId) : null;
+  const coverSrc = manual.cover || manual.coverImage || null;
+  const speakerId = manual.speakerIds?.[0] ?? manual.speakerId ?? null;
+  const speaker = speakerId ? participantsRepository.getById(speakerId) : null;
+  const palette = getCategoryPalette(manual.category);
 
   return (
-    <Link to={`/manuales/${manual.id}`} className="group block h-full">
-      <div
-        className="h-full bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-lg hover:border-brand-200 transition-all duration-300 flex flex-col"
-        style={{ transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s' }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-4px)';
-          e.currentTarget.style.boxShadow = '0 20px 40px rgba(26,63,170,0.12)';
+    <Link
+      to={`/manuales/${manual.id}`}
+      style={{ textDecoration: 'none', display: 'block', height: '100%' }}
+      aria-label={`Ver manual: ${manual.title}`}
+    >
+      <motion.div
+        initial="rest"
+        animate="rest"
+        whileHover="hover"
+        transition={{ duration: 0.28, ease: EASE }}
+        variants={{
+          rest: {
+            y: 0,
+            boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 0 0 1.5px #F1F5F9',
+          },
+          hover: {
+            y: -8,
+            boxShadow: `0 28px 64px rgba(0,0,0,0.11), 0 4px 20px rgba(0,0,0,0.06), 0 0 0 1.5px ${palette.border}`,
+          },
         }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.boxShadow = '';
+        style={{
+          display: 'flex', flexDirection: 'column',
+          height: '100%', background: '#fff',
+          borderRadius: 18, overflow: 'hidden',
+          willChange: 'transform',
         }}
       >
         {/* Image */}
         <div
-          className="relative w-full overflow-hidden bg-gradient-to-br from-brand-100 to-brand-200"
-          style={{ aspectRatio: '16/10' }}
+          style={{
+            position: 'relative', aspectRatio: '16/10', overflow: 'hidden',
+            background: `linear-gradient(135deg, ${palette.accent}18, ${palette.accent}30)`,
+            flexShrink: 0,
+          }}
         >
-          {manual.cover && !imgError ? (
-            <img
-              src={manual.cover}
+          {coverSrc && !imgError ? (
+            <motion.img
+              src={coverSrc}
               alt={manual.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              variants={{ rest: { scale: 1 }, hover: { scale: 1.07 } }}
+              transition={{ duration: 0.6, ease: EASE }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
               onError={() => setImgError(true)}
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <FileText size={40} className="text-brand-300" />
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen size={48} color={palette.accent} style={{ opacity: 0.25 }} aria-hidden="true" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+
+          <div
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(to top, rgba(10,15,30,0.30) 0%, transparent 60%)',
+            }}
+          />
 
           {/* Category badge */}
-          <div className="absolute top-4 left-4">
+          <div style={{ position: 'absolute', top: 16, left: 16 }}>
             <span
               style={{
-                display: 'inline-block',
-                padding: '4px 14px',
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
+                display: 'inline-block', padding: '4px 14px', borderRadius: 999,
+                fontSize: 12, fontWeight: 700,
                 background: 'rgba(255,255,255,0.92)',
-                color: '#1A3FAA',
-                backdropFilter: 'blur(8px)',
-                fontFamily: 'DM Sans, sans-serif',
-                letterSpacing: '0.02em',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                color: palette.accent, border: '1px solid rgba(255,255,255,0.6)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.02em',
               }}
             >
               {manual.category}
@@ -152,18 +313,14 @@ export function ManualCardFeatured({ manual }) {
 
           {/* Featured badge */}
           {manual.featured && (
-            <div className="absolute top-4 right-4">
+            <div style={{ position: 'absolute', top: 16, right: 16 }}>
               <span
                 style={{
-                  display: 'inline-block',
-                  padding: '4px 14px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: 600,
+                  display: 'inline-block', padding: '4px 14px', borderRadius: 999,
+                  fontSize: 12, fontWeight: 700,
                   background: 'rgba(255,255,255,0.92)',
-                  color: '#92400e',
-                  backdropFilter: 'blur(8px)',
-                  fontFamily: 'DM Sans, sans-serif',
+                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  color: '#92400e', fontFamily: 'DM Sans, sans-serif',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                 }}
               >
@@ -174,112 +331,70 @@ export function ManualCardFeatured({ manual }) {
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-3 p-6 flex-1">
-          <h3
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 24, flex: 1 }}>
+          <motion.h3
+            variants={{ rest: { color: '#0A0F1E' }, hover: { color: palette.accent } }}
+            transition={{ duration: 0.22 }}
             style={{
-              fontFamily: 'Syne, sans-serif',
-              fontSize: 18,
-              fontWeight: 700,
-              color: '#0A0F1E',
-              margin: 0,
-              lineHeight: 1.3,
-              letterSpacing: '-0.3px',
+              fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 700,
+              margin: 0, lineHeight: 1.3, letterSpacing: '-0.3px',
+              overflow: 'hidden', display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             }}
-            className="line-clamp-2 group-hover:text-brand-700 transition-colors"
           >
             {manual.title}
-          </h3>
+          </motion.h3>
 
           <p
             style={{
-              fontSize: 14,
-              color: '#64748b',
-              margin: 0,
-              lineHeight: 1.65,
+              fontSize: 14, color: '#64748b', margin: 0, lineHeight: 1.65,
               fontFamily: 'DM Sans, sans-serif',
+              overflow: 'hidden', display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', flex: 1,
             }}
-            className="line-clamp-2 flex-1"
           >
             {manual.description}
           </p>
 
           {/* Meta */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              paddingTop: 12,
-              borderTop: '1px solid #f1f5f9',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 12, borderTop: '1px solid #F1F5F9' }}>
             {speaker && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <User size={12} color="#93c5fd" />
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: '#64748b',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
+                <User size={12} color={palette.accent} aria-hidden="true" />
+                <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'DM Sans, sans-serif' }}>
                   {speaker.name}
                 </span>
               </div>
             )}
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {manual.date && (
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    fontSize: 12,
-                    color: '#94a3b8',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  <Calendar size={12} />
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>
+                  <Calendar size={12} aria-hidden="true" />
                   {formatDate(manual.date, { month: 'short' })}
                 </span>
               )}
               {manual.duration && (
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    fontSize: 12,
-                    color: '#94a3b8',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  <Clock size={12} />
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#94a3b8', fontFamily: 'DM Sans, sans-serif' }}>
+                  <Clock size={12} aria-hidden="true" />
                   {manual.duration}
                 </span>
               )}
             </div>
           </div>
 
-          {/* CTA */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#1A3FAA',
-              fontFamily: 'DM Sans, sans-serif',
-              marginTop: 4,
-              transition: 'gap 0.2s',
-            }}
-            className="group-hover:gap-2"
-          >
-            Ver manual <ArrowRight size={13} />
+          {/* CTA — arrow slides on hover */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: palette.accent, fontFamily: 'DM Sans, sans-serif', marginTop: 4 }}>
+            Ver manual
+            <motion.span
+              variants={{ rest: { x: 0 }, hover: { x: 5 } }}
+              transition={{ duration: 0.22, ease: EASE }}
+              style={{ display: 'flex', alignItems: 'center' }}
+            >
+              <ArrowRight size={13} aria-hidden="true" />
+            </motion.span>
           </div>
         </div>
-      </div>
+      </motion.div>
     </Link>
   );
 }

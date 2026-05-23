@@ -1,0 +1,15 @@
+# Coloca este archivo como public_html/api/.htaccess
+
+# ─── CORS a nivel Apache (se envía incluso si PHP falla) ────────────────────
+<IfModule mod_headers.c>
+    SetEnvIf Origin "^https?://(localhost:5173|localhost:4173|semillerosoftlab\.com|www\.semillerosoftlab\.com)$" CORS_ORIGIN=$0
+    Header always set Access-Control-Allow-Origin "%{CORS_ORIGIN}e" env=CORS_ORIGIN
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, X-Admin-Token"
+    Header always set Access-Control-Max-Age "86400"
+</IfModule>
+
+# ─── Responder OPTIONS (preflight) sin tocar PHP ────────────────────────────
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule .* - [R=204,L]

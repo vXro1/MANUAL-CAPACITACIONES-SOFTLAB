@@ -1,0 +1,120 @@
+/* ─────────────────────────────────────────────────────
+   DESIGN TOKENS — Softlab Manuales
+   Fuente única de verdad para colores, sombras, spacing,
+   tipografía, radios, z-index y transiciones.
+───────────────────────────────────────────────────── */
+
+:root {
+
+  /* ── Paleta principal ── */
+  --sl-blue-50:   #EEF3FF;
+  --sl-blue-100:  #C7D7F8;
+  --sl-blue-200:  #96B2F4;
+  --sl-blue-400:  #4F7BE8;
+  --sl-blue-600:  #1A3FAA;
+  --sl-blue-700:  #0F2870;
+  --sl-blue-900:  #060E30;
+
+  /* ── Alias semánticos ── */
+  --color-primary:        var(--sl-blue-600);
+  --color-primary-hover:  var(--sl-blue-700);
+  --color-primary-light:  var(--sl-blue-50);
+  --color-primary-border: var(--sl-blue-100);
+
+  /* ── Texto ── */
+  --text-primary:   #0A0F1E;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --text-white:     #ffffff;
+
+  /* ── Fondos ── */
+  --bg-white:    #ffffff;
+  --bg-light:    #F8FAFC;
+  --bg-muted:    #F1F5F9;
+  --bg-dark:     #080D1A;
+  --bg-darkest:  #050913;
+
+  /* ── Bordes ── */
+  --border-light:  #F1F5F9;
+  --border-medium: #E2E8F0;
+  --border-brand:  #C7D7F8;
+
+  /* ── Sombras ── */
+  --shadow-xs:       0 1px 3px rgba(0,0,0,0.05);
+  --shadow-sm:       0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md:       0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:       0 8px 32px rgba(0,0,0,0.10);
+  --shadow-xl:       0 16px 56px rgba(0,0,0,0.12);
+  --shadow-brand:    0 4px 24px rgba(26,63,170,0.15);
+  --shadow-brand-lg: 0 8px 48px rgba(26,63,170,0.20);
+  --shadow-brand-xl: 0 16px 64px rgba(26,63,170,0.25);
+
+  /* ── Tipografía ── */
+  --font-heading: 'Syne', system-ui, sans-serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-base:    'Inter', system-ui, sans-serif;
+
+  --text-xs:   0.6875rem;  /* 11px */
+  --text-sm:   0.8125rem;  /* 13px */
+  --text-base: 0.9375rem;  /* 15px */
+  --text-lg:   1.0625rem;  /* 17px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  2rem;       /* 32px */
+
+  --leading-tight:  1.1;
+  --leading-snug:   1.3;
+  --leading-normal: 1.6;
+  --leading-loose:  1.75;
+
+  /* ── Espaciado ── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  --space-section:   clamp(64px, 8vw, 96px);
+  --space-container: clamp(20px, 5vw, 48px);
+  --max-width:       1200px;
+  --max-width-wide:  1400px;
+
+  /* ── Border radius ── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-2xl:  24px;
+  --radius-3xl:  32px;
+  --radius-full: 999px;
+
+  /* ── Transiciones ── */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+
+  --duration-fast:   150ms;
+  --duration-base:   250ms;
+  --duration-slow:   400ms;
+  --duration-slower: 600ms;
+
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-base: var(--duration-base) var(--ease-out);
+  --transition-slow: var(--duration-slow) var(--ease-out);
+
+  /* ── Z-index ── */
+  --z-base:      0;
+  --z-above:     1;
+  --z-sticky:    10;
+  --z-navbar:    50;
+  --z-dropdown:  60;
+  --z-modal:     100;
+  --z-lightbox:  9999;
+}

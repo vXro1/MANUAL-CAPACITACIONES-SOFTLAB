@@ -3,19 +3,21 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { X, ExternalLink, Mail, BookOpen, GitBranch, ChevronRight } from 'lucide-react';
 import { participantsRepository, manualsRepository } from '@/storage/localStorageRepository';
 
+const EASE = [0.22, 1, 0.36, 1];
+
 const ROLE_CONFIG = {
-  Investigador: { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
-  'Co-Investigador': { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
-  'Investigador Principal': { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
-  Estudiante: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-  Docente: { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
-  'Docente Investigador': { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
-  Ponente: { bg: '#fefce8', color: '#92400e', border: '#fde68a' },
-  'Director del Semillero': { bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
-  'Co-Director del Semillero': { bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
-  'Auxiliar de Investigación': { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-  'Colaborador Externo': { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-  default: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  Investigador:               { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
+  'Co-Investigador':          { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
+  'Investigador Principal':   { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
+  Estudiante:                 { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  Docente:                    { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+  'Docente Investigador':     { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+  Ponente:                    { bg: '#fefce8', color: '#92400e', border: '#fde68a' },
+  'Director del Semillero':   { bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+  'Co-Director del Semillero':{ bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+  'Auxiliar de Investigación':{ bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  'Colaborador Externo':      { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  default:                    { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
 };
 
 function getRoleStyle(role) {
@@ -38,36 +40,44 @@ function getInitials(name = '') {
   return name.slice(0, 2).toUpperCase();
 }
 
+/* ── Avatar with glow ring ── */
 function Avatar({ name, photo, size = 56 }) {
   const [err, setErr] = useState(false);
   const color = avatarColor(name);
+
   if (photo && !err) {
     return (
-      <img
-        src={photo}
-        alt={name}
-        onError={() => setErr(true)}
-        style={{ width: size, height: size, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }}
-      />
+      <div
+        style={{
+          width: size, height: size, borderRadius: 12,
+          overflow: 'hidden', flexShrink: 0,
+          boxShadow: `0 0 0 2px #fff, 0 0 0 3.5px ${color}30`,
+          transition: 'box-shadow 0.25s ease',
+        }}
+        className="participant-avatar"
+      >
+        <img
+          src={photo}
+          alt={name}
+          onError={() => setErr(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
     );
   }
+
   return (
     <div
       style={{
-        width: size,
-        height: size,
-        borderRadius: 12,
-        background: color,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.3,
-        fontWeight: 800,
-        color: '#fff',
-        fontFamily: 'Syne, sans-serif',
-        flexShrink: 0,
-        letterSpacing: '-0.5px',
+        width: size, height: size, borderRadius: 12,
+        background: color, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.3, fontWeight: 800, color: '#fff',
+        fontFamily: 'Syne, sans-serif', letterSpacing: '-0.5px',
+        boxShadow: `0 0 0 2px #fff, 0 0 0 3.5px ${color}30`,
+        transition: 'box-shadow 0.25s ease',
       }}
+      className="participant-avatar"
     >
       {getInitials(name)}
     </div>
@@ -77,6 +87,7 @@ function Avatar({ name, photo, size = 56 }) {
 function AvatarModal({ name, photo, size = 72 }) {
   const [err, setErr] = useState(false);
   const color = avatarColor(name);
+
   if (photo && !err) {
     return (
       <img
@@ -84,32 +95,22 @@ function AvatarModal({ name, photo, size = 72 }) {
         alt={name}
         onError={() => setErr(true)}
         style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          objectFit: 'cover',
-          border: '4px solid #fff',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          width: size, height: size, borderRadius: '50%', objectFit: 'cover',
+          border: '4px solid #fff', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         }}
       />
     );
   }
+
   return (
     <div
       style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
+        width: size, height: size, borderRadius: '50%',
         background: `${color}22`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.28,
-        fontWeight: 800,
-        color: color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.28, fontWeight: 800, color,
         fontFamily: 'Syne, sans-serif',
-        border: '4px solid #fff',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+        border: '4px solid #fff', boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
         letterSpacing: '-0.5px',
       }}
     >
@@ -126,56 +127,50 @@ function SocialButton({ href, ariaLabel, children }) {
     href,
     'aria-label': ariaLabel,
     style: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      background: '#f1f5f9',
-      border: '1px solid #e5e7eb',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#64748b',
-      transition: 'background 0.2s, color 0.2s',
+      width: 32, height: 32, borderRadius: 8,
+      background: '#f1f5f9', border: '1px solid #e5e7eb',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#64748b', transition: 'background 0.2s, color 0.2s, transform 0.2s',
       textDecoration: 'none',
     },
     onMouseEnter: (e) => {
       e.currentTarget.style.background = '#eef3ff';
       e.currentTarget.style.color = '#1A3FAA';
+      e.currentTarget.style.transform = 'translateY(-1px)';
     },
     onMouseLeave: (e) => {
       e.currentTarget.style.background = '#f1f5f9';
       e.currentTarget.style.color = '#64748b';
+      e.currentTarget.style.transform = 'none';
     },
   };
 
-  if (isMail) {
-    return <a {...commonProps}>{children}</a>;
-  }
-
-  return (
-    <a {...commonProps} target="_blank" rel="noreferrer">
-      {children}
-    </a>
-  );
+  if (isMail) return <a {...commonProps}>{children}</a>;
+  return <a {...commonProps} target="_blank" rel="noreferrer">{children}</a>;
 }
+
 function ParticipantCard({ participant, onClick, index }) {
   const roleStyle = getRoleStyle(participant.role);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });
+  const accentColor = avatarColor(participant.name);
 
   return (
     <motion.button
       ref={ref}
       initial={{ opacity: 0, y: 24 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.45, delay: (index % 3) * 0.08, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -5, boxShadow: '0 16px 40px rgba(26,63,170,0.12)', borderColor: '#c7d7f8' }}
+      transition={{ duration: 0.48, delay: (index % 4) * 0.07, ease: EASE }}
+      whileHover={{
+        y: -6,
+        boxShadow: `0 20px 44px rgba(0,0,0,0.09), 0 0 0 1.5px ${accentColor}30`,
+      }}
       onClick={() => onClick(participant)}
       aria-label={`Ver perfil de ${participant.name}`}
       style={{
         background: '#fff',
         border: '1px solid #e5e7eb',
-        borderRadius: 16,
+        borderRadius: 18,
         padding: '20px',
         textAlign: 'left',
         width: '100%',
@@ -183,9 +178,13 @@ function ParticipantCard({ participant, onClick, index }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 14,
-        transition: 'border-color 0.2s, box-shadow 0.2s',
         outline: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03), 0 0 0 1px #f1f5f9',
+        willChange: 'transform',
+        transition: 'border-color 0.22s',
       }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = accentColor + '50'; }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
@@ -194,21 +193,14 @@ function ParticipantCard({ participant, onClick, index }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
             <h3
               style={{
-                fontFamily: 'Syne, sans-serif',
-                fontSize: 14,
-                fontWeight: 700,
-                color: '#0A0F1E',
-                margin: 0,
-                letterSpacing: '-0.2px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
+                fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700,
+                color: '#0A0F1E', margin: 0, letterSpacing: '-0.2px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
               }}
             >
               {participant.name}
             </h3>
-            <ChevronRight size={14} color="#cbd5e1" style={{ flexShrink: 0 }} />
+            <ChevronRight size={14} color="#cbd5e1" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: 'none' }} />
           </div>
           <p style={{ fontSize: 12, color: '#94a3b8', margin: '3px 0 0', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {participant.career}
@@ -221,15 +213,11 @@ function ParticipantCard({ participant, onClick, index }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         <span
           style={{
-            padding: '3px 10px',
-            borderRadius: 999,
-            fontSize: 11,
-            fontWeight: 700,
-            background: roleStyle.bg,
-            color: roleStyle.color,
+            padding: '3px 10px', borderRadius: 999,
+            fontSize: 11, fontWeight: 700,
+            background: roleStyle.bg, color: roleStyle.color,
             border: `1px solid ${roleStyle.border}`,
-            fontFamily: 'DM Sans, sans-serif',
-            letterSpacing: '0.02em',
+            fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.02em',
           }}
         >
           {participant.role}
@@ -238,12 +226,9 @@ function ParticipantCard({ participant, onClick, index }) {
           <span
             key={skill}
             style={{
-              padding: '3px 10px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 500,
-              background: '#f8fafc',
-              color: '#475569',
+              padding: '3px 10px', borderRadius: 999,
+              fontSize: 11, fontWeight: 500,
+              background: '#f8fafc', color: '#475569',
               border: '1px solid #e5e7eb',
               fontFamily: 'DM Sans, sans-serif',
             }}
@@ -279,14 +264,10 @@ function ParticipantModal({ participant, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.22 }}
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
       }}
       role="dialog"
       aria-modal="true"
@@ -298,30 +279,24 @@ function ParticipantModal({ participant, onClose }) {
         exit={{ opacity: 0 }}
         onClick={onClose}
         style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(10,15,30,0.55)',
-          backdropFilter: 'blur(6px)',
+          position: 'absolute', inset: 0,
+          background: 'rgba(10,15,30,0.60)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         }}
       />
 
       {/* Panel */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 20 }}
+        initial={{ opacity: 0, scale: 0.92, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 20 }}
-        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        exit={{ opacity: 0, scale: 0.92, y: 24 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
         style={{
-          position: 'relative',
-          background: '#fff',
-          borderRadius: 24,
-          width: '100%',
-          maxWidth: 440,
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.22)',
+          position: 'relative', background: '#fff',
+          borderRadius: 24, width: '100%', maxWidth: 440,
+          maxHeight: '90vh', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 40px 100px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.12)',
         }}
       >
         {/* Header */}
@@ -329,17 +304,14 @@ function ParticipantModal({ participant, onClose }) {
           style={{
             background: 'linear-gradient(135deg, #1A3FAA 0%, #2952cc 100%)',
             padding: '28px 24px 52px',
-            position: 'relative',
-            flexShrink: 0,
+            position: 'relative', flexShrink: 0,
           }}
         >
           <div
             style={{
-              position: 'absolute',
-              inset: 0,
+              position: 'absolute', inset: 0,
               backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
-              pointerEvents: 'none',
+              backgroundSize: '24px 24px', pointerEvents: 'none',
             }}
           />
           <button
@@ -347,20 +319,11 @@ function ParticipantModal({ participant, onClose }) {
             onClick={onClose}
             aria-label="Cerrar"
             style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.12)',
-              border: 'none',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'background 0.2s',
+              position: 'absolute', top: 16, right: 16,
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'background 0.2s',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.22)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
@@ -369,21 +332,15 @@ function ParticipantModal({ participant, onClose }) {
           </button>
         </div>
 
-        {/* Avatar flotante + iconos sociales */}
+        {/* Avatar + social icons */}
         <div
           style={{
-            position: 'relative',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: 14,
-            padding: '0 24px',
-            marginTop: -36,
+            position: 'relative', flexShrink: 0,
+            display: 'flex', alignItems: 'flex-end', gap: 14,
+            padding: '0 24px', marginTop: -36,
           }}
         >
           <AvatarModal name={participant.name} photo={participant.photo} size={72} />
-
-          {/* Social icons */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
             <SocialButton href={participant.linkedin} ariaLabel="LinkedIn">
               <ExternalLink size={13} />
@@ -399,16 +356,12 @@ function ParticipantModal({ participant, onClose }) {
           </div>
         </div>
 
-        {/* Cuerpo scrollable */}
+        {/* Scrollable body */}
         <div style={{ padding: '16px 24px 28px', overflowY: 'auto', flex: 1 }}>
           <h2
             style={{
-              fontFamily: 'Syne, sans-serif',
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#0A0F1E',
-              margin: '0 0 8px',
-              letterSpacing: '-0.4px',
+              fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 700,
+              color: '#0A0F1E', margin: '0 0 8px', letterSpacing: '-0.4px',
             }}
           >
             {participant.name}
@@ -416,17 +369,12 @@ function ParticipantModal({ participant, onClose }) {
 
           <span
             style={{
-              display: 'inline-block',
-              padding: '4px 12px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              background: roleStyle.bg,
-              color: roleStyle.color,
+              display: 'inline-block', padding: '4px 12px', borderRadius: 999,
+              fontSize: 11, fontWeight: 700,
+              background: roleStyle.bg, color: roleStyle.color,
               border: `1px solid ${roleStyle.border}`,
               fontFamily: 'DM Sans, sans-serif',
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
+              letterSpacing: '0.05em', textTransform: 'uppercase',
             }}
           >
             {participant.role}
@@ -449,13 +397,9 @@ function ParticipantModal({ participant, onClose }) {
             <div style={{ marginTop: 20 }}>
               <p
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: '#94a3b8',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  marginBottom: 10,
-                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  marginBottom: 10, fontFamily: 'DM Sans, sans-serif',
                 }}
               >
                 Habilidades
@@ -465,14 +409,9 @@ function ParticipantModal({ participant, onClose }) {
                   <span
                     key={skill}
                     style={{
-                      padding: '5px 12px',
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      background: '#eef3ff',
-                      color: '#1A3FAA',
-                      border: '1px solid #c7d7f8',
-                      fontFamily: 'DM Sans, sans-serif',
+                      padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                      background: '#eef3ff', color: '#1A3FAA',
+                      border: '1px solid #c7d7f8', fontFamily: 'DM Sans, sans-serif',
                     }}
                   >
                     {skill}
@@ -486,13 +425,9 @@ function ParticipantModal({ participant, onClose }) {
             <div style={{ marginTop: 20 }}>
               <p
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: '#94a3b8',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  marginBottom: 10,
-                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  marginBottom: 10, fontFamily: 'DM Sans, sans-serif',
                 }}
               >
                 Manuales como autor
@@ -502,14 +437,14 @@ function ParticipantModal({ participant, onClose }) {
                   <div
                     key={m.id}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
+                      display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px',
-                      background: '#f8fafc',
-                      border: '1px solid #e5e7eb',
+                      background: '#f8fafc', border: '1px solid #e5e7eb',
                       borderRadius: 10,
+                      transition: 'background 0.18s',
                     }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#eef3ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
                   >
                     <BookOpen size={13} color="#1A3FAA" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: '#374151', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -537,26 +472,25 @@ export function ParticipantsSection() {
   return (
     <section
       aria-label="Investigadores del semillero"
-      style={{ padding: '96px 0', background: '#f8fafc' }}
+      style={{
+        padding: '96px 0',
+        background: 'linear-gradient(180deg, #F1F5FF 0%, #F8FAFC 80px, #F8FAFC 100%)',
+      }}
     >
       <div
         style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px' }}
         className="participants-container"
       >
-        {/* Título */}
+        {/* Title */}
         <div ref={titleRef} style={{ textAlign: 'center', marginBottom: 56 }}>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={titleInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5 }}
             style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#1A3FAA',
-              marginBottom: 10,
-              fontFamily: 'DM Sans, sans-serif',
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: '#1A3FAA',
+              marginBottom: 10, fontFamily: 'DM Sans, sans-serif',
             }}
           >
             Comunidad
@@ -564,14 +498,12 @@ export function ParticipantsSection() {
           <motion.h2
             initial={{ opacity: 0, y: 16 }}
             animate={titleInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
             style={{
               fontFamily: 'Syne, sans-serif',
               fontSize: 'clamp(26px, 3.5vw, 42px)',
-              fontWeight: 700,
-              color: '#0A0F1E',
-              letterSpacing: '-1px',
-              margin: '0 0 12px',
+              fontWeight: 700, color: '#0A0F1E',
+              letterSpacing: '-1px', margin: '0 0 12px',
             }}
           >
             Investigadores del semillero
@@ -588,7 +520,7 @@ export function ParticipantsSection() {
 
         {/* Grid */}
         <div
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}
           className="participants-grid"
         >
           {participants.map((p, i) => (
@@ -602,17 +534,6 @@ export function ParticipantsSection() {
           <ParticipantModal participant={selected} onClose={() => setSelected(null)} />
         )}
       </AnimatePresence>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .participants-container { padding: 0 24px !important; }
-          .participants-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-        @media (max-width: 560px) {
-          .participants-container { padding: 0 20px !important; }
-          .participants-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </section>
   );
 }

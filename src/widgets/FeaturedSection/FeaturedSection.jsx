@@ -1,209 +1,307 @@
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock, BookOpen, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, ArrowLeft, BookOpen, Calendar, Clock, Star } from 'lucide-react';
 import { manualsRepository } from '@/storage/localStorageRepository';
 import { formatDate } from '@/shared/lib/formatDate';
-import { ManualCardFeatured } from '@/widgets/ManualCard/ManualCard';
 
-const CATEGORY_COLORS = {
-  'Realidad Virtual': { bg: '#eef3ff', color: '#1A3FAA', border: '#c7d7f8' },
-  DevOps: { bg: '#fff7ed', color: '#92400e', border: '#fcd9a0' },
-  Docker: { bg: '#fff7ed', color: '#92400e', border: '#fcd9a0' },
-  default: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+const PALETTE = {
+  'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
+  'DevOps':                 { bg: '#FFF7ED', accent: '#C2410C', border: '#FED7AA' },
+  'Control de Versiones':   { bg: '#F0FDF4', accent: '#15803D', border: '#BBF7D0' },
+  'Desarrollo Frontend':    { bg: '#FDF4FF', accent: '#9333EA', border: '#E9D5FF' },
+  'Desarrollo Backend':     { bg: '#FFF1F2', accent: '#E11D48', border: '#FECDD3' },
+  'Bases de Datos':         { bg: '#F0F9FF', accent: '#0369A1', border: '#BAE6FD' },
+  'Gestión de Proyectos':   { bg: '#FEFCE8', accent: '#CA8A04', border: '#FDE68A' },
+  'Seguridad':              { bg: '#F8FAFC', accent: '#475569', border: '#CBD5E1' },
+  'Inteligencia Artificial':{ bg: '#ECFDF5', accent: '#059669', border: '#A7F3D0' },
+  default:                  { bg: '#F8FAFF', accent: '#1A3FAA', border: '#C7D7F8' },
 };
 
-function getCategoryStyle(category) {
-  return CATEGORY_COLORS[category] || CATEGORY_COLORS.default;
+function getPalette(cat) {
+  return PALETTE[cat] || PALETTE.default;
 }
 
-function ManualRow({ manual, index }) {
-  const style = getCategoryStyle(manual.category);
+const slideVariants = {
+  enter: (direction) => ({
+    x: direction > 0 ? '100%' : '-100%',
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction) => ({
+    x: direction > 0 ? '-100%' : '100%',
+    opacity: 0,
+  }),
+};
+
+function CarouselSlide({ manual, palette }) {
+  const [imgError, setImgError] = useState(false);
+  const coverSrc = manual.cover || manual.coverImage || null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '55% 45%',
+        height: '100%',
+        background: palette.bg,
+      }}
+      className="carousel-slide-inner"
     >
-      <Link
-        to={`/manuales/${manual.id}`}
-        style={{ textDecoration: 'none' }}
-        aria-label={`Ver manual: ${manual.title}`}
+      {/* Text side */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: 'clamp(32px, 5vw, 56px)',
+          gap: 20,
+        }}
       >
-        <div
-          className="manual-row"
+        {/* Badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '4px 14px',
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              background: palette.accent + '18',
+              color: palette.accent,
+              border: `1.5px solid ${palette.border}`,
+              fontFamily: 'DM Sans, sans-serif',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {manual.category}
+          </span>
+          {manual.featured && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 12px',
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 700,
+                background: '#FEFCE8',
+                color: '#CA8A04',
+                border: '1.5px solid #FDE68A',
+                fontFamily: 'DM Sans, sans-serif',
+              }}
+            >
+              <Star size={10} fill="#CA8A04" aria-hidden="true" /> Destacado
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            gap: 16,
-            padding: '24px 28px',
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 14,
-            alignItems: 'center',
-            transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#1A3FAA';
-            e.currentTarget.style.transform = 'translateY(-3px)';
-            e.currentTarget.style.boxShadow = '0 10px 32px rgba(26,63,170,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#e5e7eb';
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = 'none';
+            fontFamily: 'Syne, sans-serif',
+            fontSize: 'clamp(22px, 3vw, 34px)',
+            fontWeight: 800,
+            color: '#0A0F1E',
+            margin: 0,
+            lineHeight: 1.18,
+            letterSpacing: '-0.5px',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-            {/* Badge categoría */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  padding: '3px 10px',
-                  borderRadius: 999,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  background: style.bg,
-                  color: style.color,
-                  border: `1px solid ${style.border}`,
-                  fontFamily: 'DM Sans, sans-serif',
-                  letterSpacing: '0.03em',
-                }}
-              >
-                {manual.category}
-              </span>
-              {manual.featured && (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    padding: '3px 10px',
-                    borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: '#fefce8',
-                    color: '#92400e',
-                    border: '1px solid #fde68a',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  ★ Destacado
-                </span>
-              )}
-            </div>
+          {manual.title}
+        </h3>
 
-            {/* Título */}
-            <h3
-              style={{
-                fontFamily: 'Syne, sans-serif',
-                fontSize: 17,
-                fontWeight: 700,
-                color: '#0A0F1E',
-                margin: 0,
-                lineHeight: 1.3,
-                letterSpacing: '-0.3px',
-              }}
-            >
-              {manual.title}
-            </h3>
+        {/* Description */}
+        {manual.description && (
+          <p
+            style={{
+              fontSize: 14,
+              color: '#475569',
+              margin: 0,
+              lineHeight: 1.7,
+              fontFamily: 'DM Sans, sans-serif',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}
+          >
+            {manual.description}
+          </p>
+        )}
 
-            {/* Descripción */}
-            {manual.description && (
-              <p
-                style={{
-                  fontSize: 13,
-                  color: '#64748b',
-                  margin: 0,
-                  lineHeight: 1.65,
-                  overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                {manual.description}
-              </p>
-            )}
-
-            {/* Meta */}
-            <div
+        {/* Meta */}
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {manual.date && (
+            <span
               style={{
                 display: 'flex',
-                gap: 16,
-                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 13,
+                color: '#64748b',
+                fontFamily: 'DM Sans, sans-serif',
               }}
             >
-              {manual.date && (
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    fontSize: 12,
-                    color: '#94a3b8',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  <Calendar size={12} aria-hidden="true" />
-                  {formatDate(manual.date)}
-                </span>
-              )}
-              {manual.duration && (
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    fontSize: 12,
-                    color: '#94a3b8',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  <Clock size={12} aria-hidden="true" />
-                  {manual.duration}
-                </span>
-              )}
-            </div>
-          </div>
+              <Calendar size={13} color={palette.accent} aria-hidden="true" />
+              {formatDate(manual.date, { month: 'short' })}
+            </span>
+          )}
+          {manual.duration && (
+            <span
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 13,
+                color: '#64748b',
+                fontFamily: 'DM Sans, sans-serif',
+              }}
+            >
+              <Clock size={13} color={palette.accent} aria-hidden="true" />
+              {manual.duration}
+            </span>
+          )}
+        </div>
 
-          {/* Icono derecho */}
+        {/* CTA */}
+        <div>
+          <Link
+            to={`/manuales/${manual.id}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '11px 22px',
+              borderRadius: 12,
+              background: palette.accent,
+              color: '#fff',
+              textDecoration: 'none',
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: 'DM Sans, sans-serif',
+              transition: 'opacity 0.2s, transform 0.2s',
+              boxShadow: `0 4px 16px ${palette.accent}30`,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
+          >
+            Ver manual <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Image side */}
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: `linear-gradient(135deg, ${palette.accent}22, ${palette.accent}44)`,
+        }}
+        className="carousel-image-side"
+      >
+        {coverSrc && !imgError ? (
+          <img
+            src={coverSrc}
+            alt={manual.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+        ) : (
           <div
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: '#eef3ff',
+              width: '100%',
+              height: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flexShrink: 0,
-              transition: 'background 0.2s',
             }}
           >
-            <ExternalLink size={16} color="#1A3FAA" aria-hidden="true" />
+            <BookOpen
+              size={72}
+              color={palette.accent}
+              style={{ opacity: 0.25 }}
+              aria-hidden="true"
+            />
           </div>
-        </div>
-      </Link>
-    </motion.div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export function FeaturedSection() {
-  const featured = manualsRepository.getFeatured?.()?.slice(0, 4)
-    ?? manualsRepository.getAll().slice(0, 4);
+  const manuals = manualsRepository.getAll().slice(0, 6);
 
-  if (!featured.length) return null;
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef(null);
+
+  const current = manuals[index];
+
+  function go(newIndex, dir) {
+    setDirection(dir);
+    setIndex(newIndex);
+  }
+
+  function prev() {
+    go(index === 0 ? manuals.length - 1 : index - 1, -1);
+  }
+
+  function next() {
+    go(index === manuals.length - 1 ? 0 : index + 1, 1);
+  }
+
+  useEffect(() => {
+    if (paused || manuals.length <= 1) return;
+    timerRef.current = setInterval(() => {
+      setDirection(1);
+      setIndex((i) => (i === manuals.length - 1 ? 0 : i + 1));
+    }, 5000);
+    return () => clearInterval(timerRef.current);
+  }, [paused, manuals.length, index]);
+
+  if (!manuals.length) return null;
+
+  const palette = getPalette(current?.category);
 
   return (
     <section
-      aria-label="Manuales destacados"
-      style={{ padding: '80px 0', background: '#fff' }}
+      aria-label="Manuales recientes"
+      style={{
+        padding: '96px 0',
+        background: '#FAFBFF',
+        borderTop: '1px solid rgba(226,232,240,0.6)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
     >
+      {/* Subtle dot pattern */}
       <div
-        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px' }}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(circle, #dde6f7 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          opacity: 0.45,
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div
+        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
         className="featured-container"
       >
         {/* Header */}
@@ -224,8 +322,8 @@ export function FeaturedSection() {
               viewport={{ once: true }}
               style={{
                 fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: '0.08em',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
                 textTransform: 'uppercase',
                 color: '#1A3FAA',
                 marginBottom: 8,
@@ -241,112 +339,197 @@ export function FeaturedSection() {
               transition={{ delay: 0.1 }}
               style={{
                 fontFamily: 'Syne, sans-serif',
-                fontSize: 'clamp(22px, 3vw, 34px)',
-                fontWeight: 700,
+                fontSize: 'clamp(22px, 3vw, 36px)',
+                fontWeight: 800,
                 color: '#0A0F1E',
-                letterSpacing: '-0.5px',
-                lineHeight: 1.2,
+                letterSpacing: '-0.6px',
+                lineHeight: 1.15,
                 margin: 0,
               }}
             >
-              Manuales más recientes
+              Manuales recientes
             </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              style={{
-                fontSize: 14,
-                color: '#64748b',
-                marginTop: 8,
-                fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              Las capacitaciones más relevantes documentadas por el equipo Softlab.
-            </motion.p>
           </div>
 
-          <Link to="/manuales" style={{ textDecoration: 'none' }}>
-            <button
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+          >
+            <Link
+              to="/manuales"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
                 padding: '10px 20px',
-                background: 'transparent',
+                background: 'rgba(255,255,255,0.70)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
                 color: '#1A3FAA',
-                border: '1.5px solid #1A3FAA',
-                borderRadius: 10,
+                border: '1.5px solid rgba(26,63,170,0.18)',
+                borderRadius: 12,
                 fontSize: 13,
                 fontWeight: 600,
-                cursor: 'pointer',
+                textDecoration: 'none',
                 fontFamily: 'DM Sans, sans-serif',
-                transition: 'background 0.2s',
+                transition: 'background 0.2s, border-color 0.2s',
                 whiteSpace: 'nowrap',
+                boxShadow: '0 2px 12px rgba(26,63,170,0.07)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#eef3ff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(238,243,255,0.90)';
+                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.30)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.70)';
+                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.18)';
+              }}
             >
-              Ver todos <ArrowRight size={14} />
-            </button>
-          </Link>
+              Ver todos <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </motion.div>
         </div>
 
-        {/* Grid 2 columnas */}
+        {/* Carousel — glass-framed */}
         <div
-          className="featured-grid"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 24,
+            position: 'relative',
+            borderRadius: 22,
+            padding: 6,
+            background: 'rgba(255,255,255,0.60)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.80)',
+            boxShadow: `0 2px 0 rgba(147,197,253,0.18), 0 16px 56px rgba(26,63,170,0.09)`,
           }}
         >
-          {featured.map((manual, i) => (
+        <div
+          style={{
+            position: 'relative',
+            borderRadius: 18,
+            overflow: 'hidden',
+            height: 420,
+            border: `1px solid ${palette.border}`,
+            transition: 'border-color 0.4s',
+          }}
+          className="carousel-wrapper"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <AnimatePresence initial={false} custom={direction}>
             <motion.div
-              key={manual.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              style={{ height: '100%' }}
+              key={index}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+              style={{ position: 'absolute', inset: 0 }}
             >
-              <ManualCardFeatured manual={manual} />
+              <CarouselSlide manual={current} palette={palette} />
             </motion.div>
-          ))}
+          </AnimatePresence>
+
+          {/* Prev / Next arrows */}
+          {manuals.length > 1 && (
+            <>
+              <button
+                onClick={prev}
+                aria-label="Manual anterior"
+                style={{
+                  position: 'absolute',
+                  left: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.9)',
+                  border: `1px solid ${palette.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+                  transition: 'background 0.2s, transform 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+              >
+                <ArrowLeft size={16} color={palette.accent} aria-hidden="true" />
+              </button>
+
+              <button
+                onClick={next}
+                aria-label="Manual siguiente"
+                style={{
+                  position: 'absolute',
+                  right: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.9)',
+                  border: `1px solid ${palette.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+                  transition: 'background 0.2s, transform 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+              >
+                <ArrowRight size={16} color={palette.accent} aria-hidden="true" />
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Enlace secundario */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          style={{ textAlign: 'center', marginTop: 36 }}
-        >
-          <Link
-            to="/manuales"
+        </div>
+
+        {/* Dots */}
+        {manuals.length > 1 && (
+          <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 13,
-              color: '#1A3FAA',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontFamily: 'DM Sans, sans-serif',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 8,
+              marginTop: 20,
             }}
+            role="tablist"
+            aria-label="Diapositivas del carrusel"
           >
-            <BookOpen size={14} /> Ver la biblioteca completa
-          </Link>
-        </motion.div>
+            {manuals.map((_, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`Ir a manual ${i + 1}`}
+                onClick={() => go(i, i > index ? 1 : -1)}
+                style={{
+                  width: i === index ? 24 : 8,
+                  height: 8,
+                  borderRadius: 999,
+                  border: 'none',
+                  background: i === index ? palette.accent : '#CBD5E1',
+                  cursor: 'pointer',
+                  padding: 0,
+                  transition: 'width 0.3s, background 0.3s',
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .featured-container { padding: 0 20px !important; }
-          .featured-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </section>
   );
 }

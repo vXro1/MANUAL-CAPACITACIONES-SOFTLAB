@@ -1,0 +1,17 @@
+# Este archivo va en public_html/uploads/.htaccess
+# Permite que react-pdf (fetch interno) cargue PDFs cross-origin
+
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Range"
+    Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, Accept-Ranges"
+</IfModule>
+
+# Bloquear ejecución de PHP dentro de uploads
+<FilesMatch "\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+Options -Indexes
