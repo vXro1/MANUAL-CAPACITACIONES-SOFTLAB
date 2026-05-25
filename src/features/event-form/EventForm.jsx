@@ -107,8 +107,58 @@ function CategoryField({ value, onChange }) {
   );
 }
 
-// Roles frecuentes para eventos (el admin puede escribir cualquier valor)
+// Roles predefinidos para eventos
 const EVENT_ROLES = ['Ponente', 'Asistente', 'Organizador', 'Moderador', 'Coordinador', 'Invitado'];
+const OTRO_VALUE  = '__otro__';
+
+// ─── Selector de rol: dropdown + campo de texto cuando se elige "Otro" ─────────
+function RoleSelector({ participanteId, rol, onChangeRol, name }) {
+  // Estado local: ¿está en modo personalizado?
+  // Se inicializa en true si el rol actual ya es un valor no predefinido.
+  const [custom, setCustom] = useState(() => Boolean(rol) && !EVENT_ROLES.includes(rol));
+
+  const selectValue = custom ? OTRO_VALUE : (EVENT_ROLES.includes(rol) ? rol : EVENT_ROLES[0]);
+
+  const handleSelect = (e) => {
+    const val = e.target.value;
+    if (val === OTRO_VALUE) {
+      setCustom(true);
+      // No tocamos rol todavía; el usuario escribirá en el input
+    } else {
+      setCustom(false);
+      onChangeRol(participanteId, val);
+    }
+  };
+
+  return (
+    <div className="shrink-0 flex flex-col gap-1 items-end">
+      <select
+        value={selectValue}
+        onChange={handleSelect}
+        aria-label={`Rol de ${name} en el evento`}
+        className="w-36 px-2 py-1 rounded-lg border border-brand-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+      >
+        {EVENT_ROLES.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+        <option value={OTRO_VALUE}>Otro…</option>
+      </select>
+
+      {/* Campo de texto: solo visible en modo personalizado */}
+      {custom && (
+        <input
+          autoFocus
+          type="text"
+          value={EVENT_ROLES.includes(rol) ? '' : (rol ?? '')}
+          onChange={(e) => onChangeRol(participanteId, e.target.value)}
+          placeholder="Escribe el rol…"
+          className="w-36 px-2 py-1 rounded-lg border border-brand-300 bg-white text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          aria-label={`Rol personalizado de ${name}`}
+        />
+      )}
+    </div>
+  );
+}
 
 // ─── Selector de participantes con rol por participante ───────────────────────
 // value: [{ participante_id, rol }]
@@ -125,7 +175,7 @@ function ParticipantsField({ value, onChange }) {
     if (selectedIds.includes(id)) {
       onChange(value.filter((pr) => pr.participante_id !== id));
     } else {
-      onChange([...value, { participante_id: id, rol: 'Ponente' }]);
+      onChange([...value, { participante_id: id, rol: EVENT_ROLES[0] }]);
     }
   };
 
@@ -158,13 +208,13 @@ function ParticipantsField({ value, onChange }) {
           No hay participantes registrados. Agrega participantes primero desde el panel.
         </p>
       ) : (
-        <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50">
+        <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50">
           {filtered.length === 0 ? (
             <p className="text-xs text-slate-400 p-3">Sin resultados.</p>
           ) : (
             filtered.map((p) => {
               const selected = selectedIds.includes(p.id);
-              const pr = value.find((r) => r.participante_id === p.id);
+              const pr       = value.find((r) => r.participante_id === p.id);
               const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
               return (
                 <div
@@ -195,30 +245,18 @@ function ParticipantsField({ value, onChange }) {
                     <p className="text-xs text-slate-400 truncate">{p.career || p.role || ''}</p>
                   </div>
                   {selected && (
-                    <div className="shrink-0">
-                      <input
-                        list={`roles-${p.id}`}
-                        value={pr?.rol ?? 'Ponente'}
-                        onChange={(e) => setRol(p.id, e.target.value)}
-                        placeholder="Rol en el evento"
-                        className="w-32 px-2 py-1 rounded-lg border border-brand-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        aria-label={`Rol de ${p.name} en el evento`}
-                      />
-                      <datalist id={`roles-${p.id}`}>
-                        {EVENT_ROLES.map((r) => <option key={r} value={r} />)}
-                      </datalist>
-                    </div>
+                    <RoleSelector
+                      participanteId={p.id}
+                      rol={pr?.rol ?? EVENT_ROLES[0]}
+                      onChangeRol={setRol}
+                      name={p.name}
+                    />
                   )}
                 </div>
               );
             })
           )}
         </div>
-      )}
-      {value.length > 0 && (
-        <p className="text-xs text-slate-400">
-          Puedes escribir un rol personalizado en el campo de rol de cada participante.
-        </p>
       )}
     </div>
   );
