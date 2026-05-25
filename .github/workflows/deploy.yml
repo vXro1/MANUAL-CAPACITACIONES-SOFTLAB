@@ -7,11 +7,11 @@ on:
       - segunda-version
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -23,37 +23,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
+      - name: Build
         run: npm run build
 
-      - name: Deploy frontend to public_html
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: dist/
-          server-dir: public_html/
-          log-level: verbose
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            uploads/**
+      # Junta dist/ + api-backend/ en una carpeta _deploy/
+      - name: Prepare deploy folder
+        run: |
+          mkdir -p _deploy
+          cp -r dist/. _deploy/
+          cp -r api-backend _deploy/api-backend
 
-      - name: Deploy backend API
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      # Publica _deploy/ como rama "deploy" (Hostinger jalará esta rama)
+      - name: Publish to deploy branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: api-backend/
-          server-dir: public_html/api-backend/
-          log-level: verbose
-          exclude: |
-            **/.git*
-            **/.git*/**
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _deploy
+          publish_branch: deploy
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          commit_message: "deploy: ${{ github.sha }}"
