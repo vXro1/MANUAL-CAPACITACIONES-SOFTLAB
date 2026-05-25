@@ -1,4 +1,4 @@
-const API_BASE = 'https://semillerosoftlab.com/api';
+const API_BASE = 'https://semillerosoftlab.com/api-backend';
 
 // ─── Token admin ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'softlab_api_token';

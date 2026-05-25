@@ -1,5 +1,14 @@
-# ─── MIME types para módulos JavaScript (ES modules de Vite) ─────────────────
-# Sin esto Apache sirve los .js como text/plain y el navegador los rechaza.
+# ─── MIME types (ForceType para máxima compatibilidad con LiteSpeed) ─────────
+<FilesMatch "\.js$">
+    ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.mjs$">
+    ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.css$">
+    ForceType text/css
+</FilesMatch>
+
 AddType application/javascript .js .mjs
 AddType text/css               .css
 AddType image/svg+xml          .svg
@@ -7,7 +16,7 @@ AddType application/json       .json
 AddType font/woff2             .woff2
 AddType font/woff              .woff
 
-# ─── Compresión (mejora rendimiento) ─────────────────────────────────────────
+# ─── Compresión ───────────────────────────────────────────────────────────────
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE application/javascript text/css text/html application/json
 </IfModule>
@@ -24,14 +33,14 @@ AddType font/woff              .woff
 Options -MultiViews
 RewriteEngine On
 
-# 1. Dejar pasar peticiones a /api/ (PHP backend)
-RewriteCond %{REQUEST_URI} ^/api/
+# 1. Dejar pasar peticiones a /api-backend/ (PHP backend)
+RewriteCond %{REQUEST_URI} ^/api-backend/
 RewriteRule ^ - [L]
 
-# 2. Dejar pasar archivos y carpetas que existen en disco (assets del build)
+# 2. Dejar pasar archivos y carpetas que existen en disco
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# 3. Todo lo demás → index.html (React Router maneja las rutas)
+# 3. Todo lo demás → index.html (React Router)
 RewriteRule ^ /index.html [L]
