@@ -34,6 +34,44 @@ $id = isset($_GET['id'])
     : null;
 
 // ─────────────────────────────────────────────────────────────
+// HELPER — Sincronizar participantes en tabla relacional
+// ─────────────────────────────────────────────────────────────
+
+function syncManualParticipantes($manualId, $speakerIds, $autorIds, $auxiliaresIds, $participantesDirectos) {
+    try {
+        db()->prepare('DELETE FROM manuales_participantes WHERE manual_id = ?')
+             ->execute([$manualId]);
+
+        $ins = db()->prepare(
+            'INSERT IGNORE INTO manuales_participantes (manual_id, participante_id, rol) VALUES (?, ?, ?)'
+        );
+
+        // Si vienen participantes con roles explícitos, usarlos directamente
+        if (!empty($participantesDirectos)) {
+            foreach ($participantesDirectos as $pr) {
+                if (!empty($pr['participante_id'])) {
+                    $ins->execute([$manualId, (int)$pr['participante_id'], $pr['rol'] ?? 'Autor']);
+                }
+            }
+            return;
+        }
+
+        // Fallback: usar los tres arrays separados
+        foreach ($speakerIds as $pid) {
+            if ($pid) $ins->execute([$manualId, (int)$pid, 'Ponente']);
+        }
+        foreach ($autorIds as $pid) {
+            if ($pid) $ins->execute([$manualId, (int)$pid, 'Autor']);
+        }
+        foreach ($auxiliaresIds as $pid) {
+            if ($pid) $ins->execute([$manualId, (int)$pid, 'Auxiliar']);
+        }
+    } catch (Exception $e) {
+        // La tabla manuales_participantes aún no existe; omitir
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 // NORMALIZAR MANUAL
 // ─────────────────────────────────────────────────────────────
 
@@ -64,6 +102,52 @@ function parseManual($row) {
     $row['cover']         = $extra['cover']         ?? null;
     $row['objectives']    = $extra['objectives']    ?? [];
     $row['auxiliaresIds'] = $extra['auxiliaresIds'] ?? [];
+
+    // Participantes con roles desde la tabla relacional
+    try {
+        $stmtP = db()->prepare('
+            SELECT participante_id, rol
+            FROM manuales_participantes
+            WHERE manual_id = ?
+            ORDER BY id ASC
+        ');
+        $stmtP->execute([(int)$row['id']]);
+        $mpRows = $stmtP->fetchAll();
+
+        $row['participantes'] = array_map(function ($r) {
+            return [
+                'participante_id' => (string)$r['participante_id'],
+                'rol'             => $r['rol'],
+            ];
+        }, $mpRows);
+
+        // Reconstruir speakerIds/authorIds/auxiliaresIds desde la tabla relacional
+        // para mantener compatibilidad con el frontend existente
+        $speakerIdsNuevos    = [];
+        $authorIdsNuevos     = [];
+        $auxiliaresIdsNuevos = [];
+        foreach ($mpRows as $r) {
+            $pid = (string)$r['participante_id'];
+            if ($r['rol'] === 'Ponente') {
+                $speakerIdsNuevos[] = $pid;
+            } elseif ($r['rol'] === 'Auxiliar') {
+                $auxiliaresIdsNuevos[] = $pid;
+            } else {
+                $authorIdsNuevos[] = $pid;
+            }
+        }
+
+        // Solo sobrescribir si la tabla relacional tiene datos
+        if (!empty($mpRows)) {
+            $row['speakerIds']    = $speakerIdsNuevos;
+            $row['speakerId']     = $speakerIdsNuevos[0] ?? null;
+            $row['auxiliaresIds'] = $auxiliaresIdsNuevos;
+            $row['autor_ids']     = $authorIdsNuevos;
+        }
+    } catch (Exception $e) {
+        // La tabla manuales_participantes aún no existe; usar datos legacy
+        $row['participantes'] = [];
+    }
 
     return $row;
 }
@@ -191,6 +275,15 @@ if ($method === 'POST') {
     ]);
 
     $newId = (int)db()->lastInsertId();
+
+    // Guardar participantes con roles en tabla relacional
+    syncManualParticipantes(
+        $newId,
+        $data['speakerIds']    ?? ($data['speakerId'] ? [$data['speakerId']] : []),
+        $data['autor_ids']     ?? [],
+        $data['auxiliaresIds'] ?? [],
+        $data['participantes'] ?? []
+    );
 
     $row = db()
         ->query("SELECT * FROM manuales WHERE id = {$newId}")
@@ -330,6 +423,15 @@ if ($method === 'PUT') {
 
         $id
     ]);
+
+    // Actualizar participantes con roles en tabla relacional
+    syncManualParticipantes(
+        $id,
+        $data['speakerIds']    ?? ($data['speakerId'] ? [$data['speakerId']] : ($old_extra['speakerIds'] ?? [])),
+        $data['autor_ids']     ?? json_decode($old['autor_ids'] ?? '[]', true),
+        $data['auxiliaresIds'] ?? ($old_extra['auxiliaresIds'] ?? []),
+        $data['participantes'] ?? []
+    );
 
     $row = db()
         ->query("SELECT * FROM manuales WHERE id = {$id}")

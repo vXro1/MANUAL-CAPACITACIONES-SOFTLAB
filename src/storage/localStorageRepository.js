@@ -3,12 +3,14 @@ import { participants as defaultParticipants } from '@/data/participants';
 import { speakers as defaultSpeakers } from '@/data/speakers';
 
 const KEYS = {
-  MANUALS: 'softlab_manuals',
-  PARTICIPANTS: 'softlab_participants',
-  SPEAKERS: 'softlab_speakers',
-  ADMIN_AUTH: 'softlab_admin_auth',
-  GALLERY: 'softlab_gallery',
-  DIRECTORS: 'softlab_directors',
+  MANUALS:          'softlab_manuals',
+  PARTICIPANTS:     'softlab_participants',
+  SPEAKERS:         'softlab_speakers',
+  ADMIN_AUTH:       'softlab_admin_auth',
+  GALLERY:          'softlab_gallery',
+  DIRECTORS:        'softlab_directors',
+  EVENTS:           'softlab_events',
+  EVENT_CATEGORIES: 'softlab_event_categories',
 };
 
 function getItem(key, fallback) {
@@ -156,6 +158,68 @@ export const adminAuthRepository = {
 
   logout() {
     localStorage.removeItem(KEYS.ADMIN_AUTH);
+  },
+};
+
+const DEFAULT_EVENT_CATEGORIES = [
+  'Divulgación Científica',
+  'Salida Técnica',
+  'Movilidad Internacional',
+  'Movilidad Nacional',
+];
+
+export const eventsRepository = {
+  getAll() {
+    return getItem(KEYS.EVENTS, []);
+  },
+
+  getById(id) {
+    return this.getAll().find((e) => String(e.id) === String(id)) ?? null;
+  },
+
+  getByCategory(category) {
+    return this.getAll().filter((e) => e.category === category);
+  },
+
+  save(event) {
+    const all = this.getAll();
+    const index = all.findIndex((e) => String(e.id) === String(event.id));
+    if (index >= 0) {
+      all[index] = event;
+    } else {
+      all.unshift({
+        ...event,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return setItem(KEYS.EVENTS, all);
+  },
+
+  delete(id) {
+    const filtered = this.getAll().filter((e) => String(e.id) !== String(id));
+    return setItem(KEYS.EVENTS, filtered);
+  },
+};
+
+export const eventCategoriesRepository = {
+  getAll() {
+    const stored = getItem(KEYS.EVENT_CATEGORIES, null);
+    if (!stored || stored.length === 0) return [...DEFAULT_EVENT_CATEGORIES];
+    return stored;
+  },
+
+  add(name) {
+    const all = this.getAll();
+    if (!all.includes(name)) {
+      all.push(name);
+      setItem(KEYS.EVENT_CATEGORIES, all);
+    }
+  },
+
+  delete(name) {
+    const filtered = this.getAll().filter((c) => c !== name);
+    setItem(KEYS.EVENT_CATEGORIES, filtered);
   },
 };
 

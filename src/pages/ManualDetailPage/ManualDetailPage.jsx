@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Calendar, Clock, User, BookOpen, FileText,
@@ -89,13 +89,15 @@ function SectionLabel({ icon: Icon, children }) {
 
 function PersonCard({ person }) {
   return (
-    <div
+    <Link
+      to={`/participantes/${person.id}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '10px 12px', borderRadius: 10,
         background: 'rgba(255,255,255,0.7)',
         border: '1px solid #e5e7eb',
         transition: 'background 0.18s, border-color 0.18s',
+        textDecoration: 'none',
       }}
       onMouseEnter={e => { e.currentTarget.style.background = '#eef3ff'; e.currentTarget.style.borderColor = '#c7d7f8'; }}
       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
@@ -124,7 +126,7 @@ function PersonCard({ person }) {
           {person.career ?? person.role ?? ''}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }
 

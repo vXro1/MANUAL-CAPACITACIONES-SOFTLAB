@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu, X, LayoutDashboard, BookOpen, Plus,
   Users, UserPlus, LogOut, FlaskConical, ChevronRight,
-  Images, ExternalLink, GraduationCap,
+  Images, ExternalLink, GraduationCap, CalendarDays, CalendarPlus,
 } from 'lucide-react';
 import { AdminAuth } from '@/features/admin-auth/AdminAuth';
 import { getToken, removeToken } from '@/services/apiService';
@@ -29,6 +29,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Eventos',
+    items: [
+      { label: 'Eventos',        href: '/panel-softlab-admin/eventos',       icon: CalendarDays },
+      { label: 'Nuevo evento',   href: '/panel-softlab-admin/eventos/nuevo', icon: CalendarPlus },
+    ],
+  },
+  {
     label: 'Galería',
     items: [
       { label: 'Imágenes',            href: '/panel-softlab-admin/galeria', icon: Images },
@@ -46,6 +53,8 @@ const PAGE_TITLES = {
   '/panel-softlab-admin/participantes/nuevo': { title: 'Nuevo participante',    sub: 'Agregar miembro al equipo' },
   '/panel-softlab-admin/galeria':             { title: 'Galería de imágenes',   sub: 'Gestiona las fotos del semillero' },
   '/panel-softlab-admin/directivos':          { title: 'Personal Directivo',    sub: 'Docentes y directores del semillero' },
+  '/panel-softlab-admin/eventos':             { title: 'Gestión de eventos',    sub: 'Administra los eventos del semillero' },
+  '/panel-softlab-admin/eventos/nuevo':       { title: 'Nuevo evento',          sub: 'Crear un nuevo evento' },
 };
 
 // ─── SidebarItem ──────────────────────────────────────────────────────────────

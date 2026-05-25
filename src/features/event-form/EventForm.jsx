@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, X, Upload, Trash2, Tag, Users, CalendarDays, AlignLeft, Check,
+  Plus, X, Upload, Trash2, Tag, Users, CalendarDays, AlignLeft, Check, Star,
 } from 'lucide-react';
 import { eventsRepository, eventCategoriesRepository, participantsRepository } from '@/storage/localStorageRepository';
 import { eventosApi, eventosGaleriaApi, categoriasEventosApi, getToken } from '@/services/apiService';
@@ -107,7 +107,11 @@ function CategoryField({ value, onChange }) {
   );
 }
 
-// ─── Selector de participantes ────────────────────────────────────────────────
+// Roles frecuentes para eventos (el admin puede escribir cualquier valor)
+const EVENT_ROLES = ['Ponente', 'Asistente', 'Organizador', 'Moderador', 'Coordinador', 'Invitado'];
+
+// ─── Selector de participantes con rol por participante ───────────────────────
+// value: [{ participante_id, rol }]
 function ParticipantsField({ value, onChange }) {
   const [search, setSearch] = useState('');
   const all = participantsRepository.getAll();
@@ -115,8 +119,18 @@ function ParticipantsField({ value, onChange }) {
     (p) => !search || p.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const selectedIds = value.map((pr) => pr.participante_id);
+
   const toggle = (id) => {
-    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+    if (selectedIds.includes(id)) {
+      onChange(value.filter((pr) => pr.participante_id !== id));
+    } else {
+      onChange([...value, { participante_id: id, rol: 'Ponente' }]);
+    }
+  };
+
+  const setRol = (id, rol) => {
+    onChange(value.map((pr) => pr.participante_id === id ? { ...pr, rol } : pr));
   };
 
   return (
@@ -144,17 +158,18 @@ function ParticipantsField({ value, onChange }) {
           No hay participantes registrados. Agrega participantes primero desde el panel.
         </p>
       ) : (
-        <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50">
+        <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50">
           {filtered.length === 0 ? (
             <p className="text-xs text-slate-400 p-3">Sin resultados.</p>
           ) : (
             filtered.map((p) => {
-              const selected = value.includes(p.id);
+              const selected = selectedIds.includes(p.id);
+              const pr = value.find((r) => r.participante_id === p.id);
               const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
               return (
-                <label
+                <div
                   key={p.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
                     selected ? 'bg-brand-50' : 'hover:bg-slate-50'
                   }`}
                 >
@@ -162,7 +177,7 @@ function ParticipantsField({ value, onChange }) {
                     type="checkbox"
                     checked={selected}
                     onChange={() => toggle(p.id)}
-                    className="w-4 h-4 rounded accent-brand-600"
+                    className="w-4 h-4 rounded accent-brand-600 shrink-0"
                     aria-label={`Seleccionar ${p.name}`}
                   />
                   <div
@@ -175,15 +190,35 @@ function ParticipantsField({ value, onChange }) {
                       initials
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{p.role || p.career || ''}</p>
+                    <p className="text-xs text-slate-400 truncate">{p.career || p.role || ''}</p>
                   </div>
-                </label>
+                  {selected && (
+                    <div className="shrink-0">
+                      <input
+                        list={`roles-${p.id}`}
+                        value={pr?.rol ?? 'Ponente'}
+                        onChange={(e) => setRol(p.id, e.target.value)}
+                        placeholder="Rol en el evento"
+                        className="w-32 px-2 py-1 rounded-lg border border-brand-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        aria-label={`Rol de ${p.name} en el evento`}
+                      />
+                      <datalist id={`roles-${p.id}`}>
+                        {EVENT_ROLES.map((r) => <option key={r} value={r} />)}
+                      </datalist>
+                    </div>
+                  )}
+                </div>
               );
             })
           )}
         </div>
+      )}
+      {value.length > 0 && (
+        <p className="text-xs text-slate-400">
+          Puedes escribir un rol personalizado en el campo de rol de cada participante.
+        </p>
       )}
     </div>
   );
@@ -193,7 +228,7 @@ function ParticipantsField({ value, onChange }) {
 // Cada item del array puede ser:
 //   { id, src (URL servidor), title, _serverImage: true }  → imagen existente en el servidor
 //   { id, src (blob URL), title, _file: File }             → imagen nueva pendiente de subir
-function GalleryField({ value, onChange, onRemoveServerImage }) {
+function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSetCover }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
@@ -297,34 +332,70 @@ function GalleryField({ value, onChange, onRemoveServerImage }) {
 
       {/* Thumbnails */}
       {value.length > 0 && (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
-          <AnimatePresence>
-            {value.map((img) => (
-              <motion.div
-                key={img.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={{ duration: 0.2 }}
-                className="relative group rounded-xl overflow-hidden bg-slate-100"
-                style={{ aspectRatio: '1' }}
-              >
-                <img src={img.src} alt={img.title || 'Imagen'} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => removeImage(img)}
-                    aria-label={`Eliminar imagen ${img.title}`}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg"
+        <>
+          <p className="text-xs text-slate-400">
+            Haz clic en <Star size={10} className="inline" /> para definir la imagen de portada del evento.
+          </p>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
+            <AnimatePresence>
+              {value.map((img) => {
+                const isCover = img.id === coverImageId;
+                return (
+                  <motion.div
+                    key={img.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.2 }}
+                    className="relative group rounded-xl overflow-hidden bg-slate-100"
+                    style={{ aspectRatio: '1' }}
                   >
-                    <Trash2 size={13} aria-hidden="true" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                    <img src={img.src} alt={img.title || 'Imagen'} className="w-full h-full object-cover" />
+
+                    {/* Cover badge */}
+                    {isCover && (
+                      <span style={{
+                        position: 'absolute', top: 5, left: 5,
+                        background: '#1A3FAA', color: '#fff',
+                        fontSize: 8, fontWeight: 700, padding: '2px 6px',
+                        borderRadius: 5, fontFamily: 'DM Sans, sans-serif',
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                        display: 'flex', alignItems: 'center', gap: 3,
+                      }}>
+                        <Star size={7} fill="#fff" /> Portada
+                      </span>
+                    )}
+
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1.5">
+                      {/* Set cover button */}
+                      <button
+                        type="button"
+                        onClick={() => onSetCover?.(isCover ? null : img.id)}
+                        aria-label={isCover ? 'Quitar portada' : 'Establecer como portada'}
+                        title={isCover ? 'Quitar portada' : 'Establecer como portada'}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg"
+                        style={{ background: isCover ? '#F59E0B' : 'rgba(255,255,255,0.25)' }}
+                      >
+                        <Star size={13} fill={isCover ? '#fff' : 'none'} aria-hidden="true" />
+                      </button>
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(img)}
+                        aria-label={`Eliminar imagen ${img.title}`}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg"
+                      >
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </>
       )}
     </div>
   );
@@ -334,12 +405,20 @@ function GalleryField({ value, onChange, onRemoveServerImage }) {
 export function EventForm({ event, onSuccess, onCancel }) {
   const isEdit = !!event?.id;
 
+  // Reconstruir participantRoles desde datos existentes del evento
+  const initialParticipantRoles = (() => {
+    if (event?.participantRoles?.length) return event.participantRoles;
+    // Fallback: IDs sin rol → rol vacío
+    return (event?.participantIds ?? []).map((id) => ({ participante_id: id, rol: 'Ponente' }));
+  })();
+
   const [form, setForm] = useState({
-    title:          event?.title          ?? '',
-    description:    event?.description    ?? '',
-    date:           event?.date           ?? '',
-    category:       event?.category       ?? '',
-    participantIds: event?.participantIds ?? [],
+    title:             event?.title          ?? '',
+    description:       event?.description    ?? '',
+    date:              event?.date           ?? '',
+    category:          event?.category       ?? '',
+    participantRoles:  initialParticipantRoles,
+    coverImageId:      event?.coverImageId   ?? null,
     // Imágenes existentes del servidor se marcan con _serverImage: true
     gallery: (event?.gallery ?? []).map((g) => ({ ...g, _serverImage: true })),
   });
@@ -360,6 +439,8 @@ export function EventForm({ event, onSuccess, onCancel }) {
 
   const handleRemoveServerImage = (id) => {
     setDeletedGalleryIds((prev) => [...prev, id]);
+    // Clear cover if it was the removed image
+    if (form.coverImageId === id) setForm((f) => ({ ...f, coverImageId: null }));
   };
 
   const handleSubmit = async (e) => {
@@ -374,11 +455,13 @@ export function EventForm({ event, onSuccess, onCancel }) {
       if (getToken()) {
         // ── Flujo API ──────────────────────────────────────────────────────────
         const payload = {
-          titulo:         form.title.trim(),
-          descripcion:    form.description.trim(),
-          fecha:          form.date,
-          categoria:      form.category,
-          participantIds: form.participantIds,
+          titulo:           form.title.trim(),
+          descripcion:      form.description.trim(),
+          fecha:            form.date,
+          categoria:        form.category,
+          participantRoles: form.participantRoles,
+          participantIds:   form.participantRoles.map((pr) => pr.participante_id),
+          coverImageId:     form.coverImageId,
         };
 
         const savedEvent = isEdit
@@ -404,15 +487,14 @@ export function EventForm({ event, onSuccess, onCancel }) {
         // ── Fallback localStorage ──────────────────────────────────────────────
         eventsRepository.save({
           ...(isEdit ? { id: event.id, createdAt: event.createdAt } : {}),
-          title:          form.title.trim(),
-          description:    form.description.trim(),
-          date:           form.date,
-          category:       form.category,
-          participantIds: form.participantIds,
-          // Solo conservar imágenes que ya estaban en el servidor (sin _file pendiente)
-          gallery: form.gallery
-            .filter((g) => !g._file)
-            .map((g) => ({ id: g.id, src: g.src, title: g.title })),
+          title:            form.title.trim(),
+          description:      form.description.trim(),
+          date:             form.date,
+          category:         form.category,
+          participantRoles: form.participantRoles,
+          participantIds:   form.participantRoles.map((pr) => pr.participante_id),
+          coverImageId:     form.coverImageId,
+          gallery: form.gallery.map((g) => ({ id: g.id, src: g.src, title: g.title })),
         });
       }
 
@@ -488,10 +570,10 @@ export function EventForm({ event, onSuccess, onCancel }) {
       />
       {errors.category && <p className="text-xs text-red-500 -mt-4" role="alert">{errors.category}</p>}
 
-      {/* Participantes */}
+      {/* Participantes con roles */}
       <ParticipantsField
-        value={form.participantIds}
-        onChange={(ids) => setForm((f) => ({ ...f, participantIds: ids }))}
+        value={form.participantRoles}
+        onChange={(roles) => setForm((f) => ({ ...f, participantRoles: roles }))}
       />
 
       {/* Galería */}
@@ -499,6 +581,8 @@ export function EventForm({ event, onSuccess, onCancel }) {
         value={form.gallery}
         onChange={(gallery) => setForm((f) => ({ ...f, gallery }))}
         onRemoveServerImage={handleRemoveServerImage}
+        coverImageId={form.coverImageId}
+        onSetCover={(id) => setForm((f) => ({ ...f, coverImageId: id }))}
       />
 
       {/* Error de guardado */}

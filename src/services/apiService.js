@@ -168,3 +168,49 @@ export const galeriaApi = {
     return request(`/galeria.php?id=${id}`, { method: 'DELETE' });
   },
 };
+
+// ─── Eventos ───────────────────────────────────────────────────────────────────
+export const eventosApi = {
+  getAll()    { return request('/eventos.php'); },
+  getById(id) { return request(`/eventos.php?id=${id}`); },
+  create(datos) {
+    return request('/eventos.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos),
+    });
+  },
+  update(id, datos) {
+    return request(`/eventos.php?id=${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos),
+    });
+  },
+  delete(id) { return request(`/eventos.php?id=${id}`, { method: 'DELETE' }); },
+};
+
+// ─── Galería de eventos ────────────────────────────────────────────────────────
+export const eventosGaleriaApi = {
+  upload(eventoId, imagenFile, titulo = '') {
+    const fd = new FormData();
+    fd.append('evento_id', String(eventoId));
+    fd.append('imagen', imagenFile);
+    fd.append('titulo', titulo);
+    return requestForm('/eventos_galeria.php', fd, 'POST');
+  },
+  delete(id) { return request(`/eventos_galeria.php?id=${id}`, { method: 'DELETE' }); },
+};
+
+// ─── Categorías de eventos ────────────────────────────────────────────────────
+export const categoriasEventosApi = {
+  getAll() { return request('/categorias_eventos.php'); },
+  create(nombre) {
+    return request('/categorias_eventos.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+  },
+  delete(id) { return request(`/categorias_eventos.php?id=${id}`, { method: 'DELETE' }); },
+};

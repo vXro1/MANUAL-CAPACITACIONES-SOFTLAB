@@ -15,6 +15,7 @@ export const CATEGORIES = [
 export const NAV_LINKS = [
   { label: 'Inicio', href: '/' },
   { label: 'Manuales', href: '/manuales' },
+  { label: 'Eventos', href: '/eventos' },
   { label: 'Galería', href: '/galeria' },
   { label: 'Nosotros', href: '/nosotros' },
 ];

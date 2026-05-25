@@ -35,7 +35,7 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 // PARSE PARTICIPANTE
 // ─────────────────────────────────────────────────────────────
 
-function parseParticipante($row) {
+function parseParticipante($row, $includeActividades = false) {
 
     $row['id']          = (string)$row['id'];
 
@@ -55,6 +55,59 @@ function parseParticipante($row) {
     $row['career']      = $row['carrera'];
     $row['skills']      = $row['habilidades'];
 
+    // Historial de actividades (solo se carga en peticiones individuales o cuando se solicita)
+    if ($includeActividades) {
+        $actividades = [];
+
+        // Eventos en los que participó
+        try {
+            $stmtE = db()->prepare('
+                SELECT ep.rol, e.id, e.titulo, e.fecha, e.categoria
+                FROM eventos_participantes ep
+                JOIN eventos e ON ep.evento_id = e.id
+                WHERE ep.participante_id = ?
+                ORDER BY e.fecha DESC
+            ');
+            $stmtE->execute([(int)$row['id']]);
+            foreach ($stmtE->fetchAll() as $ev) {
+                $actividades[] = [
+                    'tipo'      => 'evento',
+                    'id'        => (string)$ev['id'],
+                    'titulo'    => $ev['titulo'],
+                    'fecha'     => $ev['fecha'],
+                    'categoria' => $ev['categoria'],
+                    'rol'       => $ev['rol'],
+                ];
+            }
+        } catch (Exception $e) { /* tabla no disponible */ }
+
+        // Manuales en los que participó
+        try {
+            $stmtM = db()->prepare('
+                SELECT mp.rol, m.id, m.titulo, m.fecha, m.categoria
+                FROM manuales_participantes mp
+                JOIN manuales m ON mp.manual_id = m.id
+                WHERE mp.participante_id = ?
+                ORDER BY m.creado_en DESC
+            ');
+            $stmtM->execute([(int)$row['id']]);
+            foreach ($stmtM->fetchAll() as $mn) {
+                $actividades[] = [
+                    'tipo'      => 'manual',
+                    'id'        => (string)$mn['id'],
+                    'titulo'    => $mn['titulo'],
+                    'fecha'     => $mn['fecha'],
+                    'categoria' => $mn['categoria'],
+                    'rol'       => $mn['rol'],
+                ];
+            }
+        } catch (Exception $e) { /* tabla no disponible */ }
+
+        $row['actividades'] = $actividades;
+    } else {
+        $row['actividades'] = [];
+    }
+
     return $row;
 }
 
@@ -64,7 +117,7 @@ function parseParticipante($row) {
 
 if ($method === 'GET') {
 
-    // Obtener uno
+    // Obtener uno (incluye historial de actividades)
     if ($id) {
 
         $stmt = db()->prepare(
@@ -79,15 +132,15 @@ if ($method === 'GET') {
             err('Participante no encontrado', 404);
         }
 
-        ok(parseParticipante($row));
+        ok(parseParticipante($row, true));
     }
 
-    // Obtener todos
+    // Obtener todos (sin actividades para mejor rendimiento)
     $rows = db()
         ->query('SELECT * FROM participantes ORDER BY nombre ASC')
         ->fetchAll();
 
-    ok(array_map('parseParticipante', $rows));
+    ok(array_map(function($r) { return parseParticipante($r, false); }, $rows));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -176,7 +229,7 @@ if ($method === 'POST') {
         ->query("SELECT * FROM participantes WHERE id = {$newId}")
         ->fetch();
 
-    ok(parseParticipante($row), 201);
+    ok(parseParticipante($row, true), 201);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -288,7 +341,7 @@ if ($method === 'PUT') {
         ->query("SELECT * FROM participantes WHERE id = {$id}")
         ->fetch();
 
-    ok(parseParticipante($row));
+    ok(parseParticipante($row, true));
 }
 
 // ─────────────────────────────────────────────────────────────

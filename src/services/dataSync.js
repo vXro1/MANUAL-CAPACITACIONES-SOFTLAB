@@ -4,7 +4,7 @@
  * así que este módulo actúa como capa de caché: carga una vez al inicio
  * y después de cada mutación del admin.
  */
-import { manualesApi, participantesApi, galeriaApi } from './apiService';
+import { manualesApi, participantesApi, galeriaApi, eventosApi, categoriasEventosApi } from './apiService';
 import { directivosApi } from './directivosApi';
 
 const KEYS = {
@@ -12,6 +12,8 @@ const KEYS = {
   PARTICIPANTS: 'softlab_participants',
   GALLERY:      'softlab_gallery',
   DIRECTORS:    'softlab_directors',
+  EVENTS:       'softlab_events',
+  EVENT_CATS:   'softlab_event_categories',
   SYNCED:       'softlab_last_sync',
 };
 
@@ -23,17 +25,25 @@ function save(key, data) {
 
 function normalizeParticipant(p) {
   return {
-    id:        String(p.id),
-    name:      p.name     ?? p.nombre   ?? '',
-    role:      p.role     ?? p.rol      ?? '',
-    career:    p.career   ?? p.carrera  ?? '',
-    semester:  p.semestre ?? p.semester ?? null,
-    bio:       p.bio      ?? '',
-    skills:    p.skills   ?? p.habilidades ?? [],
-    linkedin:  p.linkedin ?? '',
-    github:    p.github   ?? '',
-    email:     p.email    ?? '',
-    photo:     p.foto_path ?? p.photo   ?? null,
+    id:         String(p.id),
+    name:       p.name     ?? p.nombre   ?? '',
+    role:       p.role     ?? p.rol      ?? '',
+    career:     p.career   ?? p.carrera  ?? '',
+    semester:   p.semestre ?? p.semester ?? null,
+    bio:        p.bio      ?? '',
+    skills:     p.skills   ?? p.habilidades ?? [],
+    linkedin:   p.linkedin ?? '',
+    github:     p.github   ?? '',
+    email:      p.email    ?? '',
+    photo:      p.foto_path ?? p.photo   ?? null,
+    actividades: (p.actividades ?? []).map((a) => ({
+      tipo:      a.tipo,
+      id:        String(a.id),
+      titulo:    a.titulo   ?? a.title    ?? '',
+      fecha:     a.fecha    ?? a.date     ?? null,
+      categoria: a.categoria ?? a.category ?? null,
+      rol:       a.rol      ?? null,
+    })),
   };
 }
 
@@ -72,6 +82,28 @@ function normalizeGalleryImage(img) {
   };
 }
 
+function normalizeEvento(ev) {
+  return {
+    id:               String(ev.id),
+    title:            ev.title          ?? ev.titulo      ?? '',
+    description:      ev.description    ?? ev.descripcion ?? '',
+    date:             ev.date           ?? ev.fecha       ?? '',
+    category:         ev.category       ?? ev.categoria   ?? '',
+    participantIds:   (ev.participantIds ?? ev.participant_ids ?? []).map(String),
+    participantRoles: (ev.participantRoles ?? []).map((pr) => ({
+      participante_id: String(pr.participante_id),
+      rol:             pr.rol ?? null,
+    })),
+    gallery:          (ev.gallery       ?? []).map((img) => ({
+      id:    String(img.id),
+      src:   img.src        ?? img.imagen_path ?? '',
+      title: img.title      ?? img.titulo      ?? '',
+      _serverImage: true,
+    })),
+    createdAt:        ev.createdAt      ?? ev.created_at  ?? '',
+  };
+}
+
 // Los directivos ya vienen normalizados desde directivosApi/directivos.php
 function normalizeDirectivo(d) {
   return {
@@ -105,17 +137,21 @@ function normalizeDirectivo(d) {
 
 export async function syncAll() {
   try {
-    const [manuals, participants, gallery, directors] = await Promise.allSettled([
+    const [manuals, participants, gallery, directors, events, eventCats] = await Promise.allSettled([
       manualesApi.getAll(),
       participantesApi.getAll(),
       galeriaApi.getAll(),
       directivosApi.getAll(),
+      eventosApi.getAll(),
+      categoriasEventosApi.getAll(),
     ]);
 
-    if (manuals.status     === 'fulfilled') save(KEYS.MANUALS,      manuals.value.map(normalizeManual));
-    if (participants.status === 'fulfilled') save(KEYS.PARTICIPANTS, participants.value.map(normalizeParticipant));
-    if (gallery.status     === 'fulfilled') save(KEYS.GALLERY,      gallery.value.map(normalizeGalleryImage));
-    if (directors.status   === 'fulfilled') save(KEYS.DIRECTORS,    directors.value.map(normalizeDirectivo));
+    if (manuals.status      === 'fulfilled') save(KEYS.MANUALS,      manuals.value.map(normalizeManual));
+    if (participants.status === 'fulfilled') save(KEYS.PARTICIPANTS,  participants.value.map(normalizeParticipant));
+    if (gallery.status      === 'fulfilled') save(KEYS.GALLERY,       gallery.value.map(normalizeGalleryImage));
+    if (directors.status    === 'fulfilled') save(KEYS.DIRECTORS,     directors.value.map(normalizeDirectivo));
+    if (events.status       === 'fulfilled') save(KEYS.EVENTS,        events.value.map(normalizeEvento));
+    if (eventCats.status    === 'fulfilled') save(KEYS.EVENT_CATS,    eventCats.value.map((c) => c.name ?? c.nombre ?? c));
 
     save(KEYS.SYNCED, Date.now());
     return true;
@@ -145,4 +181,14 @@ export async function syncGaleria() {
 export async function syncDirectivos() {
   const data = await directivosApi.getAll();
   save(KEYS.DIRECTORS, data.map(normalizeDirectivo));
+}
+
+export async function syncEventos() {
+  const data = await eventosApi.getAll();
+  save(KEYS.EVENTS, data.map(normalizeEvento));
+}
+
+export async function syncCategoriasEventos() {
+  const data = await categoriasEventosApi.getAll();
+  save(KEYS.EVENT_CATS, data.map((c) => c.name ?? c.nombre ?? c));
 }

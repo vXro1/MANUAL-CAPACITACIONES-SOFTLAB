@@ -35,14 +35,23 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 function parseEvento($row) {
     $row['id'] = (string)$row['id'];
 
-    // Participantes del evento
+    // Participantes del evento con sus roles
     $stmt = db()->prepare(
-        'SELECT participante_id FROM eventos_participantes WHERE evento_id = ?'
+        'SELECT participante_id, rol FROM eventos_participantes WHERE evento_id = ?'
     );
     $stmt->execute([(int)$row['id']]);
+    $rawParticipants = $stmt->fetchAll();
+
+    $row['participantRoles'] = array_map(function ($r) {
+        return [
+            'participante_id' => (string)$r['participante_id'],
+            'rol'             => $r['rol'],
+        ];
+    }, $rawParticipants);
+
     $row['participantIds'] = array_map(
         function ($r) { return (string)$r['participante_id']; },
-        $stmt->fetchAll()
+        $rawParticipants
     );
 
     // Galería del evento
@@ -122,8 +131,15 @@ if ($method === 'POST') {
 
     $newId = (int)db()->lastInsertId();
 
-    // Asociar participantes
-    if (!empty($data['participantIds']) && is_array($data['participantIds'])) {
+    // Asociar participantes con roles
+    if (!empty($data['participantRoles']) && is_array($data['participantRoles'])) {
+        $insP = db()->prepare(
+            'INSERT IGNORE INTO eventos_participantes (evento_id, participante_id, rol) VALUES (?, ?, ?)'
+        );
+        foreach ($data['participantRoles'] as $pr) {
+            $insP->execute([$newId, (int)$pr['participante_id'], $pr['rol'] ?? null]);
+        }
+    } elseif (!empty($data['participantIds']) && is_array($data['participantIds'])) {
         $insP = db()->prepare(
             'INSERT IGNORE INTO eventos_participantes (evento_id, participante_id) VALUES (?, ?)'
         );
@@ -169,7 +185,18 @@ if ($method === 'PUT') {
     ]);
 
     // Reemplazar participantes si se envían
-    if (isset($data['participantIds']) && is_array($data['participantIds'])) {
+    if (isset($data['participantRoles']) && is_array($data['participantRoles'])) {
+        db()->prepare(
+            'DELETE FROM eventos_participantes WHERE evento_id = ?'
+        )->execute([$id]);
+
+        $insP = db()->prepare(
+            'INSERT IGNORE INTO eventos_participantes (evento_id, participante_id, rol) VALUES (?, ?, ?)'
+        );
+        foreach ($data['participantRoles'] as $pr) {
+            $insP->execute([$id, (int)$pr['participante_id'], $pr['rol'] ?? null]);
+        }
+    } elseif (isset($data['participantIds']) && is_array($data['participantIds'])) {
         db()->prepare(
             'DELETE FROM eventos_participantes WHERE evento_id = ?'
         )->execute([$id]);

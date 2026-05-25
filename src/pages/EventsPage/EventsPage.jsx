@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  CalendarDays, Users, Images, X, ChevronLeft, ChevronRight,
-  ZoomIn, Filter,
-} from 'lucide-react';
-import { eventsRepository, eventCategoriesRepository, participantsRepository } from '@/storage/localStorageRepository';
+import { CalendarDays, Users, Images, Filter } from 'lucide-react';
+import { eventsRepository, eventCategoriesRepository } from '@/storage/localStorageRepository';
 import { formatDate } from '@/shared/lib/formatDate';
 
 const E = [0.22, 1, 0.36, 1];
@@ -20,431 +18,27 @@ function getCategoryStyle(cat) {
   return CATEGORY_STYLES[cat] ?? { bg: '#F1F5F9', color: '#475569' };
 }
 
-// ─── Lightbox ─────────────────────────────────────────────────────────────────
-function Lightbox({ photos, startIndex, onClose }) {
-  const [current, setCurrent] = useState(startIndex);
-  const [loaded, setLoaded] = useState(false);
-  const count = photos.length;
-
-  const go = useCallback((n) => {
-    setLoaded(false);
-    setCurrent(((n % count) + count) % count);
-  }, [count]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') go(current - 1);
-      if (e.key === 'ArrowRight') go(current + 1);
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [current, go, onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  if (!count) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.92)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-        }}
-        onClick={onClose}
-      >
-        {/* Close */}
-        <button
-          onClick={onClose}
-          aria-label="Cerrar galería"
-          style={{
-            position: 'absolute', top: 16, right: 16,
-            background: 'rgba(255,255,255,0.12)', border: 'none',
-            borderRadius: 10, color: '#fff', width: 40, height: 40,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', zIndex: 2,
-          }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* Counter */}
-        <div
-          aria-live="polite"
-          style={{
-            position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.6)', fontSize: 13,
-            fontFamily: 'DM Sans, sans-serif',
-          }}
-        >
-          {current + 1} / {count}
-        </div>
-
-        {/* Image */}
-        <motion.div
-          key={current}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.22, ease: E }}
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '88vw', maxHeight: '78vh', position: 'relative' }}
-        >
-          {!loaded && (
-            <div style={{
-              width: 200, height: 150, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: 'rgba(255,255,255,0.3)',
-            }}>
-              <div style={{
-                width: 28, height: 28, border: '3px solid rgba(255,255,255,0.3)',
-                borderTopColor: '#fff', borderRadius: '50%',
-                animation: 'spin 0.7s linear infinite',
-              }} />
-            </div>
-          )}
-          <img
-            src={photos[current].src}
-            alt={photos[current].title || `Foto ${current + 1}`}
-            onLoad={() => setLoaded(true)}
-            style={{
-              maxWidth: '88vw', maxHeight: '78vh',
-              objectFit: 'contain', borderRadius: 12,
-              display: loaded ? 'block' : 'none',
-              boxShadow: '0 8px 60px rgba(0,0,0,0.6)',
-            }}
-          />
-          {photos[current].title && loaded && (
-            <p style={{
-              textAlign: 'center', marginTop: 10,
-              color: 'rgba(255,255,255,0.6)', fontSize: 13,
-              fontFamily: 'DM Sans, sans-serif',
-            }}>
-              {photos[current].title}
-            </p>
-          )}
-        </motion.div>
-
-        {/* Prev / Next */}
-        {count > 1 && (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); go(current - 1); }}
-              aria-label="Imagen anterior"
-              style={{
-                position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 10,
-                color: '#fff', width: 44, height: 44, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); go(current + 1); }}
-              aria-label="Imagen siguiente"
-              style={{
-                position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
-                background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 10,
-                color: '#fff', width: 44, height: 44, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <ChevronRight size={20} />
-            </button>
-          </>
-        )}
-
-        {/* Thumbnails */}
-        {count > 1 && (
-          <div style={{
-            position: 'absolute', bottom: 20,
-            display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center',
-            maxWidth: '80vw',
-          }}>
-            {photos.map((p, i) => (
-              <button
-                key={p.id}
-                onClick={(e) => { e.stopPropagation(); go(i); }}
-                aria-label={`Ir a imagen ${i + 1}`}
-                style={{
-                  width: 46, height: 34, borderRadius: 6, overflow: 'hidden',
-                  border: `2px solid ${i === current ? '#fff' : 'transparent'}`,
-                  opacity: i === current ? 1 : 0.5,
-                  cursor: 'pointer', padding: 0, background: 'transparent',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <img src={p.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </button>
-            ))}
-          </div>
-        )}
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-// ─── EventDetailModal ─────────────────────────────────────────────────────────
-function EventDetailModal({ event, participants, onClose }) {
-  const [lightboxIndex, setLightboxIndex] = useState(null);
-  const panelRef = useRef(null);
-  const catStyle = getCategoryStyle(event.category);
-
-  const eventParticipants = (event.participantIds ?? [])
-    .map((id) => participants.find((p) => p.id === id))
-    .filter(Boolean);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  useEffect(() => {
-    const first = panelRef.current?.querySelector('button, [href]');
-    first?.focus();
-  }, []);
-
-  return (
-    <AnimatePresence>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={event.title}
-        style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-      >
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'rgba(10,15,30,0.75)',
-            backdropFilter: 'blur(6px)',
-          }}
-        />
-
-        {/* Panel */}
-        <motion.div
-          ref={panelRef}
-          initial={{ opacity: 0, scale: 0.97, y: 14 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.97, y: 14 }}
-          transition={{ duration: 0.25, ease: E }}
-          style={{
-            position: 'relative', background: '#fff', borderRadius: 20,
-            width: '100%', maxWidth: 680,
-            maxHeight: '90vh', overflowY: 'auto',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
-          }}
-        >
-          {/* Close */}
-          <button
-            onClick={onClose}
-            aria-label="Cerrar detalle del evento"
-            style={{
-              position: 'sticky', top: 16, float: 'right', marginRight: 16,
-              background: 'rgba(255,255,255,0.9)', border: '1px solid #E2E8F0',
-              borderRadius: 10, color: '#475569',
-              width: 36, height: 36, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', cursor: 'pointer', zIndex: 1,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            }}
-          >
-            <X size={16} />
-          </button>
-
-          <div style={{ padding: '28px 28px 32px', clear: 'both' }}>
-            {/* Category + Date */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-              <span style={{
-                background: catStyle.bg, color: catStyle.color,
-                fontSize: 11, fontWeight: 700, padding: '3px 10px',
-                borderRadius: 99, fontFamily: 'DM Sans, sans-serif',
-                letterSpacing: '0.04em', textTransform: 'uppercase',
-              }}>
-                {event.category}
-              </span>
-              {event.date && (
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  fontSize: 12, color: '#94A3B8', fontFamily: 'DM Sans, sans-serif',
-                }}>
-                  <CalendarDays size={13} aria-hidden="true" />
-                  {formatDate(event.date, { year: 'numeric', month: 'long', day: 'numeric' })}
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h2 style={{
-              fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 700,
-              color: '#0A0F1E', margin: '0 0 16px', lineHeight: 1.25,
-            }}>
-              {event.title}
-            </h2>
-
-            {/* Description */}
-            {event.description && (
-              <p style={{
-                fontSize: 14, color: '#475569', lineHeight: 1.75,
-                margin: '0 0 24px', fontFamily: 'DM Sans, sans-serif',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {event.description}
-              </p>
-            )}
-
-            {/* Participants */}
-            {eventParticipants.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{
-                  fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 700,
-                  color: '#0A0F1E', margin: '0 0 12px',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <Users size={14} color="#1A3FAA" aria-hidden="true" />
-                  Participantes ({eventParticipants.length})
-                </h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {eventParticipants.map((p, i) => {
-                    const colors = ['#1A3FAA', '#0369A1', '#059669', '#7C3AED', '#B45309'];
-                    const c = colors[i % colors.length];
-                    const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-                    return (
-                      <div key={p.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '6px 12px 6px 6px', borderRadius: 99,
-                        background: '#F8FAFF', border: '1px solid #E8EFFE',
-                      }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: '50%',
-                          background: `${c}18`, border: `1.5px solid ${c}40`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          overflow: 'hidden', flexShrink: 0,
-                        }}>
-                          {p.photo ? (
-                            <img src={p.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <span style={{ fontSize: 10, fontWeight: 700, color: c, fontFamily: 'Syne, sans-serif' }}>
-                              {initials}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: '#0A0F1E', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-                            {p.name}
-                          </p>
-                          {(p.role || p.career) && (
-                            <p style={{ fontSize: 10, color: '#94A3B8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-                              {p.role || p.career}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Gallery */}
-            {(event.gallery?.length ?? 0) > 0 && (
-              <div>
-                <h3 style={{
-                  fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 700,
-                  color: '#0A0F1E', margin: '0 0 12px',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <Images size={14} color="#1A3FAA" aria-hidden="true" />
-                  Galería ({event.gallery.length} {event.gallery.length === 1 ? 'imagen' : 'imágenes'})
-                </h3>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: 8,
-                }}>
-                  {event.gallery.map((img, i) => (
-                    <button
-                      key={img.id}
-                      onClick={() => setLightboxIndex(i)}
-                      aria-label={`Ver imagen: ${img.title || `Foto ${i + 1}`}`}
-                      style={{
-                        aspectRatio: '4/3', borderRadius: 10, overflow: 'hidden',
-                        background: '#F1F5F9', border: 'none', padding: 0,
-                        cursor: 'pointer', position: 'relative',
-                        display: 'block', width: '100%',
-                      }}
-                    >
-                      <img
-                        src={img.src}
-                        alt={img.title || `Foto ${i + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      />
-                      <div style={{
-                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'background 0.2s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.3)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0)'; }}
-                      >
-                        <ZoomIn size={20} color="#fff" style={{ opacity: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
-                        />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Lightbox */}
-        {lightboxIndex !== null && (
-          <Lightbox
-            photos={event.gallery}
-            startIndex={lightboxIndex}
-            onClose={() => setLightboxIndex(null)}
-          />
-        )}
-      </div>
-    </AnimatePresence>
-  );
-}
-
 // ─── EventCard ────────────────────────────────────────────────────────────────
-function EventCard({ event, participants, onOpen, index }) {
+function EventCard({ event, index }) {
+  const navigate = useNavigate();
   const catStyle = getCategoryStyle(event.category);
   const participantCount = (event.participantIds ?? []).length;
   const galleryCount = (event.gallery ?? []).length;
+  const gallery = event.gallery ?? [];
+  const coverImage = event.coverImageId
+    ? (gallery.find((g) => g.id === event.coverImageId) ?? gallery[0])
+    : gallery[0];
 
   return (
     <motion.article
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05, ease: E }}
-      onClick={() => onOpen(event)}
+      onClick={() => navigate(`/eventos/${event.id}`)}
       tabIndex={0}
       role="button"
       aria-label={`Ver detalle: ${event.title}`}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(event); } }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/eventos/${event.id}`); } }}
       style={{
         background: '#fff', borderRadius: 18,
         border: '1px solid #E8EFFE',
@@ -462,11 +56,11 @@ function EventCard({ event, participants, onOpen, index }) {
         e.currentTarget.style.transform = 'none';
       }}
     >
-      {/* Preview image if has gallery */}
-      {galleryCount > 0 && (
+      {/* Cover image */}
+      {coverImage && (
         <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#F1F5F9' }}>
           <img
-            src={event.gallery[0].src}
+            src={coverImage.src}
             alt=""
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
@@ -474,7 +68,7 @@ function EventCard({ event, participants, onOpen, index }) {
       )}
 
       {/* No-image placeholder */}
-      {galleryCount === 0 && (
+      {!coverImage && (
         <div style={{
           aspectRatio: '16/9', background: `${catStyle.bg}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -555,9 +149,7 @@ function EventCard({ event, participants, onOpen, index }) {
 export function EventsPage() {
   const [events] = useState(() => eventsRepository.getAll());
   const [categories] = useState(() => eventCategoriesRepository.getAll());
-  const [participants] = useState(() => participantsRepository.getAll());
   const [activeCategory, setActiveCategory] = useState('Todos');
-  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const filtered = activeCategory === 'Todos'
     ? events
@@ -707,8 +299,6 @@ export function EventsPage() {
                 <EventCard
                   key={ev.id}
                   event={ev}
-                  participants={participants}
-                  onOpen={setSelectedEvent}
                   index={i}
                 />
               ))}
@@ -716,17 +306,6 @@ export function EventsPage() {
           </div>
         )}
       </div>
-
-      {/* Detail modal */}
-      <AnimatePresence>
-        {selectedEvent && (
-          <EventDetailModal
-            event={selectedEvent}
-            participants={participants}
-            onClose={() => setSelectedEvent(null)}
-          />
-        )}
-      </AnimatePresence>
     </main>
   );
 }
