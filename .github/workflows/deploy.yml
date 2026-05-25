@@ -26,34 +26,34 @@ jobs:
       - name: Build project
         run: npm run build
 
-      # Deploy frontend
       - name: Deploy frontend to public_html
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
+          protocol: ftps
           port: 21
           local-dir: dist/
           server-dir: public_html/
+          log-level: verbose
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
             uploads/**
 
-      # Deploy backend PHP
       - name: Deploy backend API
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
+          protocol: ftps
           port: 21
           local-dir: api-backend/
           server-dir: public_html/api-backend/
+          log-level: verbose
           exclude: |
             **/.git*
             **/.git*/**
