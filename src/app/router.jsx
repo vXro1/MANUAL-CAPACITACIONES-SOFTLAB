@@ -12,6 +12,7 @@ import { AdminNewManualPage } from '@/pages/AdminPage/AdminNewManualPage';
 import { AdminParticipantsPage } from '@/pages/AdminPage/AdminParticipantsPage';
 import { AdminNewParticipantPage } from '@/pages/AdminPage/AdminNewParticipantPage';
 import { AdminGalleryPage } from '@/pages/AdminPage/AdminGalleryPage';
+import { AdminDirectors } from '@/pages/AdminPage/AdminDirectors';
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,8 @@ export const router = createBrowserRouter([
       { path: 'manuales/:id', element: <ManualDetailPage /> },
       { path: 'nosotros', element: <AboutPage /> },
       { path: 'galeria', element: <GalleryPage /> },
+      
+      
     ],
   },
   {
@@ -35,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'participantes', element: <AdminParticipantsPage /> },
       { path: 'participantes/nuevo', element: <AdminNewParticipantPage /> },
       { path: 'galeria', element: <AdminGalleryPage /> },
+      { path: 'directivos', element: <AdminDirectors /> },
     ],
   },
 ]);

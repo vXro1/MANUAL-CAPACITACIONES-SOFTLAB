@@ -8,6 +8,7 @@ const KEYS = {
   SPEAKERS: 'softlab_speakers',
   ADMIN_AUTH: 'softlab_admin_auth',
   GALLERY: 'softlab_gallery',
+  DIRECTORS: 'softlab_directors',
 };
 
 function getItem(key, fallback) {
@@ -155,5 +156,45 @@ export const adminAuthRepository = {
 
   logout() {
     localStorage.removeItem(KEYS.ADMIN_AUTH);
+  },
+};
+
+export const directorsRepository = {
+  getAll() {
+    return getItem(KEYS.DIRECTORS, []);
+  },
+
+  getById(id) {
+    return this.getAll().find((d) => d.id === id) ?? null;
+  },
+
+  getFeatured() {
+    return this.getAll().filter((d) => d.featured);
+  },
+
+  save(director) {
+    const all = this.getAll();
+    const index = all.findIndex((d) => d.id === director.id);
+    if (index >= 0) {
+      all[index] = director;
+    } else {
+      all.unshift({ ...director, id: Date.now().toString(), createdAt: new Date().toISOString() });
+    }
+    return setItem(KEYS.DIRECTORS, all);
+  },
+
+  delete(id) {
+    const filtered = this.getAll().filter((d) => d.id !== id);
+    return setItem(KEYS.DIRECTORS, filtered);
+  },
+
+  toggleFeatured(id) {
+    const all = this.getAll();
+    const index = all.findIndex((d) => d.id === id);
+    if (index >= 0) {
+      all[index] = { ...all[index], featured: !all[index].featured };
+      setItem(KEYS.DIRECTORS, all);
+    }
+    return this.getById(id);
   },
 };

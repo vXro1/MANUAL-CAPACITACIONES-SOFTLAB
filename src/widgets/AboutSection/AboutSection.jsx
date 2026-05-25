@@ -1,6 +1,7 @@
 import { motion, useInView } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { directivosApi } from '@/services/directivosApi';
 import { ArrowRight, FlaskConical, BookOpen, Users } from 'lucide-react';
 
 const logoSoftlab1 = new URL(
@@ -14,8 +15,10 @@ const logoSoftlab2 = new URL(
 
 const EASE = [0.22, 1, 0.36, 1];
 
-const DIRECTORS = [
+// Directivos por defecto (fallback si el servidor no responde)
+const DEFAULT_DIRECTORS = [
   {
+    id: 'default-1',
     initials: 'ZL',
     name: 'Zulema León',
     role: 'Directora del curso · Semillero de investigación',
@@ -23,10 +26,11 @@ const DIRECTORS = [
     accent: '#1A3FAA',
     bg: '#eef3ff',
     borderColor: '#c7d7f8',
-    desc: 'Directora del curso y del Semillero de Investigación Softlab. Lidera la línea de documentación técnica y la gestión del conocimiento generado por los investigadores.',
+    description: 'Directora del curso y del Semillero de Investigación Softlab. Lidera la línea de documentación técnica y la gestión del conocimiento generado por los investigadores.',
     chips: ['Ingeniería de Sistemas', 'Gestión de proyectos', 'Documentación técnica'],
   },
   {
+    id: 'default-2',
     initials: 'AM',
     name: 'Ana María',
     role: 'Docente del semillero',
@@ -34,10 +38,11 @@ const DIRECTORS = [
     accent: '#166534',
     bg: '#f0fdf4',
     borderColor: '#bbf7d0',
-    desc: 'Acompaña los procesos formativos de los estudiantes investigadores, orientando el desarrollo de competencias en programación y diseño de software.',
+    description: 'Acompaña los procesos formativos de los estudiantes investigadores, orientando el desarrollo de competencias en programación y diseño de software.',
     chips: ['Facultad de Ingeniería', 'Desarrollo de software', 'Pedagogía activa'],
   },
   {
+    id: 'default-3',
     initials: 'AG',
     name: 'Ana Gabriela',
     role: 'Directora del Semillero',
@@ -45,7 +50,7 @@ const DIRECTORS = [
     accent: '#92400e',
     bg: '#fef3c7',
     borderColor: '#fde68a',
-    desc: 'Co-directora del Semillero Softlab. Coordina las capacitaciones, supervisa los proyectos de investigación estudiantil y vincula al semillero con la comunidad académica regional.',
+    description: 'Co-directora del Semillero Softlab. Coordina las capacitaciones, supervisa los proyectos de investigación estudiantil y vincula al semillero con la comunidad académica regional.',
     chips: ['Ingeniería de Sistemas', 'Coordinación académica', 'Investigación aplicada'],
   },
 ];
@@ -77,9 +82,12 @@ const PILLARS = [
   },
 ];
 
+// ─── DirectorCard (mismo diseño que antes) ────────────────────────────────────
+
 function DirectorCard({ person, index }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
+  const borderColor = person.borderColor ?? person.border ?? '#c7d7f8';
 
   return (
     <motion.div
@@ -89,7 +97,7 @@ function DirectorCard({ person, index }) {
       transition={{ duration: 0.62, delay: index * 0.14, ease: EASE }}
       whileHover={{
         y: -7,
-        boxShadow: `0 24px 56px rgba(0,0,0,0.11), 0 0 0 1.5px ${person.borderColor}`,
+        boxShadow: `0 24px 56px rgba(0,0,0,0.11), 0 0 0 1.5px ${borderColor}`,
       }}
       style={{
         flex: 1, minWidth: 0,
@@ -101,45 +109,45 @@ function DirectorCard({ person, index }) {
         willChange: 'transform',
       }}
     >
-      {/* Colored header */}
-      <div
-        style={{
-          background: person.bg,
-          padding: '32px 28px 28px',
-          position: 'relative',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-        }}
-      >
+      {/* Cabecera coloreada */}
+      <div style={{
+        background: person.bg || '#EEF3FF',
+        padding: '32px 28px 28px',
+        position: 'relative',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+      }}>
         {/* Badge */}
-        <div
-          style={{
+        {person.badge && (
+          <div style={{
             position: 'absolute', top: 16, right: 16,
             padding: '4px 12px', borderRadius: 999,
             fontSize: 11, fontWeight: 700,
             background: '#fff', color: person.accent,
-            border: `1px solid ${person.borderColor}`,
+            border: `1px solid ${borderColor}`,
             fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em',
-          }}
-        >
-          {person.badge}
-        </div>
+          }}>
+            {person.badge}
+          </div>
+        )}
 
         {/* Avatar */}
-        <div
-          style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: person.accent,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, fontWeight: 800, color: '#fff',
-            fontFamily: 'Syne, sans-serif',
-            border: '4px solid #fff',
-            boxShadow: `0 6px 24px ${person.accent}40`,
-          }}
-        >
-          {person.initials}
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          background: person.accent || '#1A3FAA',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+          fontSize: 22, fontWeight: 800, color: '#fff',
+          fontFamily: 'Syne, sans-serif',
+          border: '4px solid #fff',
+          boxShadow: `0 6px 24px ${person.accent || '#1A3FAA'}40`,
+        }}>
+          {person.photo
+            ? <img src={person.photo} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : (person.initials || (person.name ?? '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase())
+          }
         </div>
 
-        {/* Name + role */}
+        {/* Nombre + rol */}
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 700, color: '#0A0F1E', margin: 0, letterSpacing: '-0.3px' }}>
             {person.name}
@@ -147,25 +155,31 @@ function DirectorCard({ person, index }) {
           <p style={{ fontSize: 12, color: person.accent, margin: '4px 0 0', fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>
             {person.role}
           </p>
+          {person.profession && (
+            <p style={{ fontSize: 11, color: '#94A3B8', margin: '3px 0 0', fontFamily: 'DM Sans, sans-serif' }}>
+              {person.profession}
+            </p>
+          )}
         </div>
       </div>
 
-      <div style={{ height: 1, background: person.borderColor }} />
+      <div style={{ height: 1, background: borderColor }} />
 
-      {/* Body */}
+      {/* Cuerpo */}
       <div style={{ padding: '24px 24px 20px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
         <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.75, margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-          {person.desc}
+          {person.description || person.desc || ''}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'auto' }}>
-          {person.chips.map((chip) => (
+          {(person.chips ?? []).map((chip) => (
             <span
               key={chip}
               style={{
                 padding: '4px 10px', borderRadius: 999,
                 fontSize: 11, fontWeight: 500,
-                background: person.bg, color: person.accent,
-                border: `1px solid ${person.borderColor}`,
+                background: person.bg || '#EEF3FF',
+                color: person.accent || '#1A3FAA',
+                border: `1px solid ${borderColor}`,
                 fontFamily: 'DM Sans, sans-serif',
               }}
             >
@@ -178,9 +192,43 @@ function DirectorCard({ person, index }) {
   );
 }
 
+// ─── AboutSection ─────────────────────────────────────────────────────────────
+
 export function AboutSection() {
   const titleRef = useRef(null);
   const titleInView = useInView(titleRef, { once: true, margin: '-80px' });
+
+  // Carga directivos destacados desde el servidor
+  const [featuredDirectors, setFeaturedDirectors] = useState([]);
+  const [loadingDirectors, setLoadingDirectors] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await directivosApi.getFeatured();
+        if (!cancelled) {
+          setFeaturedDirectors(data.length > 0 ? data : DEFAULT_DIRECTORS);
+        }
+      } catch {
+        // Intentar desde caché local
+        try {
+          const cached = JSON.parse(localStorage.getItem('softlab_directors') ?? '[]');
+          const featured = cached.filter((d) => d.featured);
+          if (!cancelled) {
+            setFeaturedDirectors(featured.length > 0 ? featured : DEFAULT_DIRECTORS);
+          }
+        } catch {
+          if (!cancelled) setFeaturedDirectors(DEFAULT_DIRECTORS);
+        }
+      } finally {
+        if (!cancelled) setLoadingDirectors(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const directorsToShow = featuredDirectors.slice(0, 3);
 
   return (
     <section
@@ -195,12 +243,12 @@ export function AboutSection() {
         style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px' }}
         className="about-container"
       >
-        {/* ── Identity: text + pillars ── */}
+        {/* ── Identidad: texto + pilares ── */}
         <div
           style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start', marginBottom: 88 }}
           className="about-grid"
         >
-          {/* Left column */}
+          {/* Columna izquierda */}
           <div>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -271,19 +319,9 @@ export function AboutSection() {
                 boxShadow: '0 2px 12px rgba(26,63,170,0.05)',
               }}
             >
-              <img
-                src={logoSoftlab1}
-                alt="Logo Semillero"
-                style={{ height: 44, objectFit: 'contain' }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
+              <img src={logoSoftlab1} alt="Logo Semillero" style={{ height: 44, objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               <div style={{ width: 1, height: 36, background: '#e5e7eb', flexShrink: 0 }} />
-              <img
-                src={logoSoftlab2}
-                alt="Logo Softlab"
-                style={{ height: 44, objectFit: 'contain' }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
+              <img src={logoSoftlab2} alt="Logo Softlab" style={{ height: 44, objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </motion.div>
 
             <motion.div
@@ -315,15 +353,13 @@ export function AboutSection() {
             </motion.div>
           </div>
 
-          {/* Right column: glass pillar cards */}
+          {/* Columna derecha: pilares */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <p
-              style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: '#94a3b8',
-                marginBottom: 4, fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
+            <p style={{
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: '#94a3b8',
+              marginBottom: 4, fontFamily: 'DM Sans, sans-serif',
+            }}>
               Lo que hacemos
             </p>
             {PILLARS.map((pillar, i) => {
@@ -351,25 +387,18 @@ export function AboutSection() {
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = pillar.border; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                 >
-                  <div
-                    style={{
-                      width: 42, height: 42, borderRadius: 12,
-                      background: pillar.bg,
-                      border: `1px solid ${pillar.border}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
-                      boxShadow: `0 2px 10px ${pillar.accent}18`,
-                    }}
-                  >
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 12,
+                    background: pillar.bg,
+                    border: `1px solid ${pillar.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: `0 2px 10px ${pillar.accent}18`,
+                  }}>
                     <Icon size={18} color={pillar.accent} />
                   </div>
                   <div>
-                    <h3
-                      style={{
-                        fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700,
-                        color: '#0A0F1E', margin: '0 0 6px', letterSpacing: '-0.2px',
-                      }}
-                    >
+                    <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700, color: '#0A0F1E', margin: '0 0 6px', letterSpacing: '-0.2px' }}>
                       {pillar.title}
                     </h3>
                     <p style={{ fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.7, fontFamily: 'DM Sans, sans-serif' }}>
@@ -420,14 +449,41 @@ export function AboutSection() {
             </motion.p>
           </div>
 
-          <div
-            style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}
-            className="directors-grid"
+          {loadingDirectors ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+              Cargando equipo directivo...
+            </div>
+          ) : (
+            <div
+              style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}
+              className="directors-grid"
+            >
+              {directorsToShow.map((person, i) => (
+                <DirectorCard key={person.id || person.name} person={person} index={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Enlace a ver todos */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={titleInView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            style={{ textAlign: 'center', marginTop: 36 }}
           >
-            {DIRECTORS.map((person, i) => (
-              <DirectorCard key={person.name} person={person} index={i} />
-            ))}
-          </div>
+            <Link to="/nosotros" style={{ textDecoration: 'none' }}>
+              <button style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '11px 22px',
+                background: 'transparent', color: '#64748b',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: 10, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              }}>
+                Ver todo el equipo <ArrowRight size={13} />
+              </button>
+            </Link>
+          </motion.div>
         </div>
       </div>
     </section>

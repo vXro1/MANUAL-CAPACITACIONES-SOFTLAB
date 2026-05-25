@@ -1,15 +1,17 @@
 /**
- * Sincroniza datos del servidor (MySQL) hacia localStorage.
+ * dataSync.js — Sincroniza datos del servidor (MySQL) hacia localStorage.
  * Los repositorios existentes leen localStorage de forma síncrona,
  * así que este módulo actúa como capa de caché: carga una vez al inicio
  * y después de cada mutación del admin.
  */
 import { manualesApi, participantesApi, galeriaApi } from './apiService';
+import { directivosApi } from './directivosApi';
 
 const KEYS = {
   MANUALS:      'softlab_manuals',
   PARTICIPANTS: 'softlab_participants',
   GALLERY:      'softlab_gallery',
+  DIRECTORS:    'softlab_directors',
   SYNCED:       'softlab_last_sync',
 };
 
@@ -17,36 +19,36 @@ function save(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
 }
 
-// Convierte una fila de participante del servidor al formato del frontend
+// ─── Normalizadores ───────────────────────────────────────────────────────────
+
 function normalizeParticipant(p) {
   return {
     id:        String(p.id),
-    name:      p.name  ?? p.nombre ?? '',
-    role:      p.role  ?? p.rol    ?? '',
-    career:    p.career ?? p.carrera ?? '',
+    name:      p.name     ?? p.nombre   ?? '',
+    role:      p.role     ?? p.rol      ?? '',
+    career:    p.career   ?? p.carrera  ?? '',
     semester:  p.semestre ?? p.semester ?? null,
-    bio:       p.bio ?? '',
-    skills:    p.skills ?? p.habilidades ?? [],
+    bio:       p.bio      ?? '',
+    skills:    p.skills   ?? p.habilidades ?? [],
     linkedin:  p.linkedin ?? '',
-    github:    p.github ?? '',
-    email:     p.email ?? '',
-    photo:     p.foto_path ?? p.photo ?? null,
+    github:    p.github   ?? '',
+    email:     p.email    ?? '',
+    photo:     p.foto_path ?? p.photo   ?? null,
   };
 }
 
-// Convierte una fila de manual del servidor al formato del frontend
 function normalizeManual(m) {
   return {
-    id:           String(m.id),
-    title:        m.titulo ?? m.title ?? '',
-    category:     m.categoria ?? m.category ?? '',
-    description:  m.descripcion ?? m.description ?? '',
-    authorIds:    m.autor_ids ?? m.authorIds ?? [],
-    date:         m.fecha ?? m.date ?? '',
-    featured:     !!(m.destacado ?? m.featured),
-    pdf:          m.pdf_path ?? m.pdf ?? null,
-    coverImage:   m.imagen_portada ?? m.coverImage ?? null,
-    gallery:      m.galeria_evidencias ?? m.gallery ?? [],
+    id:            String(m.id),
+    title:         m.titulo       ?? m.title        ?? '',
+    category:      m.categoria    ?? m.category     ?? '',
+    description:   m.descripcion  ?? m.description  ?? '',
+    authorIds:     m.autor_ids    ?? m.authorIds    ?? [],
+    date:          m.fecha        ?? m.date         ?? '',
+    featured:      !!(m.destacado ?? m.featured),
+    pdf:           m.pdf_path     ?? m.pdf          ?? null,
+    coverImage:    m.imagen_portada ?? m.coverImage ?? null,
+    gallery:       m.galeria_evidencias ?? m.gallery ?? [],
     subtitle:      m.subtitle      ?? null,
     introduction:  m.introduction  ?? null,
     time:          m.time          ?? null,
@@ -60,31 +62,62 @@ function normalizeManual(m) {
   };
 }
 
-// Convierte una fila de galería del servidor al formato del frontend
 function normalizeGalleryImage(img) {
   return {
-    id:          String(img.id),
-    src:         img.imagen_path ?? img.src ?? '',
-    title:       img.titulo ?? img.title ?? '',
-    featured:    !!(img.destacada ?? img.featured),
-    uploadedAt:  img.subido_en ?? img.uploadedAt ?? new Date().toISOString(),
+    id:         String(img.id),
+    src:        img.imagen_path ?? img.src     ?? '',
+    title:      img.titulo      ?? img.title   ?? '',
+    featured:   !!(img.destacada ?? img.featured),
+    uploadedAt: img.subido_en   ?? img.uploadedAt ?? new Date().toISOString(),
   };
 }
 
-// ─── Sincronización completa ───────────────────────────────────────────────────
+// Los directivos ya vienen normalizados desde directivosApi/directivos.php
+function normalizeDirectivo(d) {
+  return {
+    id:          String(d.id),
+    name:        d.name        ?? d.nombre       ?? '',
+    role:        d.role        ?? d.rol          ?? '',
+    profession:  d.profession  ?? d.profesion    ?? '',
+    faculty:     d.faculty     ?? d.facultad     ?? '',
+    description: d.description ?? d.descripcion  ?? '',
+    highlights:  d.highlights  ?? '',
+    chips:       d.chips       ?? [],
+    docs:        d.docs        ?? [],
+    photo:       d.photo       ?? d.foto         ?? null,
+    accent:      d.accent      ?? '#1A3FAA',
+    bg:          d.bg          ?? '#EEF3FF',
+    borderColor: d.borderColor ?? d.border_color ?? '#C7D5F8',
+    border:      d.borderColor ?? d.border_color ?? '#C7D5F8',
+    badge:       d.badge       ?? d.role         ?? '',
+    featured:    !!(d.featured),
+    createdAt:   d.createdAt   ?? d.created_at   ?? '',
+    initials:    d.initials    ?? (d.name ?? d.nombre ?? '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join(''),
+  };
+}
+
+// ─── Sincronización completa ──────────────────────────────────────────────────
+
 export async function syncAll() {
   try {
-    const [manuals, participants, gallery] = await Promise.all([
+    const [manuals, participants, gallery, directors] = await Promise.allSettled([
       manualesApi.getAll(),
       participantesApi.getAll(),
       galeriaApi.getAll(),
+      directivosApi.getAll(),
     ]);
 
-    save(KEYS.MANUALS,      manuals.map(normalizeManual));
-    save(KEYS.PARTICIPANTS, participants.map(normalizeParticipant));
-    save(KEYS.GALLERY,      gallery.map(normalizeGalleryImage));
-    save(KEYS.SYNCED,       Date.now());
+    if (manuals.status     === 'fulfilled') save(KEYS.MANUALS,      manuals.value.map(normalizeManual));
+    if (participants.status === 'fulfilled') save(KEYS.PARTICIPANTS, participants.value.map(normalizeParticipant));
+    if (gallery.status     === 'fulfilled') save(KEYS.GALLERY,      gallery.value.map(normalizeGalleryImage));
+    if (directors.status   === 'fulfilled') save(KEYS.DIRECTORS,    directors.value.map(normalizeDirectivo));
 
+    save(KEYS.SYNCED, Date.now());
     return true;
   } catch (err) {
     console.warn('[dataSync] No se pudo sincronizar con el servidor:', err.message);
@@ -92,7 +125,8 @@ export async function syncAll() {
   }
 }
 
-// ─── Sincronización parcial (tras mutaciones del admin) ───────────────────────
+// ─── Sincronización parcial (tras mutaciones del admin) ──────────────────────
+
 export async function syncManuales() {
   const data = await manualesApi.getAll();
   save(KEYS.MANUALS, data.map(normalizeManual));
@@ -106,4 +140,9 @@ export async function syncParticipantes() {
 export async function syncGaleria() {
   const data = await galeriaApi.getAll();
   save(KEYS.GALLERY, data.map(normalizeGalleryImage));
+}
+
+export async function syncDirectivos() {
+  const data = await directivosApi.getAll();
+  save(KEYS.DIRECTORS, data.map(normalizeDirectivo));
 }

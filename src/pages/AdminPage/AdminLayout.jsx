@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu, X, LayoutDashboard, BookOpen, Plus,
   Users, UserPlus, LogOut, FlaskConical, ChevronRight,
-  Images, ExternalLink,
+  Images, ExternalLink, GraduationCap,
 } from 'lucide-react';
 import { AdminAuth } from '@/features/admin-auth/AdminAuth';
 import { getToken, removeToken } from '@/services/apiService';
@@ -25,12 +25,13 @@ const NAV_GROUPS = [
     items: [
       { label: 'Participantes',        href: '/panel-softlab-admin/participantes',       icon: Users },
       { label: 'Agregar participante', href: '/panel-softlab-admin/participantes/nuevo', icon: UserPlus },
+      { label: 'Personal directivo',   href: '/panel-softlab-admin/directivos',          icon: GraduationCap },
     ],
   },
   {
     label: 'Galería',
     items: [
-      { label: 'Imágenes',          href: '/panel-softlab-admin/galeria', icon: Images },
+      { label: 'Imágenes',            href: '/panel-softlab-admin/galeria', icon: Images },
       { label: 'Ver galería pública', href: '/galeria', icon: ExternalLink, external: true },
     ],
   },
@@ -38,12 +39,13 @@ const NAV_GROUPS = [
 
 // ─── Mapa de títulos por ruta ─────────────────────────────────────────────────
 const PAGE_TITLES = {
-  '/panel-softlab-admin':                    { title: 'Panel principal',       sub: 'Resumen general del sistema' },
-  '/panel-softlab-admin/manuales':           { title: 'Gestión de manuales',   sub: 'Administra el catálogo de manuales' },
-  '/panel-softlab-admin/manuales/nuevo':     { title: 'Nuevo manual',          sub: 'Crea una nueva capacitación' },
-  '/panel-softlab-admin/participantes':      { title: 'Participantes',         sub: 'Equipo del semillero' },
-  '/panel-softlab-admin/participantes/nuevo':{ title: 'Nuevo participante',    sub: 'Agregar miembro al equipo' },
-  '/panel-softlab-admin/galeria':            { title: 'Galería de imágenes',   sub: 'Gestiona las fotos del semillero' },
+  '/panel-softlab-admin':                     { title: 'Panel principal',       sub: 'Resumen general del sistema' },
+  '/panel-softlab-admin/manuales':            { title: 'Gestión de manuales',   sub: 'Administra el catálogo de manuales' },
+  '/panel-softlab-admin/manuales/nuevo':      { title: 'Nuevo manual',          sub: 'Crea una nueva capacitación' },
+  '/panel-softlab-admin/participantes':       { title: 'Participantes',         sub: 'Equipo del semillero' },
+  '/panel-softlab-admin/participantes/nuevo': { title: 'Nuevo participante',    sub: 'Agregar miembro al equipo' },
+  '/panel-softlab-admin/galeria':             { title: 'Galería de imágenes',   sub: 'Gestiona las fotos del semillero' },
+  '/panel-softlab-admin/directivos':          { title: 'Personal Directivo',    sub: 'Docentes y directores del semillero' },
 };
 
 // ─── SidebarItem ──────────────────────────────────────────────────────────────
@@ -212,7 +214,6 @@ function AdminSidebar({ isOpen, onClose, onLogout }) {
 
 // ─── AdminLayout ──────────────────────────────────────────────────────────────
 export function AdminLayout() {
-  // Usa el token de API como fuente de verdad — persiste entre recargas
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
@@ -308,7 +309,6 @@ export function AdminLayout() {
 
           {/* Topbar right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Badge "Admin" */}
             <span style={{
               fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
               textTransform: 'uppercase', color: '#1A3FAA',
@@ -318,8 +318,6 @@ export function AdminLayout() {
             }}>
               Admin
             </span>
-
-            {/* Avatar */}
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
               background: 'linear-gradient(135deg, #1A3FAA, #3B63E3)',
