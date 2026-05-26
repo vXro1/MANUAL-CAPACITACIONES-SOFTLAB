@@ -60,14 +60,16 @@ async function request(path, options = {}) {
 async function requestForm(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
+  let url = API_BASE + path;
   if (token) {
     headers['X-Admin-Token'] = token;
-    // Fallback: algunos servidores (Hostinger) eliminan headers en multipart.
-    // El PHP en config.php acepta el token también desde el campo _token del form.
+    // Hostinger elimina headers en multipart: enviamos el token también como
+    // query param ($_GET) y campo de formulario ($_POST) para triple fallback.
     formData.append('_token', token);
+    url += (path.includes('?') ? '&' : '?') + '_token=' + encodeURIComponent(token);
   }
 
-  const res  = await fetch(API_BASE + path, { method, body: formData, headers });
+  const res  = await fetch(url, { method, body: formData, headers });
   const json = await res.json();
   if (!json.ok) {
     handleUnauth(res.status);
