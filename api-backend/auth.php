@@ -103,7 +103,7 @@ function clearRateLimit(string $ip): void {
  * Retorna el admin_id del token activo, o termina con error.
  * Formato almacenado: "<token>::<expiry>::<admin_id>"
  */
-function requireAdmin(): string {
+function requireAdminV3(): string {
     $token = trim($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '');
     if (empty($token)) err('No autenticado', 401);
 
@@ -210,7 +210,7 @@ if ($method === 'POST' && $action === 'login') {
 // POST { "action": "logout" }
 // ─────────────────────────────────────────────────────────────────────────────
 if ($method === 'POST' && $action === 'logout') {
-    $adminId  = requireAdmin();
+    $adminId  = requireAdminV3();
     $token    = trim($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '');
     $sessions = array_filter(getSessions(), function ($s) use ($token) {
         [$stored] = explode('::', $s, 2);
@@ -224,7 +224,7 @@ if ($method === 'POST' && $action === 'logout') {
 // CHECK  GET ?action=check
 // ─────────────────────────────────────────────────────────────────────────────
 if ($method === 'GET' && $action === 'check') {
-    $adminId = requireAdmin();
+    $adminId = requireAdminV3();
 
     $stmt = db()->prepare("SELECT display_name FROM admin_users WHERE id = ? LIMIT 1");
     $stmt->execute([$adminId]);
