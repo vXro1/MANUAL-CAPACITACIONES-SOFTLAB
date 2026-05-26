@@ -16,14 +16,30 @@ export function removeToken()       { localStorage.removeItem(TOKEN_KEY); }
 
 // ─── Cliente base ──────────────────────────────────────────────────────────────
 
-// Solo cierra sesión cuando el servidor responde con HTTP 401 (token inválido/expirado)
+// Cuando un endpoint devuelve 401, verificamos primero si el token sigue siendo válido.
+// Si la comprobación de auth también falla → logout real.
+// Si el token sigue siendo válido → el 401 es un bug del endpoint, no cerramos sesión.
 function handleUnauth(status) {
-  if (status === 401) {
-    removeToken();
-    if (window.location.pathname.startsWith('/panel-softlab-admin')) {
-      window.location.reload();
-    }
-  }
+  if (status !== 401) return;
+  const token = getToken();
+  if (!token) return;
+
+  fetch(API_BASE + '/auth.php?action=check', {
+    headers: { 'X-Admin-Token': token },
+  })
+    .then((r) => r.json())
+    .then((json) => {
+      if (!json.ok) {
+        removeToken();
+        if (window.location.pathname.startsWith('/panel-softlab-admin')) {
+          window.location.reload();
+        }
+      }
+      // Si json.ok es true → token válido, el 401 fue de un endpoint específico; no cerramos sesión
+    })
+    .catch(() => {
+      // Error de red: no cerramos sesión para no expulsar al usuario sin motivo
+    });
 }
 
 async function request(path, options = {}) {
