@@ -94,7 +94,12 @@ function err($msg, $code = 400) {
 
 // ─── Verificar token de admin ─────────────────────────────────────────────────
 function requireAdmin() {
-    $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+    // Algunos servidores (Hostinger) eliminan headers personalizados en peticiones
+    // multipart/form-data. Se acepta el token desde header, query param o form field.
+    $token = $_SERVER['HTTP_X_ADMIN_TOKEN']
+          ?? $_GET['_token']
+          ?? $_POST['_token']
+          ?? '';
     if (empty($token)) err('No autorizado', 401);
 
     $row = db()->query("SELECT valor FROM admin_config WHERE clave = 'session_token'")->fetch();

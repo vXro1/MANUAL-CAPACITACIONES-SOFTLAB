@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -7,7 +7,7 @@ import {
   Images, ExternalLink, GraduationCap, CalendarDays,
 } from 'lucide-react';
 import { AdminAuth } from '@/features/admin-auth/AdminAuth';
-import { getToken, removeToken } from '@/services/apiService';
+import { getToken, removeToken, authApi } from '@/services/apiService';
 import { cn } from '@/shared/lib/cn';
 
 // ─── Constantes de navegación ─────────────────────────────────────────────────
@@ -221,9 +221,34 @@ function AdminSidebar({ isOpen, onClose, onLogout }) {
 // ─── AdminLayout ──────────────────────────────────────────────────────────────
 export function AdminLayout() {
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [verifying,    setVerifying]    = useState(() => !!getToken());
+  const [sidebarOpen,  setSidebarOpen]  = useState(false);
   const location = useLocation();
   const pageInfo = PAGE_TITLES[location.pathname] || { title: 'Panel', sub: '' };
+
+  // Al montar, verifica que el token guardado siga siendo válido en el servidor.
+  // Así se detectan tokens caducados sin esperar a que una operación falle.
+  useEffect(() => {
+    if (!getToken()) { setVerifying(false); return; }
+    authApi.check()
+      .then(() => setVerifying(false))
+      .catch(() => {
+        removeToken();
+        setAuthenticated(false);
+        setVerifying(false);
+      });
+  }, []);
+
+  if (verifying) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#F8FAFF' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 32, height: 32, border: '3px solid #1A3FAA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+          <p style={{ fontSize: 13, color: '#94A3B8', fontFamily: 'DM Sans, sans-serif' }}>Verificando sesión…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!authenticated) {
     return <AdminAuth onSuccess={() => setAuthenticated(true)} />;

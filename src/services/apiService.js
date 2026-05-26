@@ -26,7 +26,6 @@ function handleUnauth(status) {
 
   fetch(API_BASE + '/auth.php?action=check', {
     headers: { 'X-Admin-Token': token },
-    credentials: 'include',
   })
     .then((r) => r.json())
     .then((json) => {
@@ -48,7 +47,7 @@ async function request(path, options = {}) {
   const headers = { ...(options.headers ?? {}) };
   if (token) headers['X-Admin-Token'] = token;
 
-  const res  = await fetch(API_BASE + path, { credentials: 'include', ...options, headers });
+  const res  = await fetch(API_BASE + path, { ...options, headers });
   const json = await res.json();
   if (!json.ok) {
     handleUnauth(res.status);
@@ -61,9 +60,14 @@ async function request(path, options = {}) {
 async function requestForm(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
-  if (token) headers['X-Admin-Token'] = token;
+  if (token) {
+    headers['X-Admin-Token'] = token;
+    // Fallback: algunos servidores (Hostinger) eliminan headers en multipart.
+    // El PHP en config.php acepta el token también desde el campo _token del form.
+    formData.append('_token', token);
+  }
 
-  const res  = await fetch(API_BASE + path, { method, body: formData, headers, credentials: 'include' });
+  const res  = await fetch(API_BASE + path, { method, body: formData, headers });
   const json = await res.json();
   if (!json.ok) {
     handleUnauth(res.status);
