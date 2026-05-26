@@ -93,24 +93,33 @@ function err($msg, $code = 400) {
 }
 
 // ─── Verificar token de admin ─────────────────────────────────────────────────
+// Compatible con auth.php v3: sesiones en 'session_tokens' (JSON array)
+// Formato de cada sesión: "TOKEN::EXPIRY::ADMIN_ID"
+// Hostinger elimina headers en multipart → se lee también de $_GET/_POST.
 function requireAdmin() {
-    // Algunos servidores (Hostinger) eliminan headers personalizados en peticiones
-    // multipart/form-data. Se acepta el token desde header, query param o form field.
-    $token = $_SERVER['HTTP_X_ADMIN_TOKEN']
-          ?? $_GET['_token']
-          ?? $_POST['_token']
-          ?? '';
+    $token = trim(
+        $_SERVER['HTTP_X_ADMIN_TOKEN']
+        ?? $_GET['_token']
+        ?? $_POST['_token']
+        ?? ''
+    );
     if (empty($token)) err('No autorizado', 401);
 
-    $row = db()->query("SELECT valor FROM admin_config WHERE clave = 'session_token'")->fetch();
+    $stmt = db()->prepare("SELECT valor FROM admin_config WHERE clave = 'session_tokens' LIMIT 1");
+    $stmt->execute();
+    $row = $stmt->fetch();
     if (!$row) err('No autorizado', 401);
 
-    $parts = explode('::', $row['valor'], 2);
-    if (count($parts) !== 2) err('No autorizado', 401);
+    $sessions = json_decode($row['valor'], true) ?? [];
+    foreach ($sessions as $session) {
+        [$stored, $expiry] = array_pad(explode('::', $session, 3), 3, '');
+        if (hash_equals($stored, $token)) {
+            if (time() > (int)$expiry) err('Sesión expirada. Inicia sesión de nuevo.', 401);
+            return;
+        }
+    }
 
-    [$stored, $expiry] = $parts;
-    if ($stored !== $token)   err('Token inválido', 401);
-    if (time() > (int)$expiry) err('Sesión expirada. Inicia sesión de nuevo.', 401);
+    err('Token inválido', 401);
 }
 
 // ─── Leer body JSON ───────────────────────────────────────────────────────────
