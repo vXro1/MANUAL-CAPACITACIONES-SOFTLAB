@@ -11,11 +11,13 @@ import { Modal } from '@/shared/ui/Modal';
 import { ManualForm } from '@/features/manual-form/ManualForm';
 import { formatDate } from '@/shared/lib/formatDate';
 
+
 export function AdminManualsPage() {
-  const [manuals, setManuals] = useState(() => manualsRepository.getAll());
-  const [search, setSearch] = useState('');
-  const [editManual, setEditManual] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+  const [manuals,     setManuals]     = useState(() => manualsRepository.getAll());
+  const [search,      setSearch]      = useState('');
+  const [createOpen,  setCreateOpen]  = useState(false);
+  const [editManual,  setEditManual]  = useState(null);
+  const [deleteId,    setDeleteId]    = useState(null);
 
   const reload = () => setManuals(manualsRepository.getAll());
 
@@ -61,9 +63,7 @@ export function AdminManualsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Manuales</h1>
           <p className="text-sm text-slate-500 mt-1">{manuals.length} manuales registrados</p>
         </div>
-        <Link to="/panel-softlab-admin/manuales/nuevo">
-          <Button icon={Plus}>Nuevo manual</Button>
-        </Link>
+        <Button icon={Plus} onClick={() => setCreateOpen(true)}>Nuevo manual</Button>
       </div>
 
       {/* Search */}
@@ -184,21 +184,20 @@ export function AdminManualsPage() {
         )}
       </div>
 
-      {/* Edit Modal */}
-      <Modal
+      {/* Create modal */}
+      <ManualForm
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => { reload(); setCreateOpen(false); }}
+      />
+
+      {/* Edit modal */}
+      <ManualForm
         isOpen={!!editManual}
         onClose={() => setEditManual(null)}
-        title="Editar manual"
-        size="xl"
-      >
-        {editManual && (
-          <ManualForm
-            manual={editManual}
-            onSuccess={() => { reload(); setEditManual(null); }}
-            onCancel={() => setEditManual(null)}
-          />
-        )}
-      </Modal>
+        manual={editManual}
+        onSuccess={() => { reload(); setEditManual(null); }}
+      />
 
       {/* Delete confirm */}
       <Modal

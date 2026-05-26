@@ -1,111 +1,132 @@
-import { useForm } from 'react-hook-form';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Save, Plus, X, Upload, Link as LinkIcon, FileText, CheckCircle,
-  ImagePlus, Image as ImageIcon, Search, Users, User, Mic,
+  BookOpen, AlignLeft, Users, Upload, X, Plus, Check,
+  Link as LinkIcon, FileText, Image as ImageIcon, Search,
+  User, Mic, CheckCircle, ImagePlus,
 } from 'lucide-react';
-import { useState, useRef } from 'react';
-import { Button } from '@/shared/ui/Button';
-import { Input, Textarea } from '@/shared/ui/Input';
 import { CATEGORIES } from '@/shared/constants';
-import { manualesApi } from '@/services/apiService';
+import { manualesApi, evidenciasApi } from '@/services/apiService';
 import { syncManuales } from '@/services/dataSync';
 import { participantsRepository } from '@/storage/localStorageRepository';
-import { evidenciasApi } from '@/services/apiService';
-import { cn } from '@/shared/lib/cn';
 
-// ─── Campo PDF ────────────────────────────────────────────────────────────────
+const ACCENT = '#7C3AED';
+const BG     = '#F5F3FF';
+const BORDER = '#DDD6FE';
+const E      = [0.22, 1, 0.36, 1];
+
+const TABS = [
+  { id: 'general',   label: 'General',   icon: BookOpen },
+  { id: 'contenido', label: 'Contenido', icon: AlignLeft },
+  { id: 'personas',  label: 'Personas',  icon: Users },
+  { id: 'archivos',  label: 'Archivos',  icon: Upload },
+];
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const buildForm = (manual) => ({
+  title:        manual?.title        ?? '',
+  subtitle:     manual?.subtitle     ?? '',
+  description:  manual?.description  ?? '',
+  introduction: manual?.introduction ?? '',
+  category:     manual?.category     ?? (CATEGORIES[0] ?? ''),
+  date:         manual?.date         ?? '',
+  time:         manual?.time         ?? '',
+  duration:     manual?.duration     ?? '',
+  institution:  manual?.institution  ?? '',
+  cover:        manual?.cover || manual?.coverImage || null,
+  pdf:          manual?.pdf && !manual.pdf.startsWith('idb:') ? manual.pdf : null,
+});
+
+// ─── PDFUploadField ───────────────────────────────────────────────────────────
 function PDFUploadField({ value, onChange }) {
-  const isFile    = value instanceof File;
-  const isUrl     = typeof value === 'string' && value.startsWith('http');
-  const [mode, setMode]         = useState(isUrl ? 'url' : 'file');
+  const isFile = value instanceof File;
+  const isUrl  = typeof value === 'string' && value.startsWith('http');
+  const [mode,     setMode]     = useState(isUrl ? 'url' : 'file');
   const [urlInput, setUrlInput] = useState(isUrl ? value : '');
 
-  const handleFileChange = (e) => {
+  const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== 'application/pdf') { alert('Solo se permiten archivos PDF.'); return; }
     onChange(file);
   };
 
-  const handleUrlChange = (e) => {
+  const handleUrl = (e) => {
     setUrlInput(e.target.value);
     onChange(e.target.value || null);
   };
 
-  const hasFile = isFile || isUrl;
-
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-slate-700">PDF del manual</label>
-      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs w-fit">
-        {[['file', Upload, 'Subir archivo'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label]) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 font-medium transition-colors',
-              m !== 'file' && 'border-l border-slate-200',
-              mode === m ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
-            )}
-          >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>PDF del manual</label>
+
+      <div style={{ display: 'flex', borderRadius: 8, border: '1.5px solid #E2E8F0', overflow: 'hidden', width: 'fit-content' }}>
+        {[['file', Upload, 'Subir archivo'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label], i) => (
+          <button key={m} type="button" onClick={() => setMode(m)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+              fontSize: 12, fontWeight: 500,
+              borderLeft: i > 0 ? '1.5px solid #E2E8F0' : 'none',
+              background: mode === m ? ACCENT : '#fff',
+              color: mode === m ? '#fff' : '#475569',
+              border: 'none', cursor: 'pointer', transition: 'all .15s',
+            }}>
             <Icon size={12} />{label}
           </button>
         ))}
       </div>
 
       {mode === 'file' ? (
-        <label className={cn(
-          'flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all',
-          hasFile && isFile ? 'border-green-300 bg-green-50' : 'border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/30'
-        )}>
-          <input type="file" accept="application/pdf" className="sr-only" onChange={handleFileChange} />
+        <label style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 10, padding: '20px 16px', borderRadius: 12,
+          border: `2px dashed ${(isFile || isUrl) ? '#86EFAC' : '#E2E8F0'}`,
+          background: isFile ? '#F0FDF4' : isUrl ? BG : '#F8FAFC',
+          cursor: 'pointer', transition: 'all .15s',
+        }}>
+          <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFile} />
           {isFile ? (
-            <div className="flex flex-col items-center gap-1.5 text-green-700">
-              <CheckCircle size={24} className="text-green-500" />
-              <span className="text-sm font-medium">{value.name}</span>
-              <span className="text-xs text-green-600">Listo para subir. Haz clic para reemplazar.</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#15803D' }}>
+              <CheckCircle size={22} style={{ color: '#22C55E' }} />
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{value.name}</span>
+              <span style={{ fontSize: 11, color: '#16A34A' }}>Listo para subir. Haz clic para reemplazar.</span>
             </div>
           ) : isUrl ? (
-            <div className="flex flex-col items-center gap-1.5 text-brand-700">
-              <CheckCircle size={24} className="text-brand-500" />
-              <span className="text-sm font-medium">PDF guardado en el servidor</span>
-              <span className="text-xs text-brand-600">Haz clic para reemplazar.</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: ACCENT }}>
+              <CheckCircle size={22} style={{ color: ACCENT }} />
+              <span style={{ fontSize: 13, fontWeight: 500 }}>PDF guardado en el servidor</span>
+              <span style={{ fontSize: 11 }}>Haz clic para reemplazar.</span>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-1.5 text-slate-500">
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
-                <FileText size={20} className="text-slate-400" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#64748B' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1.5px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileText size={20} style={{ color: '#94A3B8' }} />
               </div>
-              <span className="text-sm font-medium text-slate-700">Haz clic para seleccionar el PDF</span>
-              <span className="text-xs text-slate-400">Solo archivos .pdf · Máx 50 MB</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Haz clic para seleccionar el PDF</span>
+              <span style={{ fontSize: 11, color: '#94A3B8' }}>Solo archivos .pdf · Máx 50 MB</span>
             </div>
           )}
         </label>
       ) : (
-        <input
-          type="url"
-          value={urlInput}
-          onChange={handleUrlChange}
+        <input type="url" value={urlInput} onChange={handleUrl}
           placeholder="https://ejemplo.com/manual.pdf"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          style={{ width: '100%', borderRadius: 10, border: '1.5px solid #E2E8F0', background: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
         />
       )}
     </div>
   );
 }
 
-// ─── Campo portada ───────────────────────────────────────────────────────────
+// ─── CoverImageField ──────────────────────────────────────────────────────────
 function CoverImageField({ value, onChange }) {
-  // value: null | base64 string (nueva) | URL http string (existente en servidor)
   const isBase64 = typeof value === 'string' && value.startsWith('data:');
   const isUrl    = typeof value === 'string' && !isBase64 && value.length > 0;
-  const [mode, setMode]         = useState(isUrl ? 'url' : 'file');
+  const [mode,     setMode]     = useState(isUrl ? 'url' : 'file');
   const [urlInput, setUrlInput] = useState(isUrl ? value : '');
 
-  const preview = isBase64 || isUrl ? value : null;
+  const preview = (isBase64 || isUrl) ? value : null;
 
-  const handleFileChange = (e) => {
+  const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes.'); return; }
@@ -115,90 +136,74 @@ function CoverImageField({ value, onChange }) {
     reader.readAsDataURL(file);
   };
 
-  const handleUrlChange = (e) => {
-    setUrlInput(e.target.value);
-    onChange(e.target.value || null);
-  };
-
-  const clear = () => {
-    setUrlInput('');
-    onChange(null);
-  };
+  const handleUrl = (e) => { setUrlInput(e.target.value); onChange(e.target.value || null); };
+  const clear = () => { setUrlInput(''); onChange(null); };
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-slate-700">Portada del manual</label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Portada del manual</label>
 
-      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs w-fit">
-        {[['file', Upload, 'Subir imagen'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label]) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 font-medium transition-colors',
-              m !== 'file' && 'border-l border-slate-200',
-              mode === m ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
-            )}
-          >
+      <div style={{ display: 'flex', borderRadius: 8, border: '1.5px solid #E2E8F0', overflow: 'hidden', width: 'fit-content' }}>
+        {[['file', Upload, 'Subir imagen'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label], i) => (
+          <button key={m} type="button" onClick={() => setMode(m)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+              fontSize: 12, fontWeight: 500,
+              borderLeft: i > 0 ? '1.5px solid #E2E8F0' : 'none',
+              background: mode === m ? ACCENT : '#fff',
+              color: mode === m ? '#fff' : '#475569',
+              border: 'none', cursor: 'pointer', transition: 'all .15s',
+            }}>
             <Icon size={12} />{label}
           </button>
         ))}
       </div>
 
-      <div className="flex gap-3 items-start">
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         {mode === 'file' ? (
-          <label className={cn(
-            'flex-1 flex flex-col items-center justify-center gap-3 p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all',
-            isBase64 ? 'border-green-300 bg-green-50'
-              : isUrl ? 'border-brand-200 bg-brand-50/30'
-              : 'border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/30'
-          )}>
-            <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
+          <label style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 10, padding: '18px 16px', borderRadius: 12,
+            border: `2px dashed ${isBase64 ? '#86EFAC' : isUrl ? BORDER : '#E2E8F0'}`,
+            background: isBase64 ? '#F0FDF4' : isUrl ? BG : '#F8FAFC',
+            cursor: 'pointer', transition: 'all .15s',
+          }}>
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
             {isBase64 ? (
-              <div className="flex flex-col items-center gap-1.5 text-green-700">
-                <CheckCircle size={20} className="text-green-500" />
-                <span className="text-sm font-medium">✓ Imagen lista para guardar</span>
-                <span className="text-xs text-green-600">Haz clic para reemplazar</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#15803D' }}>
+                <CheckCircle size={20} style={{ color: '#22C55E' }} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>✓ Imagen lista para guardar</span>
+                <span style={{ fontSize: 11, color: '#16A34A' }}>Haz clic para reemplazar</span>
               </div>
             ) : isUrl ? (
-              <div className="flex flex-col items-center gap-1.5 text-brand-700">
-                <CheckCircle size={20} className="text-brand-500" />
-                <span className="text-sm font-medium">Portada guardada en servidor</span>
-                <span className="text-xs text-brand-600">Haz clic para reemplazar con archivo</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: ACCENT }}>
+                <CheckCircle size={20} style={{ color: ACCENT }} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Portada guardada en servidor</span>
+                <span style={{ fontSize: 11 }}>Haz clic para reemplazar con archivo</span>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-1.5 text-slate-500">
-                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
-                  <ImageIcon size={20} className="text-slate-400" />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#64748B' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1.5px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ImageIcon size={20} style={{ color: '#94A3B8' }} />
                 </div>
-                <span className="text-sm font-medium text-slate-700">Haz clic para seleccionar imagen</span>
-                <span className="text-xs text-slate-400">PNG, JPG, WEBP · máx. 3 MB</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Haz clic para seleccionar imagen</span>
+                <span style={{ fontSize: 11, color: '#94A3B8' }}>PNG, JPG, WEBP · máx. 3 MB</span>
               </div>
             )}
           </label>
         ) : (
-          <input
-            type="url"
-            value={urlInput}
-            onChange={handleUrlChange}
+          <input type="url" value={urlInput} onChange={handleUrl}
             placeholder="https://images.unsplash.com/..."
-            className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            style={{ flex: 1, borderRadius: 10, border: '1.5px solid #E2E8F0', background: '#fff', padding: '10px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
           />
         )}
 
-        {/* Preview */}
         {preview && (
-          <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
-            <img src={preview} alt="Vista previa portada" className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={clear}
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
-              aria-label="Quitar portada"
-            >
-              <X size={10} />
-            </button>
+          <div style={{ position: 'relative', width: 88, height: 88, borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E2E8F0', background: '#F1F5F9', flexShrink: 0 }}>
+            <img src={preview} alt="Vista previa portada" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <button type="button" onClick={clear}
+              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,.55)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-label="Quitar portada"><X size={10} /></button>
           </div>
         )}
       </div>
@@ -206,92 +211,62 @@ function CoverImageField({ value, onChange }) {
   );
 }
 
-// ─── Selector de participantes (multi) ────────────────────────────────────────
+// ─── ParticipantPicker ────────────────────────────────────────────────────────
 function ParticipantPicker({ label, icon: Icon, participants, value, onChange }) {
   const [search, setSearch] = useState('');
-  const filtered = participants.filter(p =>
+  const filtered = participants.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.career ?? '').toLowerCase().includes(search.toLowerCase())
   );
   const toggle = (id) =>
-    onChange(value.includes(id) ? value.filter(v => v !== id) : [...value, id]);
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon size={14} className="text-brand-500" />}
-        <label className="text-sm font-medium text-slate-700">{label}</label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {Icon && <Icon size={14} style={{ color: ACCENT }} />}
+        <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{label}</label>
         {value.length > 0 && (
-          <span className="ml-auto text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-medium">
-            {value.length}
-          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, background: BG, color: ACCENT, padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>{value.length}</span>
         )}
       </div>
-
-      {/* Búsqueda */}
-      <div className="relative">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+      <div style={{ position: 'relative' }}>
+        <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nombre..."
-          className="w-full rounded-lg border border-slate-200 pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          style={{ width: '100%', borderRadius: 10, border: '1.5px solid #E2E8F0', padding: '7px 12px 7px 32px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
         />
       </div>
-
-      {/* Lista */}
-      <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5 border border-slate-200 rounded-xl p-1.5 bg-slate-50">
-        {filtered.length === 0 && (
-          <p className="text-xs text-slate-400 text-center py-3">Sin resultados</p>
-        )}
-        {filtered.map(p => {
-          const selected = value.includes(p.id);
-          return (
-            <label
-              key={p.id}
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors select-none',
-                selected ? 'bg-brand-50 border border-brand-100' : 'hover:bg-white'
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => toggle(p.id)}
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              <div className="w-7 h-7 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-xs font-bold text-brand-600 shrink-0">
-                {p.photo
-                  ? <img src={p.photo} alt="" className="w-full h-full object-cover" />
-                  : (p.name?.[0] ?? '?')}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
-                <p className="text-xs text-slate-400 truncate">{p.career ?? p.role ?? ''}</p>
-              </div>
-            </label>
-          );
-        })}
+      <div style={{ maxHeight: 160, overflowY: 'auto', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: 6, background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {filtered.length === 0
+          ? <p style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', padding: '8px 0' }}>Sin resultados</p>
+          : filtered.map((p) => {
+              const selected = value.includes(p.id);
+              return (
+                <label key={p.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: selected ? BG : 'transparent', border: selected ? `1px solid ${BORDER}` : '1px solid transparent', transition: 'all .15s' }}>
+                  <input type="checkbox" checked={selected} onChange={() => toggle(p.id)}
+                    style={{ accentColor: ACCENT }} />
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: BG, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
+                    {p.photo ? <img src={p.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name?.[0] ?? '?')}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                    <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.career ?? p.role ?? ''}</p>
+                  </div>
+                </label>
+              );
+            })
+        }
       </div>
-
-      {/* Chips de seleccionados */}
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {value.map(id => {
-            const p = participants.find(x => x.id === id);
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {value.map((id) => {
+            const p = participants.find((x) => x.id === id);
             return p ? (
-              <span
-                key={id}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-50 border border-brand-100 text-xs font-medium text-brand-700"
-              >
+              <span key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, background: BG, border: `1px solid ${BORDER}`, fontSize: 12, fontWeight: 500, color: ACCENT }}>
                 {p.name}
-                <button
-                  type="button"
-                  onClick={() => toggle(id)}
-                  className="text-brand-300 hover:text-red-500 transition-colors ml-0.5"
-                  aria-label={`Quitar ${p.name}`}
-                >
+                <button type="button" onClick={() => toggle(id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4B5FD', padding: 0, display: 'flex' }} aria-label={`Quitar ${p.name}`}>
                   <X size={10} />
                 </button>
               </span>
@@ -303,80 +278,71 @@ function ParticipantPicker({ label, icon: Icon, participants, value, onChange })
   );
 }
 
-// ─── Evidencias (galería del manual) ─────────────────────────────────────────
-function GalleryItemPreview({ value, onRemove, index }) {
-  return (
-    <div className="relative aspect-video rounded-lg overflow-hidden group border border-slate-200 bg-slate-100">
-      <img src={value} alt="" className="w-full h-full object-cover" />
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
-        className="absolute top-1 right-1 p-1 rounded-md bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-        aria-label="Eliminar imagen"
-      >
-        <X size={12} />
-      </button>
-    </div>
-  );
-}
-
 // ─── ManualForm ───────────────────────────────────────────────────────────────
-export function ManualForm({ manual, onSuccess, onCancel }) {
+export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
+  const isEdit     = Boolean(manual?.id);
   const participants = participantsRepository.getAll();
-  const isEdit       = Boolean(manual?.id);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = useForm({
-    defaultValues: {
-      title:        manual?.title        ?? '',
-      subtitle:     manual?.subtitle     ?? '',
-      description:  manual?.description  ?? '',
-      introduction: manual?.introduction ?? '',
-      category:     manual?.category     ?? CATEGORIES[0],
-      date:         manual?.date         ?? '',
-      time:         manual?.time         ?? '',
-      duration:     manual?.duration     ?? '',
-      institution:  manual?.institution  ?? '',
-      // portada: puede ser File (nueva) o string URL (servidor/externa)
-      cover:        manual?.cover || manual?.coverImage || null,
-      pdf:          manual?.pdf && !manual.pdf.startsWith('idb:') ? manual.pdf : null,
-    },
-  });
-
-  const pdfValue   = watch('pdf');
-  const coverValue = watch('cover');
-
-  // ── Roles ──
-  const [speakerIds, setSpeakerIds]       = useState(
+  const [form,           setForm]           = useState(() => buildForm(manual));
+  const [objectives,     setObjectives]     = useState(() =>
+    manual?.objectives?.length ? manual.objectives : ['']
+  );
+  const [speakerIds,     setSpeakerIds]     = useState(() =>
     manual?.speakerId ? [manual.speakerId] : (manual?.speakerIds ?? [])
   );
-  const [authorIds, setAuthorIds]         = useState(manual?.authorIds ?? []);
-  const [auxiliaresIds, setAuxiliaresIds] = useState(manual?.auxiliaresIds ?? []);
+  const [authorIds,      setAuthorIds]      = useState(() => manual?.authorIds ?? []);
+  const [auxiliaresIds,  setAuxiliaresIds]  = useState(() => manual?.auxiliaresIds ?? []);
 
-  // ── Objetivos ──
-  const [objectives, setObjectives]   = useState(manual?.objectives?.length ? manual.objectives : ['']);
-  const addObjective    = () => setObjectives(p => [...p, '']);
-  const removeObjective = (i) => setObjectives(p => p.filter((_, idx) => idx !== i));
-  const updateObjective = (i, val) => setObjectives(p => p.map((o, idx) => idx === i ? val : o));
-
-  // ── Galería de evidencias ──
-  const [galleryItems, setGalleryItems]       = useState(
-    (manual?.gallery ?? []).filter(v => typeof v === 'string' && v.startsWith('http'))
+  const [galleryItems,   setGalleryItems]   = useState(() =>
+    (manual?.gallery ?? []).filter((v) => typeof v === 'string' && v.startsWith('http'))
   );
-  const [galleryUrlInput, setGalleryUrlInput] = useState('');
+  const [galleryUrlInput,  setGalleryUrlInput]  = useState('');
   const [uploadingGallery, setUploadingGallery] = useState(false);
-  const [galleryError, setGalleryError]       = useState('');
-  const [draggingOver, setDraggingOver]       = useState(false);
-  const [apiError, setApiError]               = useState('');
+  const [galleryError,     setGalleryError]     = useState('');
+  const [draggingOver,     setDraggingOver]     = useState(false);
+
+  const [errors,     setErrors]     = useState({});
+  const [saving,     setSaving]     = useState(false);
+  const [saveError,  setSaveError]  = useState('');
+  const [activeTab,  setActiveTab]  = useState('general');
+
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setForm(buildForm(manual));
+      setObjectives(manual?.objectives?.length ? manual.objectives : ['']);
+      setSpeakerIds(manual?.speakerId ? [manual.speakerId] : (manual?.speakerIds ?? []));
+      setAuthorIds(manual?.authorIds ?? []);
+      setAuxiliaresIds(manual?.auxiliaresIds ?? []);
+      setGalleryItems((manual?.gallery ?? []).filter((v) => typeof v === 'string' && v.startsWith('http')));
+      setGalleryUrlInput('');
+      setGalleryError('');
+      setErrors({});
+      setSaveError('');
+      setActiveTab('general');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const setField = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+  const set      = (field) => (val)  => setForm((f) => ({ ...f, [field]: val }));
+
+  const validate = () => {
+    const e = {};
+    if (!form.title.trim())       e.title       = 'El título es requerido.';
+    if (!form.description.trim()) e.description = 'La descripción es requerida.';
+    if (!form.date)               e.date        = 'La fecha es requerida.';
+    return e;
+  };
+
   const uploadGalleryFiles = async (files) => {
-    const images = files.filter(f => f.type.startsWith('image/'));
+    const images = files.filter((f) => f.type.startsWith('image/'));
     if (!images.length) return;
-    setUploadingGallery(true);
-    setGalleryError('');
+    setUploadingGallery(true); setGalleryError('');
     try {
-      const results = await Promise.all(images.map(f => evidenciasApi.upload(f)));
-      setGalleryItems(p => [...p, ...results.map(r => r.url)]);
+      const results = await Promise.all(images.map((f) => evidenciasApi.upload(f)));
+      setGalleryItems((p) => [...p, ...results.map((r) => r.url)]);
     } catch (err) {
       setGalleryError('Error al subir imágenes: ' + (err.message ?? 'Intenta de nuevo'));
     } finally {
@@ -386,47 +352,48 @@ export function ManualForm({ manual, onSuccess, onCancel }) {
 
   const addGalleryUrl = () => {
     const url = galleryUrlInput.trim();
-    if (url) { setGalleryItems(p => [...p, url]); setGalleryUrlInput(''); }
+    if (url) { setGalleryItems((p) => [...p, url]); setGalleryUrlInput(''); }
   };
 
-  const onSubmit = async (data) => {
-    setApiError('');
-    const pdfFile = data.pdf instanceof File ? data.pdf : undefined;
-    const pdfUrl  = typeof data.pdf === 'string' ? data.pdf : undefined;
+  const handleSubmit = async () => {
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); setActiveTab('general'); return; }
+    setSaving(true); setSaveError('');
 
-    // Portada: puede ser base64 (nueva), URL http (existente) o null
+    const coverValue   = form.cover;
     const coverIsBase64 = typeof coverValue === 'string' && coverValue.startsWith('data:');
-    const coverUrl = typeof coverValue === 'string' && !coverIsBase64 ? coverValue : undefined;
+    const coverUrl      = typeof coverValue === 'string' && !coverIsBase64 ? coverValue : undefined;
     let coverFile;
     if (coverIsBase64) {
       const [header, b64] = coverValue.split(',');
       const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
       const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
+      const bytes  = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       coverFile = new File([bytes], 'portada.jpg', { type: mime });
     }
 
+    const pdfValue = form.pdf;
+    const pdfFile  = pdfValue instanceof File ? pdfValue : undefined;
+    const pdfUrl   = typeof pdfValue === 'string' ? pdfValue : undefined;
+
     const payload = {
-      titulo:       data.title,
-      categoria:    data.category,
-      descripcion:  data.description,
-      fecha:        data.date,
+      titulo:       form.title,
+      categoria:    form.category,
+      descripcion:  form.description,
+      fecha:        form.date,
       destacado:    manual?.featured ?? false,
-      // roles
-      autor_ids:     authorIds,
-      speakerId:     speakerIds[0] ?? null,
-      speakerIds:    speakerIds,
-      auxiliaresIds: auxiliaresIds,
-      // campos extra
-      subtitle:      data.subtitle,
-      introduction:  data.introduction,
-      time:          data.time,
-      duration:      data.duration,
-      institution:   data.institution,
-      // portada URL (si no hay archivo nuevo)
-      cover:         coverFile ? undefined : coverUrl,
-      objectives:    objectives.filter(Boolean),
+      autor_ids:    authorIds,
+      speakerId:    speakerIds[0] ?? null,
+      speakerIds,
+      auxiliaresIds,
+      subtitle:     form.subtitle,
+      introduction: form.introduction,
+      time:         form.time,
+      duration:     form.duration,
+      institution:  form.institution,
+      cover:        coverFile ? undefined : coverUrl,
+      objectives:   objectives.filter(Boolean),
       galeria_evidencias: galleryItems,
       ...(pdfUrl && !pdfFile ? { pdf_path: pdfUrl } : {}),
     };
@@ -439,194 +406,335 @@ export function ManualForm({ manual, onSuccess, onCancel }) {
       }
       await syncManuales();
       onSuccess?.();
+      onClose?.();
     } catch (err) {
-      setApiError(err.message ?? 'Error al guardar. Intenta de nuevo.');
+      setSaveError(err.message ?? 'Error al guardar. Intenta de nuevo.');
+    } finally {
+      setSaving(false);
     }
   };
 
+  const tabIdx = TABS.findIndex((t) => t.id === activeTab);
+
+  const inputStyle = (hasError) => ({
+    width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
+    border: `1.5px solid ${hasError ? '#FCA5A5' : '#E2E8F0'}`,
+    background: hasError ? '#FEF2F2' : '#fff',
+    outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+  });
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
-
-      {/* ── Información básica ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <Input label="Título del manual" placeholder="Ej: Manual de Docker"
-            error={errors.title?.message} {...register('title', { required: 'El título es requerido' })} />
-        </div>
-        <div className="md:col-span-2">
-          <Input label="Subtítulo (opcional)" placeholder="Descripción breve del tema" {...register('subtitle')} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700">Categoría</label>
-          <input
-            list="manual-categories"
-            placeholder="Selecciona o escribe una categoría"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-            {...register('category')}
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="manual-backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: .2 }}
+            onClick={onClose}
+            style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(2,6,23,.72)', backdropFilter: 'blur(4px)' }}
           />
-          <datalist id="manual-categories">
-            {CATEGORIES.map(c => <option key={c} value={c} />)}
-          </datalist>
-        </div>
-        <Input label="Fecha" type="date" {...register('date', { required: 'La fecha es requerida' })} error={errors.date?.message} />
-        <Input label="Hora" type="time" {...register('time')} />
-        <Input label="Duración" placeholder="Ej: 3 horas" {...register('duration')} />
-        <div className="md:col-span-2">
-          <Input label="Institución" placeholder="Universidad Autónoma del Cauca" {...register('institution')} />
-        </div>
-        <div className="md:col-span-2">
-          <Textarea label="Descripción breve" placeholder="Resumen del contenido..." rows={3}
-            {...register('description', { required: 'La descripción es requerida' })} error={errors.description?.message} />
-        </div>
-        <div className="md:col-span-2">
-          <Textarea label="Introducción" placeholder="Introducción completa al tema..." rows={5} {...register('introduction')} />
-        </div>
-        <div className="md:col-span-2">
-          <CoverImageField
-            value={coverValue}
-            onChange={val => setValue('cover', val, { shouldDirty: true })}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <PDFUploadField value={pdfValue} onChange={val => setValue('pdf', val, { shouldDirty: true })} />
-        </div>
-      </div>
 
-      {/* ── Objetivos ── */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-slate-700">Objetivos</label>
-          <button type="button" onClick={addObjective}
-            className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium">
-            <Plus size={14} /> Agregar objetivo
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {objectives.map((obj, i) => (
-            <div key={i} className="flex gap-2">
-              <input value={obj} onChange={e => updateObjective(i, e.target.value)}
-                placeholder={`Objetivo ${i + 1}`}
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              {objectives.length > 1 && (
-                <button type="button" onClick={() => removeObjective(i)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+          {/* Modal */}
+          <motion.div
+            key="manual-modal"
+            initial={{ opacity: 0, scale: .96, y: 16 }}
+            animate={{ opacity: 1, scale: 1,   y: 0 }}
+            exit={{   opacity: 0, scale: .96, y: 16 }}
+            transition={{ duration: .28, ease: E }}
+            style={{ position: 'fixed', inset: 0, zIndex: 51, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, pointerEvents: 'none' }}
+          >
+            <div style={{ width: '100%', maxWidth: 660, background: '#fff', borderRadius: 20, boxShadow: '0 24px 80px rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 32px)', overflow: 'hidden', pointerEvents: 'auto' }}>
 
-      {/* ── Roles ── */}
-      <div className="flex flex-col gap-5 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Personas involucradas</p>
+              {/* Header */}
+              <div style={{ padding: '20px 24px 0', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <BookOpen size={22} style={{ color: ACCENT }} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 17, fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                        {isEdit ? 'Editar manual' : 'Nuevo manual'}
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#94A3B8', margin: '2px 0 0' }}>
+                        {isEdit ? 'Modifica los datos del manual' : 'Completa la información de la capacitación'}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={onClose}
+                    style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #E2E8F0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B', flexShrink: 0 }}
+                    aria-label="Cerrar">
+                    <X size={16} />
+                  </button>
+                </div>
 
-        <ParticipantPicker
-          label="Ponente(s)"
-          icon={Mic}
-          participants={participants}
-          value={speakerIds}
-          onChange={setSpeakerIds}
-        />
-
-        <div className="border-t border-slate-200" />
-
-        <ParticipantPicker
-          label="Autores / Estudiantes encargados"
-          icon={Users}
-          participants={participants}
-          value={authorIds}
-          onChange={setAuthorIds}
-        />
-
-        <div className="border-t border-slate-200" />
-
-        <ParticipantPicker
-          label="Auxiliares externos"
-          icon={User}
-          participants={participants}
-          value={auxiliaresIds}
-          onChange={setAuxiliaresIds}
-        />
-      </div>
-
-      {/* ── Galería de evidencias ── */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-brand-100 flex items-center justify-center">
-            <ImageIcon size={13} className="text-brand-600" />
-          </div>
-          <label className="text-sm font-medium text-slate-700">Galería de evidencias</label>
-          {galleryItems.length > 0 && (
-            <span className="ml-auto text-xs text-slate-400">
-              {galleryItems.length} imagen{galleryItems.length !== 1 ? 'es' : ''}
-            </span>
-          )}
-        </div>
-        <div
-          onDrop={async e => { e.preventDefault(); setDraggingOver(false); await uploadGalleryFiles(Array.from(e.dataTransfer.files)); }}
-          onDragOver={e => { e.preventDefault(); setDraggingOver(true); }}
-          onDragLeave={() => setDraggingOver(false)}
-          onClick={() => fileInputRef.current?.click()}
-          className={cn(
-            'flex flex-col items-center justify-center gap-2 p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all',
-            draggingOver ? 'border-brand-400 bg-brand-50' : 'border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/40'
-          )}
-        >
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="sr-only"
-            onChange={async e => { await uploadGalleryFiles(Array.from(e.target.files)); e.target.value = ''; }} />
-          {uploadingGallery ? (
-            <div className="flex flex-col items-center gap-2 text-brand-600">
-              <div className="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs">Guardando imágenes...</span>
-            </div>
-          ) : (
-            <>
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
-                <ImagePlus size={18} className="text-brand-400" />
+                {/* Tabs */}
+                <div style={{ display: 'flex', borderBottom: '2px solid #F1F5F9', overflowX: 'auto' }}>
+                  {TABS.map((tab) => {
+                    const Icon   = tab.icon;
+                    const active = activeTab === tab.id;
+                    return (
+                      <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px',
+                          fontSize: 13, fontWeight: active ? 600 : 400,
+                          color: active ? ACCENT : '#64748B',
+                          background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                          borderBottom: `2px solid ${active ? ACCENT : 'transparent'}`,
+                          marginBottom: -2, transition: 'all .15s',
+                        }}>
+                        <Icon size={14} />{tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="text-sm font-medium text-slate-700">
-                {draggingOver ? 'Suelta las imágenes aquí' : 'Arrastra imágenes o haz clic para seleccionar'}
-              </p>
-              <p className="text-xs text-slate-400">PNG, JPG, WEBP</p>
-            </>
-          )}
-        </div>
-        {galleryError && (
-          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{galleryError}</p>
-        )}
-        <div className="flex gap-2 items-center">
-          <span className="text-xs text-slate-400 shrink-0 flex items-center gap-1.5"><LinkIcon size={11} /> O por URL:</span>
-          <input value={galleryUrlInput} onChange={e => setGalleryUrlInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addGalleryUrl())}
-            placeholder="https://..."
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 min-w-0" />
-          <button type="button" onClick={addGalleryUrl}
-            className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-brand-50 hover:text-brand-600">
-            <Plus size={12} /> Agregar
-          </button>
-        </div>
-        {galleryItems.length > 0 && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {galleryItems.map((item, i) => (
-              <GalleryItemPreview key={`${item}-${i}`} value={item} index={i}
-                onRemove={i => setGalleryItems(p => p.filter((_, idx) => idx !== i))} />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {apiError && (
-        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{apiError}</p>
+              {/* Body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{   opacity: 0, x: 12 }}
+                    transition={{ duration: .2, ease: E }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
+                  >
+
+                    {/* ── Tab: General ── */}
+                    {activeTab === 'general' && (
+                      <>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Título del manual <span style={{ color: '#EF4444' }}>*</span></label>
+                          <input type="text" value={form.title} onChange={setField('title')} placeholder="Ej: Manual de Docker" style={inputStyle(errors.title)} />
+                          {errors.title && <p style={{ fontSize: 12, color: '#EF4444' }}>{errors.title}</p>}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Subtítulo (opcional)</label>
+                          <input type="text" value={form.subtitle} onChange={setField('subtitle')} placeholder="Descripción breve del tema" style={inputStyle(false)} />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Categoría</label>
+                            <input list="manual-categories" value={form.category} onChange={setField('category')} placeholder="Selecciona o escribe una categoría" style={inputStyle(false)} />
+                            <datalist id="manual-categories">
+                              {CATEGORIES.map((c) => <option key={c} value={c} />)}
+                            </datalist>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Fecha <span style={{ color: '#EF4444' }}>*</span></label>
+                            <input type="date" value={form.date} onChange={setField('date')} style={inputStyle(errors.date)} />
+                            {errors.date && <p style={{ fontSize: 12, color: '#EF4444' }}>{errors.date}</p>}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Hora</label>
+                            <input type="time" value={form.time} onChange={setField('time')} style={inputStyle(false)} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Duración</label>
+                            <input type="text" value={form.duration} onChange={setField('duration')} placeholder="Ej: 3 horas" style={inputStyle(false)} />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Institución</label>
+                          <input type="text" value={form.institution} onChange={setField('institution')} placeholder="Universidad Autónoma del Cauca" style={inputStyle(false)} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* ── Tab: Contenido ── */}
+                    {activeTab === 'contenido' && (
+                      <>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Descripción <span style={{ color: '#EF4444' }}>*</span></label>
+                          <textarea value={form.description} onChange={setField('description')} rows={3} placeholder="Resumen del contenido..."
+                            style={{ ...inputStyle(errors.description), resize: 'none' }} />
+                          {errors.description && <p style={{ fontSize: 12, color: '#EF4444' }}>{errors.description}</p>}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Introducción</label>
+                          <textarea value={form.introduction} onChange={setField('introduction')} rows={5} placeholder="Introducción completa al tema..."
+                            style={{ ...inputStyle(false), resize: 'none' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Objetivos</label>
+                            <button type="button" onClick={() => setObjectives((p) => [...p, ''])}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: ACCENT, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                              <Plus size={13} /> Agregar objetivo
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {objectives.map((obj, i) => (
+                              <div key={i} style={{ display: 'flex', gap: 8 }}>
+                                <input value={obj} onChange={(e) => setObjectives((p) => p.map((o, idx) => idx === i ? e.target.value : o))}
+                                  placeholder={`Objetivo ${i + 1}`}
+                                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1.5px solid #E2E8F0', fontSize: 13, outline: 'none', background: '#fff' }}
+                                />
+                                {objectives.length > 1 && (
+                                  <button type="button" onClick={() => setObjectives((p) => p.filter((_, idx) => idx !== i))}
+                                    style={{ padding: '8px 10px', borderRadius: 8, background: 'none', border: '1.5px solid #E2E8F0', color: '#94A3B8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    <X size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* ── Tab: Personas ── */}
+                    {activeTab === 'personas' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <ParticipantPicker label="Ponente(s)" icon={Mic} participants={participants} value={speakerIds} onChange={setSpeakerIds} />
+                        <div style={{ height: 1, background: '#F1F5F9' }} />
+                        <ParticipantPicker label="Autores / Estudiantes encargados" icon={Users} participants={participants} value={authorIds} onChange={setAuthorIds} />
+                        <div style={{ height: 1, background: '#F1F5F9' }} />
+                        <ParticipantPicker label="Auxiliares externos" icon={User} participants={participants} value={auxiliaresIds} onChange={setAuxiliaresIds} />
+                      </div>
+                    )}
+
+                    {/* ── Tab: Archivos ── */}
+                    {activeTab === 'archivos' && (
+                      <>
+                        <CoverImageField value={form.cover} onChange={set('cover')} />
+                        <PDFUploadField  value={form.pdf}   onChange={set('pdf')}   />
+
+                        {/* Galería de evidencias */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 24, height: 24, borderRadius: 6, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <ImagePlus size={13} style={{ color: ACCENT }} />
+                            </div>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Galería de evidencias</label>
+                            {galleryItems.length > 0 && (
+                              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748B' }}>
+                                {galleryItems.length} imagen{galleryItems.length !== 1 ? 'es' : ''}
+                              </span>
+                            )}
+                          </div>
+
+                          <div
+                            onDrop={async (e) => { e.preventDefault(); setDraggingOver(false); await uploadGalleryFiles(Array.from(e.dataTransfer.files)); }}
+                            onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+                            onDragLeave={() => setDraggingOver(false)}
+                            onClick={() => fileInputRef.current?.click()}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '20px 16px', borderRadius: 12, border: `2px dashed ${draggingOver ? ACCENT : '#E2E8F0'}`, background: draggingOver ? BG : '#F8FAFC', cursor: 'pointer', transition: 'all .2s' }}
+                          >
+                            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+                              onChange={async (e) => { await uploadGalleryFiles(Array.from(e.target.files)); e.target.value = ''; }} />
+                            {uploadingGallery ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: ACCENT }}>
+                                <div style={{ width: 20, height: 20, border: `2px solid ${ACCENT}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+                                <span style={{ fontSize: 12 }}>Guardando imágenes...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1.5px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <ImagePlus size={18} style={{ color: '#C4B5FD' }} />
+                                </div>
+                                <p style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                                  {draggingOver ? 'Suelta las imágenes aquí' : 'Arrastra imágenes o haz clic'}
+                                </p>
+                                <p style={{ fontSize: 11, color: '#94A3B8' }}>PNG, JPG, WEBP</p>
+                              </>
+                            )}
+                          </div>
+
+                          {galleryError && <p style={{ fontSize: 12, color: '#EF4444', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '6px 12px' }}>{galleryError}</p>}
+
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                              <LinkIcon size={11} /> O por URL:
+                            </span>
+                            <input value={galleryUrlInput} onChange={(e) => setGalleryUrlInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGalleryUrl())}
+                              placeholder="https://..."
+                              style={{ flex: 1, borderRadius: 8, border: '1.5px solid #E2E8F0', padding: '6px 10px', fontSize: 12, outline: 'none', minWidth: 0 }}
+                            />
+                            <button type="button" onClick={addGalleryUrl}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, padding: '6px 10px', borderRadius: 8, background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                              <Plus size={12} /> Agregar
+                            </button>
+                          </div>
+
+                          {galleryItems.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+                              {galleryItems.map((item, i) => (
+                                <div key={`${item}-${i}`}
+                                  style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#F1F5F9', aspectRatio: '16/9' }}
+                                  onMouseEnter={(e) => { e.currentTarget.querySelector('button').style.opacity = '1'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.querySelector('button').style.opacity = '0'; }}
+                                >
+                                  <img src={item} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <button type="button" onClick={() => setGalleryItems((p) => p.filter((_, idx) => idx !== i))}
+                                    style={{ position: 'absolute', top: 4, right: 4, padding: 4, borderRadius: 6, background: 'rgba(0,0,0,.55)', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0, transition: 'opacity .2s', display: 'flex' }}
+                                    aria-label="Eliminar imagen">
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Error global */}
+              {saveError && (
+                <div style={{ padding: '0 24px' }}>
+                  <p style={{ fontSize: 12, color: '#EF4444', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', margin: 0 }}>{saveError}</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div style={{ padding: '16px 24px', borderTop: '1.5px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                {/* Dot nav */}
+                <div style={{ display: 'flex', gap: 5, flex: 1 }}>
+                  {TABS.map((tab) => (
+                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                      aria-label={`Ir a ${tab.label}`}
+                      style={{ height: 6, width: activeTab === tab.id ? 20 : 6, borderRadius: 3, border: 'none', cursor: 'pointer', padding: 0, background: activeTab === tab.id ? ACCENT : '#E2E8F0', transition: 'all .25s' }}
+                    />
+                  ))}
+                </div>
+
+                <button type="button" onClick={onClose}
+                  style={{ padding: '10px 18px', borderRadius: 10, border: '1.5px solid #E2E8F0', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+
+                {tabIdx < TABS.length - 1 ? (
+                  <button type="button" onClick={() => setActiveTab(TABS[tabIdx + 1].id)}
+                    style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    Siguiente →
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleSubmit} disabled={saving}
+                    style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: saving ? '#94A3B8' : ACCENT, color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                    {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear manual'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </>
       )}
-
-      <div className="flex gap-3 pt-2 border-t border-slate-100">
-        {onCancel && <Button type="button" variant="outline" onClick={onCancel} className="flex-1">Cancelar</Button>}
-        <Button type="submit" loading={isSubmitting} icon={Save} className="flex-1">
-          {isEdit ? 'Guardar cambios' : 'Crear manual'}
-        </Button>
-      </div>
-    </form>
+    </AnimatePresence>
   );
 }

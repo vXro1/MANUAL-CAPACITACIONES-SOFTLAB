@@ -1,12 +1,12 @@
-import { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { motion } from 'framer-motion';
-import { Save, Plus, X, Camera, User, Trash2 } from 'lucide-react';
-import { Button } from '@/shared/ui/Button';
-import { Input, Textarea, Select } from '@/shared/ui/Input';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  X, Save, Camera, User, FileText, Link2, Plus,
+} from 'lucide-react';
 import { participantesApi } from '@/services/apiService';
 import { syncParticipantes } from '@/services/dataSync';
-import { cn } from '@/shared/lib/cn';
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 export const PARTICIPANT_ROLES = [
   'Investigador',
@@ -22,310 +22,405 @@ export const PARTICIPANT_ROLES = [
   'Colaborador Externo',
 ];
 
-function PhotoUploadField({ value, onChange }) {
-  const inputRef = useRef(null);
+const ACCENT  = '#1A3FAA';
+const BG      = '#EEF3FF';
+const BORDER  = '#C7D5F8';
+const E       = [0.22, 1, 0.36, 1];
 
-  // value es null | base64 string | URL string (foto existente del servidor)
-  const isBase64 = typeof value === 'string' && value.startsWith('data:');
-  const isUrl = typeof value === 'string' && !isBase64 && value.length > 0;
-  const previewUrl = isBase64 || isUrl ? value : null;
+const TABS = [
+  { id: 'foto',  label: 'Foto',        icon: Camera   },
+  { id: 'info',  label: 'Información', icon: User     },
+  { id: 'perfil',label: 'Perfil',      icon: FileText },
+  { id: 'redes', label: 'Redes',       icon: Link2    },
+];
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+const DEFAULT_FORM = {
+  name: '', role: PARTICIPANT_ROLES[0],
+  career: '', semester: '', email: '',
+  bio: '', linkedin: '', github: '',
+};
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!validTypes.includes(file.type)) {
-      alert('Solo se permiten imágenes JPG, PNG, WebP o GIF.');
-      return;
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      alert('La imagen no puede superar 3 MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target.result);
-    reader.readAsDataURL(file);
-
-    if (inputRef.current) inputRef.current.value = '';
-  };
-
-  const handleRemove = () => onChange(null);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-slate-700">Foto de perfil</label>
-
-      <div className="flex items-start gap-4">
-        {/* Preview */}
-        <div className="relative shrink-0">
-          <div className="w-24 h-24 rounded-2xl overflow-hidden bg-brand-50 border-2 border-brand-100 flex items-center justify-center">
-            {previewUrl ? (
-              <img src={previewUrl} alt="Vista previa" className="w-full h-full object-cover" />
-            ) : (
-              <User size={32} className="text-brand-200" />
-            )}
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-col gap-2 flex-1">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="sr-only"
-            onChange={handleFileChange}
-            id="photo-upload-input"
-          />
-          <label
-            htmlFor="photo-upload-input"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-medium',
-              'border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 hover:border-brand-300'
-            )}
-          >
-            <Camera size={15} />
-            {previewUrl ? 'Cambiar foto' : 'Subir foto'}
-          </label>
-
-          {previewUrl && (
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-100 text-red-500 bg-red-50 hover:bg-red-100 text-sm font-medium transition-colors"
-            >
-              <Trash2 size={14} />
-              Eliminar foto
-            </button>
-          )}
-
-          <p className="text-xs text-slate-400 leading-relaxed">
-            JPG, PNG o WebP. Máx 3 MB.
-          </p>
-
-          {isBase64 && (
-            <p className="text-xs text-green-600">✓ Foto lista para guardar</p>
-          )}
-          {isUrl && (
-            <p className="text-xs text-green-600">Foto guardada en el servidor</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function getInitials(name = '') {
+  return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 }
 
-function SkillsField({ value, onChange }) {
-  const [input, setInput] = useState('');
+// ─── ParticipantForm (modal con tabs) ────────────────────────────────────────
 
-  const add = () => {
-    const trimmed = input.trim();
-    if (trimmed && !value.includes(trimmed)) {
-      onChange([...value, trimmed]);
-      setInput('');
-    }
-  };
+export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
+  const [form, setForm]       = useState(DEFAULT_FORM);
+  const [photo, setPhoto]     = useState(null);
+  const [skills, setSkills]   = useState([]);
+  const [skillInput, setSkillInput] = useState('');
+  const [activeTab, setActiveTab]   = useState('foto');
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
+  const fileRef = useRef();
 
-  const remove = (skill) => onChange(value.filter((s) => s !== skill));
-
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-slate-700">Habilidades / Tecnologías</label>
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); add(); }
-          }}
-          placeholder="Ej: React, Docker, Python..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-        <Button type="button" variant="secondary" size="sm" onClick={add} icon={Plus}>
-          Agregar
-        </Button>
-      </div>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {value.map((skill) => (
-            <span
-              key={skill}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-100 text-xs font-medium text-brand-700"
-            >
-              {skill}
-              <button
-                type="button"
-                onClick={() => remove(skill)}
-                className="text-brand-400 hover:text-brand-700 transition-colors"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function ParticipantForm({ participant, onSuccess, onCancel }) {
   const isEdit = Boolean(participant?.id);
-  const [skills, setSkills] = useState(participant?.skills ?? []);
-  const [apiError, setApiError] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    watch,
-    setValue,
-  } = useForm({
-    defaultValues: {
-      name: participant?.name ?? '',
-      role: participant?.role ?? PARTICIPANT_ROLES[0],
-      career: participant?.career ?? '',
-      semester: participant?.semester ?? '',
-      bio: participant?.bio ?? '',
-      email: participant?.email ?? '',
-      linkedin: participant?.linkedin ?? '',
-      github: participant?.github ?? '',
-      photo: participant?.photo ?? null,
-    },
-  });
-
-  const photoValue = watch('photo');
-
-  const onSubmit = async (data) => {
-    setApiError('');
-    // Si la foto es base64 nueva, convertirla a Blob/File para FormData
-    let fotoFile;
-    if (typeof photoValue === 'string' && photoValue.startsWith('data:')) {
-      const [header, b64] = photoValue.split(',');
-      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      fotoFile = new File([bytes], 'foto.jpg', { type: mime });
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveTab('foto');
+    setError('');
+    if (participant) {
+      setForm({
+        name:     participant.name     ?? '',
+        role:     participant.role     ?? PARTICIPANT_ROLES[0],
+        career:   participant.career   ?? '',
+        semester: participant.semester ?? '',
+        email:    participant.email    ?? '',
+        bio:      participant.bio      ?? '',
+        linkedin: participant.linkedin ?? '',
+        github:   participant.github   ?? '',
+      });
+      setSkills(participant.skills ?? []);
+      setPhoto(participant.photo  ?? null);
+    } else {
+      setForm(DEFAULT_FORM);
+      setSkills([]);
+      setPhoto(null);
     }
-    const payload = {
-      nombre: data.name,
-      rol: data.role,
-      carrera: data.career,
-      semestre: data.semester || null,
-      bio: data.bio,
-      email: data.email,
-      linkedin: data.linkedin,
-      github: data.github,
-      habilidades: skills,
-    };
+    setSkillInput('');
+  }, [isOpen, participant]);
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handlePhoto = (file) => {
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { alert('La foto supera los 3 MB permitidos'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => setPhoto(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const addSkill = () => {
+    const v = skillInput.trim().replace(',', '');
+    if (v && !skills.includes(v)) setSkills((s) => [...s, v]);
+    setSkillInput('');
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) { setError('El nombre es obligatorio'); return; }
+    setSaving(true);
+    setError('');
     try {
-      let saved;
+      let fotoFile;
+      if (typeof photo === 'string' && photo.startsWith('data:')) {
+        const [header, b64] = photo.split(',');
+        const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        fotoFile = new File([bytes], 'foto.jpg', { type: mime });
+      }
+      const payload = {
+        nombre:      form.name,
+        rol:         form.role,
+        carrera:     form.career,
+        semestre:    form.semester || null,
+        bio:         form.bio,
+        email:       form.email,
+        linkedin:    form.linkedin,
+        github:      form.github,
+        habilidades: skills,
+      };
       if (isEdit) {
-        saved = await participantesApi.update(participant.id, payload, fotoFile);
+        await participantesApi.update(participant.id, payload, fotoFile);
       } else {
-        saved = await participantesApi.create(payload, fotoFile);
+        await participantesApi.create(payload, fotoFile);
       }
       await syncParticipantes();
-      onSuccess?.(saved);
+      onSuccess?.();
     } catch (err) {
-      setApiError(err.message ?? 'Error al guardar.');
+      setError(err.message ?? 'Error al guardar');
+    } finally {
+      setSaving(false);
     }
   };
 
+  if (!isOpen) return null;
+
+  const inputStyle = {
+    width: '100%', padding: '10px 13px', border: `1.5px solid #E2E8F0`, borderRadius: 10,
+    fontSize: 13.5, color: '#0A0F1E', background: '#FAFAFA', fontFamily: 'DM Sans, sans-serif',
+    outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
+  };
+  const labelStyle = {
+    fontSize: 11, fontWeight: 700, color: '#374151', letterSpacing: '0.06em',
+    textTransform: 'uppercase', marginBottom: 6, display: 'block', fontFamily: 'DM Sans, sans-serif',
+  };
+  const onFocus = (e) => { e.currentTarget.style.borderColor = ACCENT; };
+  const onBlur  = (e) => { e.currentTarget.style.borderColor = '#E2E8F0'; };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
-      {/* Photo */}
-      <PhotoUploadField
-        value={photoValue}
-        onChange={(val) => setValue('photo', val, { shouldDirty: true })}
-      />
-
-      <div className="border-t border-slate-100" />
-
-      {/* Basic info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <Input
-            label="Nombre completo"
-            placeholder="Nombre y apellidos"
-            error={errors.name?.message}
-            {...register('name', { required: 'El nombre es requerido' })}
-          />
-        </div>
-
-        <Select label="Rol en el semillero" {...register('role')}>
-          {PARTICIPANT_ROLES.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </Select>
-
-        <Input
-          label="Carrera / Programa"
-          placeholder="Ej: Ingeniería de Software"
-          {...register('career')}
+    <AnimatePresence>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9990, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        {/* Overlay */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(10,15,30,0.65)', backdropFilter: 'blur(8px)' }}
+          onClick={onClose}
         />
 
-        <Input
-          label="Semestre"
-          placeholder="Ej: 6"
-          {...register('semester')}
-        />
-
-        <Input
-          label="Correo electrónico"
-          type="email"
-          placeholder="correo@universidad.edu"
-          {...register('email')}
-        />
-      </div>
-
-      {/* Bio */}
-      <Textarea
-        label="Descripción / Biografía"
-        placeholder="Breve presentación del participante, áreas de interés, aportes al semillero..."
-        rows={4}
-        {...register('bio')}
-      />
-
-      {/* Skills */}
-      <SkillsField value={skills} onChange={setSkills} />
-
-      {/* Social */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="LinkedIn (URL)"
-          placeholder="https://linkedin.com/in/..."
-          {...register('linkedin')}
-        />
-        <Input
-          label="GitHub (URL)"
-          placeholder="https://github.com/..."
-          {...register('github')}
-        />
-      </div>
-
-      {apiError && (
-        <motion.p
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2"
+        {/* Panel */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94 }}
+          transition={{ duration: 0.3, ease: E }}
+          style={{
+            position: 'relative', background: '#fff', borderRadius: 26,
+            width: '100%', maxWidth: 680, maxHeight: '94vh',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 40px 100px rgba(0,0,0,0.25)', overflow: 'hidden',
+          }}
         >
-          {apiError}
-        </motion.p>
-      )}
+          {/* Header con tabs */}
+          <div style={{ background: BG, padding: '22px 28px 0', borderBottom: '1px solid #F1F5F9', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Mini avatar */}
+                <div style={{ width: 42, height: 42, borderRadius: 13, background: ACCENT, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${BORDER}`, boxShadow: `0 4px 12px ${ACCENT}40` }}>
+                  {photo
+                    ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{getInitials(form.name)}</span>
+                  }
+                </div>
+                <div>
+                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 700, color: '#0A0F1E', margin: 0 }}>
+                    {isEdit ? 'Editar participante' : 'Nuevo participante'}
+                  </p>
+                  <p style={{ fontSize: 11.5, color: '#94A3B8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                    {form.name || 'Sin nombre'}{form.role ? ` · ${form.role}` : ''}
+                  </p>
+                </div>
+              </div>
+              <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 10, background: '#fff', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}>
+                <X size={15} />
+              </button>
+            </div>
 
-      <div className="flex gap-3 pt-2 border-t border-slate-100">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-            Cancelar
-          </Button>
-        )}
-        <Button type="submit" loading={isSubmitting} icon={Save} className="flex-1">
-          {isEdit ? 'Guardar cambios' : 'Agregar participante'}
-        </Button>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 2 }}>
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: active ? 700 : 500, background: active ? '#fff' : 'transparent', color: active ? ACCENT : '#94A3B8', fontFamily: 'DM Sans, sans-serif', borderBottom: active ? `2px solid ${ACCENT}` : '2px solid transparent', transition: 'all 0.15s' }}>
+                    <Icon size={13} /> {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Cuerpo scrolleable */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+            <AnimatePresence mode="wait">
+
+              {/* ── TAB FOTO ── */}
+              {activeTab === 'foto' && (
+                <motion.div key="foto"
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div
+                      onClick={() => fileRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); handlePhoto(e.dataTransfer.files[0]); }}
+                      style={{ width: 150, height: 150, borderRadius: '50%', margin: '0 auto 16px', background: photo ? 'transparent' : BG, border: `3px dashed ${photo ? ACCENT : '#CBD5E1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', boxShadow: photo ? `0 0 0 5px ${BORDER}, 0 8px 32px ${ACCENT}30` : 'none', transition: 'all 0.25s' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.borderColor = ACCENT; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = photo ? ACCENT : '#CBD5E1'; }}
+                    >
+                      {photo
+                        ? <img src={photo} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ textAlign: 'center' }}>
+                            <Camera size={32} color="#CBD5E1" style={{ marginBottom: 8 }} />
+                            <p style={{ fontSize: 12.5, color: '#94A3B8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>Subir foto</p>
+                          </div>
+                      }
+                    </div>
+                    <p style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', marginBottom: 8 }}>JPG, PNG, WEBP · máx. 3 MB</p>
+                    {photo && (
+                      <button onClick={() => setPhoto(null)} style={{ fontSize: 12, color: '#E11D48', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>
+                        Quitar foto
+                      </button>
+                    )}
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhoto(e.target.files[0])} />
+
+                  {/* Preview tamaños */}
+                  <div style={{ background: '#F8FAFF', borderRadius: 16, padding: 16, border: '1px dashed #E2E8F0' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: 'DM Sans, sans-serif' }}>Vista previa en distintos tamaños</p>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                      {[80, 56, 40].map((size) => (
+                        <div key={size} style={{ width: size, height: size, borderRadius: '50%', background: ACCENT, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #fff', boxShadow: `0 0 0 2px ${BORDER}`, flexShrink: 0 }}>
+                          {photo
+                            ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <span style={{ color: '#fff', fontSize: size * 0.28, fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{getInitials(form.name)}</span>
+                          }
+                        </div>
+                      ))}
+                      <p style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
+                        {photo ? '✓ Foto cargada' : `Iniciales: "${getInitials(form.name)}"`}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── TAB INFORMACIÓN ── */}
+              {activeTab === 'info' && (
+                <motion.div key="info"
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>Nombre completo *</label>
+                    <input style={inputStyle} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Nombre y apellidos" onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Rol en el semillero *</label>
+                    <select style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }} value={form.role} onChange={(e) => set('role', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
+                      {PARTICIPANT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <label style={labelStyle}>Carrera / Programa</label>
+                      <input style={inputStyle} value={form.career} onChange={(e) => set('career', e.target.value)} placeholder="Ej: Ingeniería de Software" onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Semestre</label>
+                      <input style={inputStyle} value={form.semester} onChange={(e) => set('semester', e.target.value)} placeholder="Ej: 6" onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Correo electrónico</label>
+                    <input style={inputStyle} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="correo@universidad.edu" onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── TAB PERFIL ── */}
+              {activeTab === 'perfil' && (
+                <motion.div key="perfil"
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>Descripción / Biografía</label>
+                    <textarea
+                      style={{ ...inputStyle, resize: 'vertical', minHeight: 100, lineHeight: 1.65 }}
+                      value={form.bio} onChange={(e) => set('bio', e.target.value)}
+                      placeholder="Breve presentación, áreas de interés, aportes al semillero..."
+                      onFocus={onFocus} onBlur={onBlur}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>
+                      Habilidades / Tecnologías{' '}
+                      <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11, color: '#94A3B8' }}>(Enter o coma)</span>
+                    </label>
+                    <div
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', border: '1.5px solid #E2E8F0', borderRadius: 10, background: '#FAFAFA', minHeight: 44, alignItems: 'center', cursor: 'text' }}
+                      onClick={() => document.getElementById('skill-field-p')?.focus()}
+                    >
+                      {skills.map((sk) => (
+                        <span key={sk} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: BG, color: ACCENT, border: `1px solid ${BORDER}` }}>
+                          {sk}
+                          <button onClick={() => setSkills((s) => s.filter((x) => x !== sk))}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                        </span>
+                      ))}
+                      <input
+                        id="skill-field-p"
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSkill(); } }}
+                        placeholder={skills.length === 0 ? 'Ej. React, Docker, Python...' : ''}
+                        style={{ border: 'none', outline: 'none', fontSize: 13, background: 'transparent', minWidth: 130, color: '#0A0F1E', fontFamily: 'DM Sans, sans-serif' }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── TAB REDES ── */}
+              {activeTab === 'redes' && (
+                <motion.div key="redes"
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>LinkedIn</label>
+                    <input style={inputStyle} type="url" value={form.linkedin} onChange={(e) => set('linkedin', e.target.value)} placeholder="https://linkedin.com/in/..." onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>GitHub</label>
+                    <input style={inputStyle} type="url" value={form.github} onChange={(e) => set('github', e.target.value)} placeholder="https://github.com/..." onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                  {/* Vista previa redes */}
+                  {(form.linkedin || form.github) && (
+                    <div style={{ background: '#F8FAFF', borderRadius: 16, padding: 16, border: '1px dashed #E2E8F0' }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: 'DM Sans, sans-serif' }}>Vista previa</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {form.linkedin && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#0077B5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>in</span>
+                            </div>
+                            <span style={{ fontSize: 12.5, color: '#374151', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.linkedin}</span>
+                          </div>
+                        )}
+                        {form.github && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#0A0F1E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ color: '#fff', fontSize: 11, fontWeight: 900 }}>GH</span>
+                            </div>
+                            <span style={{ fontSize: 12.5, color: '#374151', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.github}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error */}
+            {error && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                style={{ marginTop: 16, padding: '10px 14px', background: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: 10, fontSize: 13, color: '#E11D48', fontFamily: 'DM Sans, sans-serif' }}>
+                {error}
+              </motion.div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', padding: '16px 28px', borderTop: '1px solid #F1F5F9', background: '#FAFCFF', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                  style={{ width: activeTab === t.id ? 20 : 7, height: 7, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 0, background: activeTab === t.id ? ACCENT : '#E2E8F0', transition: 'all 0.25s' }}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={onClose} disabled={saving}
+                style={{ padding: '10px 18px', background: '#F8FAFF', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                Cancelar
+              </button>
+              <motion.button whileTap={{ scale: 0.96 }} onClick={handleSubmit} disabled={saving}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 22px', background: saving ? '#94A3B8' : `linear-gradient(135deg, ${ACCENT}, ${ACCENT}CC)`, color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', boxShadow: saving ? 'none' : `0 4px 16px ${ACCENT}40`, transition: 'all 0.2s' }}>
+                <Save size={14} /> {saving ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Crear participante')}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </form>
+    </AnimatePresence>
   );
 }

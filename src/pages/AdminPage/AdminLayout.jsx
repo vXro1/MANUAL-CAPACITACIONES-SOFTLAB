@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Menu, X, LayoutDashboard, BookOpen, Plus,
-  Users, UserPlus, LogOut, FlaskConical, ChevronRight,
-  Images, ExternalLink, GraduationCap, CalendarDays, CalendarPlus,
+  Menu, X, LayoutDashboard, BookOpen,
+  Users, LogOut, FlaskConical, ChevronRight,
+  Images, ExternalLink, GraduationCap, CalendarDays,
 } from 'lucide-react';
 import { AdminAuth } from '@/features/admin-auth/AdminAuth';
 import { getToken, removeToken } from '@/services/apiService';
@@ -17,22 +17,19 @@ const NAV_GROUPS = [
     items: [
       { label: 'Panel',           href: '/panel-softlab-admin',               icon: LayoutDashboard, end: true },
       { label: 'Manuales',        href: '/panel-softlab-admin/manuales',       icon: BookOpen },
-      { label: 'Nuevo manual',    href: '/panel-softlab-admin/manuales/nuevo', icon: Plus },
     ],
   },
   {
     label: 'Equipo',
     items: [
-      { label: 'Participantes',        href: '/panel-softlab-admin/participantes',       icon: Users },
-      { label: 'Agregar participante', href: '/panel-softlab-admin/participantes/nuevo', icon: UserPlus },
-      { label: 'Personal directivo',   href: '/panel-softlab-admin/directivos',          icon: GraduationCap },
+      { label: 'Participantes',      href: '/panel-softlab-admin/participantes', icon: Users },
+      { label: 'Personal directivo', href: '/panel-softlab-admin/directivos',   icon: GraduationCap },
     ],
   },
   {
     label: 'Eventos',
     items: [
-      { label: 'Eventos',        href: '/panel-softlab-admin/eventos',       icon: CalendarDays },
-      { label: 'Nuevo evento',   href: '/panel-softlab-admin/eventos/nuevo', icon: CalendarPlus },
+      { label: 'Eventos', href: '/panel-softlab-admin/eventos', icon: CalendarDays },
     ],
   },
   {

@@ -2,12 +2,10 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   BookOpen,
-  Plus,
   Users,
   LogOut,
   FlaskConical,
   ChevronRight,
-  UserPlus,
   X,
   Images,
   ExternalLink,
@@ -21,14 +19,12 @@ const NAV_GROUPS = [
     items: [
       { label: 'Panel', href: '/panel-softlab-admin', icon: LayoutDashboard, end: true },
       { label: 'Manuales', href: '/panel-softlab-admin/manuales', icon: BookOpen },
-      { label: 'Nuevo manual', href: '/panel-softlab-admin/manuales/nuevo', icon: Plus },
     ],
   },
   {
     label: 'Equipo',
     items: [
       { label: 'Participantes', href: '/panel-softlab-admin/participantes', icon: Users },
-      { label: 'Agregar participante', href: '/panel-softlab-admin/participantes/nuevo', icon: UserPlus },
     ],
   },
   {

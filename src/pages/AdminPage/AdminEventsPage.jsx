@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, CalendarDays, Search, Images, Users } from 'lucide-react';
 import { eventsRepository, participantsRepository } from '@/storage/localStorageRepository';
@@ -23,14 +22,14 @@ function categoryVariant(cat) {
 }
 
 export function AdminEventsPage() {
-  const [events, setEvents] = useState(() => eventsRepository.getAll());
-  const [participants] = useState(() => participantsRepository.getAll());
-  const [search, setSearch] = useState('');
-  const [editEvent, setEditEvent] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [events,     setEvents]     = useState(() => eventsRepository.getAll());
+  const [participants]              = useState(() => participantsRepository.getAll());
+  const [search,     setSearch]     = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editEvent,  setEditEvent]  = useState(null);
+  const [deleteId,   setDeleteId]   = useState(null);
+  const [deleting,   setDeleting]   = useState(false);
 
-  // Sincronizar con el servidor al montar
   useEffect(() => {
     if (!getToken()) return;
     syncEventos()
@@ -48,9 +47,7 @@ export function AdminEventsPage() {
   );
 
   const getParticipantNames = (ids = []) =>
-    ids
-      .map((id) => participants.find((p) => p.id === id)?.name)
-      .filter(Boolean);
+    ids.map((id) => participants.find((p) => p.id === id)?.name).filter(Boolean);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -63,7 +60,6 @@ export function AdminEventsPage() {
       }
       reload();
     } catch {
-      // Si la API falla, eliminar localmente como fallback
       eventsRepository.delete(deleteId);
       reload();
     } finally {
@@ -72,10 +68,9 @@ export function AdminEventsPage() {
     }
   };
 
-  const handleEditSuccess = async () => {
+  const handleSuccess = async () => {
     await syncEventos().catch(() => {});
     reload();
-    setEditEvent(null);
   };
 
   return (
@@ -84,11 +79,11 @@ export function AdminEventsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Eventos</h1>
-          <p className="text-sm text-slate-500 mt-1">{events.length} evento{events.length !== 1 ? 's' : ''} registrado{events.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {events.length} evento{events.length !== 1 ? 's' : ''} registrado{events.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <Link to="/panel-softlab-admin/eventos/nuevo">
-          <Button icon={Plus}>Nuevo evento</Button>
-        </Link>
+        <Button icon={Plus} onClick={() => setCreateOpen(true)}>Nuevo evento</Button>
       </div>
 
       {/* Search */}
@@ -112,9 +107,9 @@ export function AdminEventsPage() {
             <CalendarDays size={32} className="opacity-30" />
             <p className="text-sm">{search ? 'Sin resultados' : 'No hay eventos aún'}</p>
             {!search && (
-              <Link to="/panel-softlab-admin/eventos/nuevo">
-                <Button variant="outline" icon={Plus}>Crear el primero</Button>
-              </Link>
+              <Button variant="outline" icon={Plus} onClick={() => setCreateOpen(true)}>
+                Crear el primero
+              </Button>
             )}
           </div>
         ) : (
@@ -141,7 +136,6 @@ export function AdminEventsPage() {
                       transition={{ duration: 0.2, delay: i * 0.03 }}
                       className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
                     >
-                      {/* Título */}
                       <td className="px-5 py-4">
                         <div>
                           <p className="font-medium text-slate-900 line-clamp-1">{ev.title}</p>
@@ -150,18 +144,12 @@ export function AdminEventsPage() {
                           )}
                         </div>
                       </td>
-
-                      {/* Categoría */}
                       <td className="px-5 py-4 hidden md:table-cell">
                         <Badge variant={categoryVariant(ev.category)}>{ev.category}</Badge>
                       </td>
-
-                      {/* Fecha */}
                       <td className="px-5 py-4 text-slate-500 hidden lg:table-cell">
                         {ev.date ? formatDate(ev.date, { month: 'short' }) : '—'}
                       </td>
-
-                      {/* Participantes */}
                       <td className="px-5 py-4 hidden sm:table-cell">
                         {names.length > 0 ? (
                           <div className="flex items-center gap-1.5">
@@ -172,8 +160,6 @@ export function AdminEventsPage() {
                           <span className="text-xs text-slate-300">—</span>
                         )}
                       </td>
-
-                      {/* Galería */}
                       <td className="px-5 py-4 hidden sm:table-cell">
                         {(ev.gallery?.length ?? 0) > 0 ? (
                           <div className="flex items-center gap-1.5">
@@ -184,8 +170,6 @@ export function AdminEventsPage() {
                           <span className="text-xs text-slate-300">—</span>
                         )}
                       </td>
-
-                      {/* Acciones */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -213,16 +197,20 @@ export function AdminEventsPage() {
         )}
       </div>
 
-      {/* Edit Modal */}
-      <Modal isOpen={!!editEvent} onClose={() => setEditEvent(null)} title="Editar evento" size="xl">
-        {editEvent && (
-          <EventForm
-            event={editEvent}
-            onSuccess={handleEditSuccess}
-            onCancel={() => setEditEvent(null)}
-          />
-        )}
-      </Modal>
+      {/* Create modal */}
+      <EventForm
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={handleSuccess}
+      />
+
+      {/* Edit modal */}
+      <EventForm
+        isOpen={!!editEvent}
+        onClose={() => setEditEvent(null)}
+        event={editEvent}
+        onSuccess={handleSuccess}
+      />
 
       {/* Delete confirm */}
       <Modal isOpen={!!deleteId} onClose={() => setDeleteId(null)} title="Confirmar eliminación" size="sm">

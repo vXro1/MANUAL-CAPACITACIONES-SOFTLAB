@@ -266,19 +266,13 @@ export function AdminParticipantsPage() {
         </div>
       )}
 
-      {/* Form Modal */}
-      <Modal
+      {/* Form Modal — auto-contenido con tabs */}
+      <ParticipantForm
         isOpen={formOpen}
         onClose={closeForm}
-        title={editTarget ? `Editar: ${editTarget.name}` : 'Nuevo participante'}
-        size="lg"
-      >
-        <ParticipantForm
-          participant={editTarget}
-          onSuccess={handleFormSuccess}
-          onCancel={closeForm}
-        />
-      </Modal>
+        participant={editTarget}
+        onSuccess={handleFormSuccess}
+      />
 
       {/* Delete confirm modal */}
       <Modal
