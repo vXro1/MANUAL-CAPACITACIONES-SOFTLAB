@@ -32,7 +32,7 @@ export function AboutPage() {
         </div>
       </div>
 
-      <AboutSection />
+      <AboutSection showDirectors />
       <ParticipantsSection />
     </main>
   );

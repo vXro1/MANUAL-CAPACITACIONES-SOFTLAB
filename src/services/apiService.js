@@ -58,11 +58,11 @@ async function requestForm(path, formData, method = 'POST') {
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 export const authApi = {
-  async login(password) {
+  async login({ username, password }) {
     const data = await request('/auth.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', password }),
+      body: JSON.stringify({ action: 'login', username, password }),
     });
     setToken(data.token);
     return data;

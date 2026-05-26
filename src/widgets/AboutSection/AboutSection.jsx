@@ -2,7 +2,7 @@ import { motion, useInView } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import { directivosApi } from '@/services/directivosApi';
-import { ArrowRight, FlaskConical, BookOpen, Users, Zap, Shield, GraduationCap, ChevronRight } from 'lucide-react';
+import { ArrowRight, FlaskConical, BookOpen, Users, Zap, Shield, GraduationCap } from 'lucide-react';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -216,16 +216,15 @@ export function AboutSection({ showDirectors = false }) {
     let cancelled = false;
     (async () => {
       try {
-        const data = await directivosApi.getFeatured();
+        const data = await directivosApi.getAll();
         if (!cancelled) {
           setFeaturedDirectors(data.length > 0 ? data : DEFAULT_DIRECTORS);
         }
       } catch {
         try {
           const cached = JSON.parse(localStorage.getItem('softlab_directors') ?? '[]');
-          const featured = cached.filter((d) => d.featured);
           if (!cancelled) {
-            setFeaturedDirectors(featured.length > 0 ? featured : DEFAULT_DIRECTORS);
+            setFeaturedDirectors(cached.length > 0 ? cached : DEFAULT_DIRECTORS);
           }
         } catch {
           if (!cancelled) setFeaturedDirectors(DEFAULT_DIRECTORS);
@@ -237,7 +236,7 @@ export function AboutSection({ showDirectors = false }) {
     return () => { cancelled = true; };
   }, [showDirectors]);
 
-  const directorsToShow = featuredDirectors.slice(0, 3);
+  const directorsToShow = featuredDirectors;
 
   return (
     <section
@@ -626,38 +625,18 @@ export function AboutSection({ showDirectors = false }) {
                 Cargando equipo directivo...
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 24, alignItems: 'stretch' }} className="directors-grid">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: 24,
+              }}>
                 {directorsToShow.map((person, i) => (
                   <DirectorCard key={person.id || person.name} person={person} index={i} />
                 ))}
               </div>
             )}
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={titleInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              style={{ textAlign: 'center', marginTop: 40 }}
-            >
-              <Link to="/nosotros" style={{ textDecoration: 'none' }}>
-                <motion.button
-                  whileHover={{ y: -2, borderColor: '#2563EB', color: '#2563EB' }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ duration: 0.18 }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '11px 24px',
-                    background: 'transparent', color: '#64748b',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: 11, fontSize: 13, fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                    transition: 'border-color 0.2s, color 0.2s',
-                  }}
-                >
-                  Ver todo el equipo <ArrowRight size={13} aria-hidden="true" />
-                </motion.button>
-              </Link>
-            </motion.div>
+            {/* Botón solo visible cuando no estamos en /nosotros (showDirectors=false) */}
           </div>
         )}
       </div>
