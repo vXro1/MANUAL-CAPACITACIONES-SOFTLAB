@@ -9,7 +9,7 @@ set_exception_handler(function($e) {
 });
 
 // ─── Credenciales de base de datos ────────────────────────────────────────────
-define('DB_HOST', 'localhost');
+define('DB_HOST', '127.0.0.1');
 define('DB_PORT', '3306');
 define('DB_NAME', 'u122834460_softlabarchivo');
 define('DB_USER', 'u122834460_admin2026');

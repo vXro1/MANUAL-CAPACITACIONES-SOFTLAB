@@ -97,30 +97,30 @@ function PDFUploadField({ value, onChange }) {
 
 // ─── Campo portada ───────────────────────────────────────────────────────────
 function CoverImageField({ value, onChange }) {
-  const isFile = value instanceof File;
-  const isUrl  = typeof value === 'string' && value.startsWith('http');
+  // value: null | base64 string (nueva) | URL http string (existente en servidor)
+  const isBase64 = typeof value === 'string' && value.startsWith('data:');
+  const isUrl    = typeof value === 'string' && !isBase64 && value.length > 0;
   const [mode, setMode]         = useState(isUrl ? 'url' : 'file');
   const [urlInput, setUrlInput] = useState(isUrl ? value : '');
-  const [preview, setPreview]   = useState(isUrl ? value : null);
+
+  const preview = isBase64 || isUrl ? value : null;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes.'); return; }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    onChange(file);
+    if (file.size > 3 * 1024 * 1024) { alert('La imagen no puede superar 3 MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target.result);
+    reader.readAsDataURL(file);
   };
 
   const handleUrlChange = (e) => {
     setUrlInput(e.target.value);
-    setPreview(e.target.value || null);
     onChange(e.target.value || null);
   };
 
   const clear = () => {
-    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
-    setPreview(null);
     setUrlInput('');
     onChange(null);
   };
@@ -150,15 +150,15 @@ function CoverImageField({ value, onChange }) {
         {mode === 'file' ? (
           <label className={cn(
             'flex-1 flex flex-col items-center justify-center gap-3 p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all',
-            isFile ? 'border-green-300 bg-green-50'
+            isBase64 ? 'border-green-300 bg-green-50'
               : isUrl ? 'border-brand-200 bg-brand-50/30'
               : 'border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/30'
           )}>
             <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
-            {isFile ? (
+            {isBase64 ? (
               <div className="flex flex-col items-center gap-1.5 text-green-700">
                 <CheckCircle size={20} className="text-green-500" />
-                <span className="text-sm font-medium text-center">{value.name}</span>
+                <span className="text-sm font-medium">✓ Imagen lista para guardar</span>
                 <span className="text-xs text-green-600">Haz clic para reemplazar</span>
               </div>
             ) : isUrl ? (
@@ -173,7 +173,7 @@ function CoverImageField({ value, onChange }) {
                   <ImageIcon size={20} className="text-slate-400" />
                 </div>
                 <span className="text-sm font-medium text-slate-700">Haz clic para seleccionar imagen</span>
-                <span className="text-xs text-slate-400">PNG, JPG, WEBP · Máx 5 MB</span>
+                <span className="text-xs text-slate-400">PNG, JPG, WEBP · máx. 3 MB</span>
               </div>
             )}
           </label>
@@ -391,10 +391,21 @@ export function ManualForm({ manual, onSuccess, onCancel }) {
 
   const onSubmit = async (data) => {
     setApiError('');
-    const pdfFile   = data.pdf   instanceof File ? data.pdf   : undefined;
-    const pdfUrl    = typeof data.pdf   === 'string' ? data.pdf   : undefined;
-    const coverFile = data.cover instanceof File ? data.cover : undefined;
-    const coverUrl  = typeof data.cover === 'string' ? data.cover : undefined;
+    const pdfFile = data.pdf instanceof File ? data.pdf : undefined;
+    const pdfUrl  = typeof data.pdf === 'string' ? data.pdf : undefined;
+
+    // Portada: puede ser base64 (nueva), URL http (existente) o null
+    const coverIsBase64 = typeof coverValue === 'string' && coverValue.startsWith('data:');
+    const coverUrl = typeof coverValue === 'string' && !coverIsBase64 ? coverValue : undefined;
+    let coverFile;
+    if (coverIsBase64) {
+      const [header, b64] = coverValue.split(',');
+      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      coverFile = new File([bytes], 'portada.jpg', { type: mime });
+    }
 
     const payload = {
       titulo:       data.title,

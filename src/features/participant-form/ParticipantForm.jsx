@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Save, Plus, X, Camera, User, Trash2 } from 'lucide-react';
@@ -25,17 +25,10 @@ export const PARTICIPANT_ROLES = [
 function PhotoUploadField({ value, onChange }) {
   const inputRef = useRef(null);
 
-  const previewUrl = useMemo(() => {
-    if (!value) return null;
-    if (value instanceof File) return URL.createObjectURL(value);
-    return value;
-  }, [value]);
-
-  useEffect(() => {
-    return () => {
-      if (value instanceof File && previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [value, previewUrl]);
+  // value es null | base64 string | URL string (foto existente del servidor)
+  const isBase64 = typeof value === 'string' && value.startsWith('data:');
+  const isUrl = typeof value === 'string' && !isBase64 && value.length > 0;
+  const previewUrl = isBase64 || isUrl ? value : null;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -46,12 +39,15 @@ function PhotoUploadField({ value, onChange }) {
       alert('Solo se permiten imágenes JPG, PNG, WebP o GIF.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen no puede superar 5 MB.');
+    if (file.size > 3 * 1024 * 1024) {
+      alert('La imagen no puede superar 3 MB.');
       return;
     }
 
-    onChange(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target.result);
+    reader.readAsDataURL(file);
+
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -106,13 +102,13 @@ function PhotoUploadField({ value, onChange }) {
           )}
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            JPG, PNG o WebP. Máx 5 MB.
+            JPG, PNG o WebP. Máx 3 MB.
           </p>
 
-          {value instanceof File && (
-            <p className="text-xs text-green-600">{value.name}</p>
+          {isBase64 && (
+            <p className="text-xs text-green-600">✓ Foto lista para guardar</p>
           )}
-          {typeof value === 'string' && value && (
+          {isUrl && (
             <p className="text-xs text-green-600">Foto guardada en el servidor</p>
           )}
         </div>
@@ -203,8 +199,16 @@ export function ParticipantForm({ participant, onSuccess, onCancel }) {
 
   const onSubmit = async (data) => {
     setApiError('');
-    // photoValue (watched) es más fiable que data.photo para campos no registrados con register()
-    const fotoFile = photoValue instanceof File ? photoValue : undefined;
+    // Si la foto es base64 nueva, convertirla a Blob/File para FormData
+    let fotoFile;
+    if (typeof photoValue === 'string' && photoValue.startsWith('data:')) {
+      const [header, b64] = photoValue.split(',');
+      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      fotoFile = new File([bytes], 'foto.jpg', { type: mime });
+    }
     const payload = {
       nombre: data.name,
       rol: data.role,

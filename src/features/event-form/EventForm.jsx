@@ -279,14 +279,24 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
       const results = [];
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue;
+        if (file.size > 3 * 1024 * 1024) {
+          setError(`"${file.name}" supera los 3 MB permitidos.`);
+          continue;
+        }
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = () => reject(new Error('Error al leer el archivo'));
+          reader.readAsDataURL(file);
+        });
         results.push({
           id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          src: URL.createObjectURL(file),
+          src: base64,
           title: file.name.replace(/\.[^.]+$/, ''),
           _file: file,
         });
       }
-      onChange([...value, ...results]);
+      if (results.length) onChange([...value, ...results]);
     } catch {
       setError('Error al procesar alguna imagen. Intenta de nuevo.');
     } finally {
@@ -302,10 +312,7 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
   };
 
   const removeImage = (img) => {
-    // Si es una imagen del servidor, notificar al padre para que la elimine vía API
     if (img._serverImage) onRemoveServerImage?.(img.id);
-    // Si es un blob URL temporal, liberarlo
-    if (img._file) URL.revokeObjectURL(img.src);
     onChange(value.filter((i) => i.id !== img.id));
   };
 
@@ -358,7 +365,7 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
           <p className="text-sm font-semibold text-slate-700" style={{ fontFamily: 'Syne, sans-serif' }}>
             {uploading ? 'Procesando…' : dragOver ? 'Suelta aquí' : 'Subir imágenes'}
           </p>
-          <p className="text-xs text-slate-400">Arrastra y suelta o haz clic · PNG, JPG, WEBP</p>
+          <p className="text-xs text-slate-400">Arrastra y suelta o haz clic · PNG, JPG, WEBP · máx. 3 MB</p>
         </div>
       </div>
 
