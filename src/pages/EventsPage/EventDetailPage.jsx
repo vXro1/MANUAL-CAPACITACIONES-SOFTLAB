@@ -5,8 +5,9 @@ import {
   CalendarDays, Users, Images, ArrowLeft,
   ChevronLeft, ChevronRight, X, ZoomIn, Briefcase,
 } from 'lucide-react';
-import { eventsRepository, participantsRepository } from '@/storage/localStorageRepository';
+import { eventosApi, participantesApi } from '@/services/apiService';
 import { formatDate } from '@/shared/lib/formatDate';
+import { toSlug } from '@/shared/lib/toSlug';
 
 const E = [0.22, 1, 0.36, 1];
 
@@ -185,9 +186,33 @@ export function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [event, setEvent] = useState(null);
+  const [allParticipants, setAllParticipants] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const event = eventsRepository.getById(id);
-  const allParticipants = participantsRepository.getAll();
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setEvent(null);
+    Promise.all([eventosApi.getById(id), participantesApi.getAll()])
+      .then(([ev, participants]) => {
+        if (!cancelled) {
+          setEvent(ev ?? null);
+          setAllParticipants(participants ?? []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#F8FAFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>Cargando evento...</p>
+      </main>
+    );
+  }
 
   if (!event) {
     return (
@@ -213,7 +238,7 @@ export function EventDetailPage() {
   const catStyle  = getCategoryStyle(event.category);
   const gallery   = event.gallery ?? [];
   const coverImage = event.coverImageId
-    ? (gallery.find((g) => g.id === event.coverImageId) ?? gallery[0])
+    ? (gallery.find((g) => String(g.id) === String(event.coverImageId)) ?? gallery[0])
     : gallery[0];
 
   // Combinar datos del participante con su rol específico en este evento
@@ -224,7 +249,7 @@ export function EventDetailPage() {
     if (roles.length > 0) {
       return roles
         .map((pr) => {
-          const p = allParticipants.find((x) => x.id === pr.participante_id);
+          const p = allParticipants.find((x) => String(x.id) === String(pr.participante_id));
           return p ? { ...p, eventRole: pr.rol } : null;
         })
         .filter(Boolean);
@@ -232,7 +257,7 @@ export function EventDetailPage() {
     // Fallback: IDs sin rol
     return ids
       .map((pid) => {
-        const p = allParticipants.find((x) => x.id === pid);
+        const p = allParticipants.find((x) => String(x.id) === String(pid));
         return p ? { ...p, eventRole: null } : null;
       })
       .filter(Boolean);
@@ -242,7 +267,7 @@ export function EventDetailPage() {
     <main id="main-content" style={{ minHeight: '100vh', background: '#F8FAFF', paddingBottom: 80 }}>
 
       {/* Back button */}
-      <div style={{ maxWidth: 920, margin: '0 auto', padding: '28px 24px 0' }}>
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: 'clamp(16px, 4vw, 28px) clamp(16px, 4vw, 24px) 0' }}>
         <button
           onClick={() => navigate(-1)}
           style={{
@@ -267,9 +292,9 @@ export function EventDetailPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: E }}
-          style={{ maxWidth: 920, margin: '22px auto 0', padding: '0 24px' }}
+          style={{ maxWidth: 920, margin: '22px auto 0', padding: '0 clamp(16px, 4vw, 24px)' }}
         >
-          <div style={{ borderRadius: 20, overflow: 'hidden', height: 380, background: '#E2E8F0' }}>
+          <div className="event-detail-cover" style={{ borderRadius: 20, overflow: 'hidden', background: '#E2E8F0' }}>
             <img
               src={coverImage.src}
               alt={coverImage.title || event.title}
@@ -284,7 +309,7 @@ export function EventDetailPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.12, ease: E }}
-        style={{ maxWidth: 920, margin: '0 auto', padding: '32px 24px 0' }}
+        style={{ maxWidth: 920, margin: '0 auto', padding: '32px clamp(16px, 4vw, 24px) 0' }}
       >
         {/* Category + Date */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -347,7 +372,7 @@ export function EventDetailPage() {
                 return (
                   <Link
                     key={p.id}
-                    to={`/participantes/${p.id}`}
+                    to={`/participantes/${toSlug(p.name)}`}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '8px 16px 8px 8px', borderRadius: 99,

@@ -5,8 +5,9 @@
 
 /* ── GallerySection widget — photo items ── */
 
-.photo-item:hover .photo-overlay { background: rgba(0,0,0,0.32) !important; }
-.photo-item:hover .zoom-btn      { opacity: 1 !important; }
+.photo-item:hover .photo-overlay  { background: rgba(0,0,0,0.32) !important; }
+.photo-item:hover .zoom-btn       { opacity: 1 !important; }
+.photo-item:hover .more-overlay   { background: rgba(5,9,26,0.85) !important; }
 
 /* ── GalleryPage — card base ── */
 
@@ -90,6 +91,19 @@
 }
 
 .gp-btn-dl { transition-delay: 0.04s; }
+
+/* ── Touch: siempre visible en táctil ── */
+@media (hover: none) {
+  .gp-card { cursor: pointer; }
+  .gp-card:active { transform: scale(0.98); }
+  .gp-overlay { background: rgba(6, 12, 28, 0.35) !important; }
+  .gp-actions {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* Deshabilita hover scale para evitar comportamientos extraños en touch */
+  .gp-card:hover { transform: none !important; box-shadow: none !important; }
+}
 
 /* ── Adaptive grids ── */
 

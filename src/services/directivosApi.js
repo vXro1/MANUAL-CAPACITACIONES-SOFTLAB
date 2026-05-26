@@ -14,21 +14,9 @@
 import { getToken } from './apiService';
 
 // ─── Configuración de ruta ────────────────────────────────────────────────────
-// Detecta automáticamente la ruta base del backend igual que apiService.js
-// Si apiService usa una variable distinta, cámbiala aquí también.
-const API_BASE = (() => {
-  // 1. Variable de entorno explícita
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  // 2. Misma base que la página actual + /api-backend (ajusta si tu carpeta tiene otro nombre)
-  return '/api-backend';
-})();
+const API_BASE = 'https://semillerosoftlab.com/api-backend';
 
 const ENDPOINT = `${API_BASE}/directivos.php`;
-
-// Útil para depuración: muestra la URL en consola la primera vez
-if (import.meta.env.DEV) {
-  console.log('[directivosApi] endpoint →', ENDPOINT);
-}
 
 // ─── Headers ─────────────────────────────────────────────────────────────────
 

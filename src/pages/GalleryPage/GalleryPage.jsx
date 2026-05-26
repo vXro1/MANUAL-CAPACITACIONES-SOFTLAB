@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, ZoomIn, Images, Search } from 'lucide-react';
-import { galleryRepository } from '@/storage/localStorageRepository';
+import { galeriaApi } from '@/services/apiService';
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 function downloadImage(url, title) {
@@ -93,7 +93,7 @@ function Lightbox({ photos, startIndex, onClose }) {
             </span>
           </div>
           {photo.title && (
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, maxWidth: 'clamp(100px, 30vw, 300px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {photo.title}
             </span>
           )}
@@ -122,7 +122,7 @@ function Lightbox({ photos, startIndex, onClose }) {
 
       {/* Main image */}
       <div
-        style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 72px' }}
+        style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(52px, 8vw, 72px)' }}
         onClick={e => e.stopPropagation()}
       >
         {!imgLoaded && (
@@ -266,8 +266,15 @@ export function GalleryPage() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
-    const all = galleryRepository.getAll();
-    setPhotos(all.map(img => ({ src: img.src, title: img.title || '' })).filter(p => p.src));
+    let cancelled = false;
+    galeriaApi.getAll()
+      .then(data => {
+        if (!cancelled) {
+          setPhotos((data ?? []).map(img => ({ src: img.src, title: img.title || img.titulo || '' })).filter(p => p.src));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   const filtered = search.trim()

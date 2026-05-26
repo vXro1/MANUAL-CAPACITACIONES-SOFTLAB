@@ -12,7 +12,10 @@
    xl:  ≥ 1280px  (desktop)
 ─────────────────────────────── */
 
-/* ── Navbar ── */
+/* ═══════════════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 767px) {
   .nav-inner      { padding: 0 20px !important; }
   .nav-desktop    { display: none !important; }
@@ -20,7 +23,10 @@
   .nav-hamburger  { display: flex !important; }
 }
 
-/* ── Hero ── */
+/* ═══════════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
   .hero-grid {
     grid-template-columns: 1fr !important;
@@ -31,10 +37,55 @@
 }
 
 @media (max-width: 480px) {
-  .hero-grid { padding: 32px 20px !important; }
+  .hero-grid { padding: 40px 20px !important; }
 }
 
-/* ── Gallery Section ── */
+@media (max-width: 380px) {
+  .hero-grid { padding: 32px 16px !important; }
+}
+
+/* Stats bar en hero — evita desbordamiento en pantallas muy pequeñas */
+@media (max-width: 420px) {
+  .hero-stats {
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    padding-top: 16px !important;
+  }
+  .hero-stats > div {
+    flex: 0 0 auto !important;
+    min-width: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   FEATURED / CAROUSEL
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .featured-container { padding: 0 20px !important; }
+
+  /* altura fija para que el position:absolute de Framer Motion funcione */
+  .carousel-wrapper   { height: 560px !important; }
+
+  .carousel-slide-inner {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 200px auto;
+  }
+  .carousel-image-side { order: -1; height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .carousel-wrapper { height: 540px !important; }
+}
+
+@media (max-width: 380px) {
+  .carousel-wrapper { height: 580px !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   GALLERY SECTION (widget homepage)
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
   .gallery-container    { padding: 0 24px !important; }
   .gallery-main-grid    { grid-template-columns: 1fr !important; gap: 40px !important; }
@@ -48,26 +99,66 @@
 
 @media (max-width: 480px) {
   .gallery-container { padding: 0 20px !important; }
+  .photo-grid        { grid-template-columns: 1fr !important; }
 }
 
-/* ── Featured carousel ── */
-@media (max-width: 768px) {
-  .featured-container { padding: 0 20px !important; }
-  .carousel-wrapper   { height: auto !important; }
-  .carousel-slide-inner {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: 200px auto;
-  }
-  .carousel-image-side { order: -1; height: 200px; }
+/* ═══════════════════════════════════════════════════
+   EVENTS SECTION (widget homepage)
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .events-section-container { padding: 0 24px !important; }
+  .events-grid { grid-template-columns: 1fr 1fr !important; }
 }
 
-/* ── Manual detail ── */
+@media (max-width: 600px) {
+  .events-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .events-section-container { padding: 0 20px !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   MANUAL DETAIL PAGE
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
   .manual-body-grid { grid-template-columns: 1fr !important; }
   .manual-hero-grid { grid-template-columns: 1fr !important; }
 }
 
-/* ── Gallery Page ── */
+/* Botón PDF en hero: en móvil va al final en columna */
+@media (max-width: 900px) {
+  .manual-hero-grid > *:last-child {
+    align-self: flex-start;
+    width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENT DETAIL PAGE — portada
+═══════════════════════════════════════════════════ */
+
+.event-detail-cover {
+  height: 380px;
+}
+
+@media (max-width: 768px) {
+  .event-detail-cover {
+    height: clamp(200px, 45vw, 300px);
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .event-detail-cover { height: 220px; }
+}
+
+/* ═══════════════════════════════════════════════════
+   GALLERY PAGE
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 1100px) {
   .gp-grid-large { columns: 3 200px; }
 }
@@ -84,7 +175,13 @@
   .gp-grid-small  { grid-template-columns: 1fr; }
   .gp-grid-few img { height: 220px; }
   .gp-card { border-radius: 10px; }
-  .gp-card:hover { transform: none; }
+}
+
+@media (max-width: 420px) {
+  .gp-grid-large,
+  .gp-grid-medium { columns: 2; column-gap: 6px; }
+  .gp-grid-few    { grid-template-columns: 1fr; }
+  .gp-grid-few img { height: 200px; }
 }
 
 @media (max-width: 380px) {
@@ -92,14 +189,28 @@
   .gp-grid-medium { columns: 1; }
 }
 
-/* ── Admin sidebar ── */
+/* ═══════════════════════════════════════════════════
+   ADMIN SIDEBAR
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
   .admin-sidebar       { transform: translateX(-100%) !important; }
   .admin-sidebar.open  { transform: translateX(0) !important; }
   .admin-main          { margin-left: 0 !important; }
 }
 
-/* ── About page ── */
+@media (max-width: 900px) {
+  .dash-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 768px) {
+  .admin-gallery-top { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   ABOUT PAGE
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 1024px) {
   .about-container  { padding: 0 28px !important; }
   .directors-grid   { flex-direction: column !important; }
@@ -113,18 +224,26 @@
   .about-container { padding: 0 20px !important; }
 }
 
-/* ── Participants ── */
+/* ═══════════════════════════════════════════════════
+   PARTICIPANTS SECTION
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
-  .participants-container { padding: 0 24px !important; }
-  .participants-grid      { grid-template-columns: repeat(2, 1fr) !important; }
+  .participants-container    { padding: 0 24px !important; }
+  .participants-grid         { grid-template-columns: repeat(2, 1fr) !important; }
+  .participants-grid-compact { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
 @media (max-width: 560px) {
-  .participants-container { padding: 0 20px !important; }
-  .participants-grid      { grid-template-columns: 1fr !important; }
+  .participants-container    { padding: 0 20px !important; }
+  .participants-grid         { grid-template-columns: 1fr !important; }
+  .participants-grid-compact { grid-template-columns: 1fr !important; }
 }
 
-/* ── Footer ── */
+/* ═══════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
   .footer-inner                     { padding: 40px 24px 0 !important; }
   .footer-grid                      { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
@@ -134,28 +253,84 @@
 @media (max-width: 480px) {
   .footer-inner  { padding: 32px 20px 0 !important; }
   .footer-grid   { grid-template-columns: 1fr !important; }
-  .footer-bottom { flex-direction: column; text-align: center; }
+  .footer-bottom {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 8px !important;
+  }
 }
 
-/* ── CTA section ── */
+/* ═══════════════════════════════════════════════════
+   CTA SECTION
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 480px) {
   .cta-container { padding: 0 20px !important; }
 }
 
-/* ── Admin pages ── */
-@media (max-width: 900px) {
-  .dash-grid { grid-template-columns: 1fr !important; }
+/* Labels decorativos del CTA — se apilan en pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .cta-features {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
 }
 
-@media (max-width: 768px) {
-  .admin-gallery-top { grid-template-columns: 1fr !important; }
+@media (max-width: 360px) {
+  .cta-features { display: none !important; }
 }
 
-/* ── Utilities responsive ── */
+/* ═══════════════════════════════════════════════════
+   PARTICIPANT DETAIL PAGE
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .participant-body-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   UTILIDADES RESPONSIVE
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 767px) {
   .sl-hide-mobile { display: none !important; }
 }
 
 @media (min-width: 768px) {
   .sl-show-mobile-only { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   DISPOSITIVOS TÁCTILES — elimina efectos hover
+   que requieren ratón y no tienen sentido en touch
+═══════════════════════════════════════════════════ */
+
+@media (hover: none) {
+  /* Gallery page cards — muestra acciones sin hover */
+  .gp-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+  .gp-card:hover .gp-overlay {
+    background: rgba(6, 12, 28, 0.38) !important;
+  }
+  .gp-card:hover .gp-actions {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Gallery section widget */
+  .photo-item:hover .photo-overlay {
+    background: rgba(0, 0, 0, 0.22) !important;
+  }
+  .photo-item:hover .zoom-btn {
+    opacity: 0.85 !important;
+  }
+
+  /* Cards hover lift — sin desplazamiento en touch */
+  .sl-card-hover:hover {
+    transform: none !important;
+  }
 }

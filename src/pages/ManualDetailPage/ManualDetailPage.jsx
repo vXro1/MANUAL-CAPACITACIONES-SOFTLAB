@@ -5,10 +5,11 @@ import {
   ArrowLeft, Calendar, Clock, User, BookOpen, FileText,
   ChevronRight, Tag, Building2, List, Mic, Users, UserCheck, ZoomIn, X,
 } from 'lucide-react';
-import { manualsRepository, participantsRepository } from '@/storage/localStorageRepository';
+import { manualesApi, participantesApi } from '@/services/apiService';
 import { PDFViewer } from '@/features/manual-viewer/PDFViewer';
 import { Modal } from '@/shared/ui/Modal';
 import { formatDate, formatTime } from '@/shared/lib/formatDate';
+import { toSlug } from '@/shared/lib/toSlug';
 
 /* ─── Category palette ──────────────────────────────────────── */
 const CATEGORY_PALETTE = {
@@ -90,7 +91,7 @@ function SectionLabel({ icon: Icon, children }) {
 function PersonCard({ person }) {
   return (
     <Link
-      to={`/participantes/${person.id}`}
+      to={`/participantes/${toSlug(person.name)}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '10px 12px', borderRadius: 10,
@@ -298,23 +299,48 @@ export function ManualDetailPage() {
   const { id } = useParams();
   const [pdfOpen, setPdfOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(null);
+  const [manual, setManual] = useState(null);
+  const [allParticipants, setAllParticipants] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const manual = manualsRepository.getById(id);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setManual(null);
+    Promise.all([manualesApi.getById(id), participantesApi.getAll()])
+      .then(([m, participants]) => {
+        if (!cancelled) {
+          setManual(m ?? null);
+          setAllParticipants(participants ?? []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>Cargando manual...</p>
+      </main>
+    );
+  }
+
+  if (!manual) return <Navigate to="/manuales" replace />;
+
   const evidenceGallery = (manual?.gallery ?? []).filter(
     s => typeof s === 'string' && s.startsWith('http')
   );
 
-  const allParticipants = participantsRepository.getAll();
   const palette = getCategoryPalette(manual?.category);
 
   const speakerIds = manual?.speakerIds?.length
     ? manual.speakerIds
     : manual?.speakerId ? [manual.speakerId] : [];
-  const speakers = speakerIds.map(sid => allParticipants.find(p => p.id === sid)).filter(Boolean);
-  const authors = (manual?.authorIds ?? []).map(aid => allParticipants.find(p => p.id === aid)).filter(Boolean);
-  const auxiliares = (manual?.auxiliaresIds ?? []).map(aid => allParticipants.find(p => p.id === aid)).filter(Boolean);
-
-  if (!manual) return <Navigate to="/manuales" replace />;
+  const speakers = speakerIds.map(sid => allParticipants.find(p => String(p.id) === String(sid))).filter(Boolean);
+  const authors = (manual?.authorIds ?? []).map(aid => allParticipants.find(p => String(p.id) === String(aid))).filter(Boolean);
+  const auxiliares = (manual?.auxiliaresIds ?? []).map(aid => allParticipants.find(p => String(p.id) === String(aid))).filter(Boolean);
 
   return (
     <main id="main-content" style={{ minHeight: '100vh', background: '#F8FAFC', paddingTop: 64 }}>

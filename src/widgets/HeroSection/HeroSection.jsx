@@ -9,7 +9,7 @@ import {
   useSpring,
 } from 'framer-motion';
 import { ArrowRight, Users, FileText, Star, MapPin } from 'lucide-react';
-import { manualsRepository } from '@/storage/localStorageRepository';
+import { manualesApi } from '@/services/apiService';
 
 const foto1 = new URL('/src/assets/foto1semillero.png', import.meta.url).href;
 const foto2 = new URL('/src/assets/foto2semillero.png', import.meta.url).href;
@@ -121,9 +121,12 @@ function Counter({ end, suffix = '+', delay = 0 }) {
 }
 
 // ─── Glass-framed image carousel ─────────────────────────────
-function ImageCarousel() {
+function ImageCarousel({ slides }) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+
+  // Reset to first slide when slides change (e.g. after API loads)
+  useEffect(() => { setCurrent(0); }, [slides]);
 
   const go = useCallback((idx) => {
     setDirection(idx > current ? 1 : -1);
@@ -131,11 +134,12 @@ function ImageCarousel() {
   }, [current]);
 
   useEffect(() => {
+    if (slides.length <= 1) return;
     const id = setInterval(() => {
-      setCurrent((c) => { setDirection(1); return (c + 1) % SLIDES.length; });
+      setCurrent((c) => { setDirection(1); return (c + 1) % slides.length; });
     }, 4500);
     return () => clearInterval(id);
-  }, []);
+  }, [slides.length]);
 
   return (
     <div
@@ -163,8 +167,8 @@ function ImageCarousel() {
         <AnimatePresence initial={false} custom={direction}>
           <motion.img
             key={current}
-            src={SLIDES[current]}
-            alt={`Semillero Softlab foto ${current + 1}`}
+            src={slides[current]?.src ?? slides[current]}
+            alt={slides[current]?.alt ?? `Semillero Softlab foto ${current + 1}`}
             custom={direction}
             variants={{
               enter: (d) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
@@ -198,7 +202,7 @@ function ImageCarousel() {
             display: 'flex', gap: 6, zIndex: 10,
           }}
         >
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
@@ -236,7 +240,9 @@ function ImageCarousel() {
 }
 
 // ─── HeroSection ─────────────────────────────────────────────
-export function HeroSection() {
+export function HeroSection({ slides: apiSlides = [] }) {
+  // Fall back to local assets until API images load
+  const slides = apiSlides.length > 0 ? apiSlides : SLIDES.map(src => ({ src, alt: 'Semillero Softlab' }));
   const sectionRef = useRef(null);
 
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
@@ -255,7 +261,15 @@ export function HeroSection() {
     mouseYMv.set((e.clientY - rect.top) / rect.height - 0.5);
   }, [mouseXMv, mouseYMv]);
 
-  const totalManuals = manualsRepository.getAll().length;
+  const [totalManuals, setTotalManuals] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    manualesApi.getAll()
+      .then(data => { if (!cancelled) setTotalManuals((data ?? []).length); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const stats = [
     { icon: FileText, label: 'Manuales',       value: totalManuals || 2 },
@@ -518,6 +532,7 @@ export function HeroSection() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.92, duration: 0.5 }}
+              className="hero-stats"
               style={{
                 display: 'flex',
                 gap: 0,
@@ -579,7 +594,7 @@ export function HeroSection() {
           transition={{ delay: 0.45, duration: 0.88, ease: EASE }}
           style={{ y: imgY }}
         >
-          <ImageCarousel />
+          <ImageCarousel slides={slides} />
         </motion.div>
       </div>
 

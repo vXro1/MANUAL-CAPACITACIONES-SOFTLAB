@@ -1,3 +1,12 @@
+# ─── CORS para PDFs (permite visor desde cualquier origen) ───────────────────
+<IfModule mod_headers.c>
+  <FilesMatch "\.pdf$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Range"
+  </FilesMatch>
+</IfModule>
+
 # ─── MIME types (ForceType para máxima compatibilidad con LiteSpeed) ─────────
 <FilesMatch "\.js$">
     ForceType application/javascript

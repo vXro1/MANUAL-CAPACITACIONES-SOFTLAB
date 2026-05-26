@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ZoomIn, Users, BookOpen, FlaskConical, Award, ArrowRight, Images } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { galleryRepository } from '@/storage/localStorageRepository';
+import { galeriaApi } from '@/services/apiService';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -197,26 +197,44 @@ function Lightbox({ photos, index, onClose }) {
 }
 
 // ─── GallerySection ───────────────────────────────────────────
-export function GallerySection() {
-  const featuredMeta = galleryRepository.getFeatured().slice(0, 5);
+export function GallerySection({ photos: propPhotos = null }) {
+  const [fallbackPhotos, setFallbackPhotos] = useState([]);
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
-  if (featuredMeta.length === 0) return null;
+  // Only fetch from API when parent hasn't provided photos (propPhotos === null)
+  useEffect(() => {
+    if (propPhotos !== null) return;
+    let cancelled = false;
+    galeriaApi.getFeatured()
+      .then(data => {
+        if (!cancelled) {
+          setFallbackPhotos(
+            (data ?? [])
+              .slice(0, 15)
+              .filter(img => img.src)
+              .map(img => ({ src: img.src, alt: img.title || 'Foto del semillero' }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [propPhotos]);
 
-  const photos = featuredMeta
-    .filter((img) => img.src)
-    .map((img) => ({ src: img.src, alt: img.title || 'Foto del semillero' }));
+  const photos = propPhotos !== null ? propPhotos : fallbackPhotos;
 
   if (photos.length === 0) return null;
 
-  const hasBigLayout = photos.length >= 2;
+  // Show up to 9 in the grid; lightbox accesses all
+  const VISIBLE = 9;
+  const visiblePhotos = photos.slice(0, VISIBLE);
+  const hiddenCount = Math.max(0, photos.length - VISIBLE);
 
   return (
     <>
       <section
         aria-label="Galería del semillero"
         style={{
-          padding: '100px 0',
+          padding: 'clamp(56px, 9vw, 100px) 0',
           background: 'linear-gradient(180deg, #050913 0%, #080D1A 55%, #0B1222 100%)',
           position: 'relative',
           overflow: 'hidden',
@@ -303,137 +321,113 @@ export function GallerySection() {
               viewport={{ once: true }}
               transition={{ duration: 0.65, ease: EASE }}
             >
-              {hasBigLayout ? (
-                <div
-                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gridTemplateRows: 'auto auto', gap: 8 }}
-                  className="photo-grid"
-                >
-                  {/* Large photo — spans 2 rows */}
-                  <div
-                    style={{ gridRow: '1 / 3', position: 'relative', cursor: 'pointer', borderRadius: 16, overflow: 'hidden', minHeight: 280 }}
-                    onClick={() => setLightboxIndex(0)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Ver foto 1"
-                    onKeyDown={(e) => e.key === 'Enter' && setLightboxIndex(0)}
-                    className="photo-item"
-                  >
-                    <img
-                      src={photos[0].src}
-                      alt={photos[0].alt}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
-                    <div
-                      className="photo-overlay"
-                      style={{
-                        position: 'absolute', inset: 0,
-                        background: 'transparent',
-                        transition: 'background 0.28s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        borderRadius: 16,
-                      }}
-                    >
-                      <div
-                        className="zoom-btn"
-                        style={{
-                          width: 46, height: 46, borderRadius: '50%',
-                          background: 'rgba(255,255,255,0.10)',
-                          backdropFilter: 'blur(8px)',
-                          border: '1px solid rgba(255,255,255,0.25)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          opacity: 0, transition: 'opacity 0.22s',
-                        }}
-                      >
-                        <ZoomIn size={18} color="#fff" aria-hidden="true" />
-                      </div>
-                    </div>
-                  </div>
+                {/* ── Bento photo grid (up to 9 photos) ── */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateRows: 'auto',
+                  gap: 7,
+                }}
+                className="photo-grid"
+              >
+                {visiblePhotos.map((photo, i) => {
+                  const isLastVisible = i === visiblePhotos.length - 1;
+                  const showOverlay = isLastVisible && hiddenCount > 0;
 
-                  {/* Smaller photos */}
-                  {photos.slice(1).map((photo, i) => (
+                  // First photo: spans 2 columns + 2 rows (large hero)
+                  const isBigHero = i === 0 && visiblePhotos.length >= 3;
+                  const gridStyle = isBigHero
+                    ? { gridColumn: '1 / 3', gridRow: '1 / 3', minHeight: 200 }
+                    : { aspectRatio: '1 / 1' };
+
+                  return (
                     <div
-                      key={i + 1}
-                      style={{ position: 'relative', cursor: 'pointer', borderRadius: 16, overflow: 'hidden', aspectRatio: '4/3' }}
-                      onClick={() => setLightboxIndex(i + 1)}
+                      key={i}
+                      style={{
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderRadius: 13,
+                        overflow: 'hidden',
+                        ...gridStyle,
+                      }}
+                      onClick={() => setLightboxIndex(i)}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Ver foto ${i + 2}`}
-                      onKeyDown={(e) => e.key === 'Enter' && setLightboxIndex(i + 1)}
+                      aria-label={`Ver foto ${i + 1}`}
+                      onKeyDown={(e) => e.key === 'Enter' && setLightboxIndex(i)}
                       className="photo-item"
                     >
                       <img
                         src={photo.src}
                         alt={photo.alt}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        loading="lazy"
                       />
-                      <div
-                        className="photo-overlay"
-                        style={{
-                          position: 'absolute', inset: 0,
-                          background: 'transparent',
-                          transition: 'background 0.28s',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          borderRadius: 16,
-                        }}
-                      >
+
+                      {/* Normal hover overlay */}
+                      {!showOverlay && (
                         <div
-                          className="zoom-btn"
+                          className="photo-overlay"
                           style={{
-                            width: 38, height: 38, borderRadius: '50%',
-                            background: 'rgba(255,255,255,0.10)',
-                            backdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(255,255,255,0.22)',
+                            position: 'absolute', inset: 0,
+                            background: 'transparent',
+                            transition: 'background 0.28s',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: 0, transition: 'opacity 0.22s',
+                            borderRadius: 13,
                           }}
                         >
-                          <ZoomIn size={14} color="#fff" aria-hidden="true" />
+                          <div
+                            className="zoom-btn"
+                            style={{
+                              width: isBigHero ? 46 : 36, height: isBigHero ? 46 : 36,
+                              borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.10)',
+                              backdropFilter: 'blur(8px)',
+                              border: '1px solid rgba(255,255,255,0.25)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: 0, transition: 'opacity 0.22s',
+                            }}
+                          >
+                            <ZoomIn size={isBigHero ? 18 : 14} color="#fff" aria-hidden="true" />
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* "+N más" overlay on last visible photo */}
+                      {showOverlay && (
+                        <div
+                          style={{
+                            position: 'absolute', inset: 0,
+                            background: 'rgba(5,9,26,0.72)',
+                            backdropFilter: 'blur(3px)',
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            gap: 4, borderRadius: 13,
+                            transition: 'background 0.25s',
+                          }}
+                          className="more-overlay"
+                        >
+                          <span style={{
+                            fontFamily: 'Syne, sans-serif',
+                            fontSize: 22, fontWeight: 800, color: '#fff',
+                            lineHeight: 1,
+                          }}>
+                            +{hiddenCount}
+                          </span>
+                          <span style={{
+                            fontFamily: 'DM Sans, sans-serif',
+                            fontSize: 11, color: 'rgba(255,255,255,0.65)',
+                            fontWeight: 500,
+                          }}>
+                            más fotos
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  style={{ position: 'relative', cursor: 'pointer', borderRadius: 16, overflow: 'hidden', aspectRatio: '16/9' }}
-                  onClick={() => setLightboxIndex(0)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Ver foto"
-                  onKeyDown={(e) => e.key === 'Enter' && setLightboxIndex(0)}
-                  className="photo-item"
-                >
-                  <img
-                    src={photos[0].src}
-                    alt={photos[0].alt}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                  <div
-                    className="photo-overlay"
-                    style={{
-                      position: 'absolute', inset: 0,
-                      background: 'transparent',
-                      transition: 'background 0.28s',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      borderRadius: 16,
-                    }}
-                  >
-                    <div
-                      className="zoom-btn"
-                      style={{
-                        width: 46, height: 46, borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.10)',
-                        backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(255,255,255,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        opacity: 0, transition: 'opacity 0.22s',
-                      }}
-                    >
-                      <ZoomIn size={18} color="#fff" aria-hidden="true" />
-                    </div>
-                  </div>
-                </div>
-              )}
+                  );
+                })}
+              </div>
 
               {/* Gallery footer link */}
               <motion.div
@@ -445,6 +439,9 @@ export function GallerySection() {
               >
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
                   {photos.length} {photos.length === 1 ? 'momento' : 'momentos'} · Haz clic para ampliar
+                  {hiddenCount > 0 && (
+                    <span style={{ color: '#93C5FD', marginLeft: 4 }}>({hiddenCount} más en galería)</span>
+                  )}
                 </p>
                 <Link
                   to="/galeria"

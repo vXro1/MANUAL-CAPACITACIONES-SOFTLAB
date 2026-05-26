@@ -183,7 +183,7 @@ export function Footer() {
                 Navegación
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[...NAV_LINKS, { href: '/manuales', label: 'Biblioteca' }].map((link) => (
+                {NAV_LINKS.map((link) => (
                   <li key={link.href}>
                     <Link
                       to={link.href}

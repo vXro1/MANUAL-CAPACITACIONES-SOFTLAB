@@ -1,3 +1,10 @@
+import {
+  normalizeManual,
+  normalizeParticipant,
+  normalizeGalleryImage,
+  normalizeEvento,
+} from './normalizers';
+
 const API_BASE = 'https://semillerosoftlab.com/api-backend';
 
 // ─── Token admin ───────────────────────────────────────────────────────────────
@@ -77,8 +84,8 @@ export const authApi = {
 
 // ─── Manuales ──────────────────────────────────────────────────────────────────
 export const manualesApi = {
-  getAll()    { return request('/manuales.php'); },
-  getById(id) { return request(`/manuales.php?id=${id}`); },
+  getAll()    { return request('/manuales.php').then(data => (data ?? []).map(normalizeManual)); },
+  getById(id) { return request(`/manuales.php?id=${id}`).then(normalizeManual); },
 
   create(datos, pdfFile, imagenFile) {
     const fd = new FormData();
@@ -104,8 +111,8 @@ export const manualesApi = {
 
 // ─── Participantes ─────────────────────────────────────────────────────────────
 export const participantesApi = {
-  getAll()    { return request('/participantes.php'); },
-  getById(id) { return request(`/participantes.php?id=${id}`); },
+  getAll()    { return request('/participantes.php').then(data => (data ?? []).map(normalizeParticipant)); },
+  getById(id) { return request(`/participantes.php?id=${id}`).then(normalizeParticipant); },
 
   create(datos, fotoFile) {
     const fd = new FormData();
@@ -146,8 +153,8 @@ export const evidenciasApi = {
 
 // ─── Galería ───────────────────────────────────────────────────────────────────
 export const galeriaApi = {
-  getAll()        { return request('/galeria.php'); },
-  getFeatured()   { return request('/galeria.php?featured'); },
+  getAll()        { return request('/galeria.php').then(data => (data ?? []).map(normalizeGalleryImage)); },
+  getFeatured()   { return request('/galeria.php?featured').then(data => (data ?? []).map(normalizeGalleryImage)); },
 
   upload(imagenFile, titulo = '') {
     const fd = new FormData();
@@ -171,8 +178,8 @@ export const galeriaApi = {
 
 // ─── Eventos ───────────────────────────────────────────────────────────────────
 export const eventosApi = {
-  getAll()    { return request('/eventos.php'); },
-  getById(id) { return request(`/eventos.php?id=${id}`); },
+  getAll()    { return request('/eventos.php').then(data => (data ?? []).map(normalizeEvento)); },
+  getById(id) { return request(`/eventos.php?id=${id}`).then(normalizeEvento); },
   create(datos) {
     return request('/eventos.php', {
       method: 'POST',

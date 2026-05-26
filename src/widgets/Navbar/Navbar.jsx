@@ -116,27 +116,6 @@ export function Navbar() {
             ))}
           </nav>
 
-          {/* CTA Desktop */}
-          <div style={{ display: 'flex', alignItems: 'center' }} className="nav-cta">
-            <Link to="/manuales" style={{ textDecoration: 'none' }}>
-              <motion.button
-                whileHover={{ translateY: -2, boxShadow: '0 8px 24px rgba(26,63,170,0.25)' }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '10px 20px',
-                  background: '#1A3FAA', color: '#fff',
-                  borderRadius: 10, border: 'none',
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                <BookOpen size={14} />
-                Ver manuales
-              </motion.button>
-            </Link>
-          </div>
-
           {/* Hamburger móvil */}
           <button
             onClick={() => setMobileOpen(v => !v)}

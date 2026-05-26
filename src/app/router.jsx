@@ -73,7 +73,7 @@ export const router = createBrowserRouter([
       { path: 'galeria',          element: <GalleryPage /> },
       { path: 'eventos',              element: <EventsPage /> },
       { path: 'eventos/:id',         element: <EventDetailPage /> },
-      { path: 'participantes/:id',   element: <ParticipantDetailPage /> },
+      { path: 'participantes/:slug', element: <ParticipantDetailPage /> },
     ],
   },
   {

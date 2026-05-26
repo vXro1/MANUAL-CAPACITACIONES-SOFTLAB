@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays, Users, Images, Filter } from 'lucide-react';
-import { eventsRepository, eventCategoriesRepository } from '@/storage/localStorageRepository';
+import { eventosApi, categoriasEventosApi } from '@/services/apiService';
 import { formatDate } from '@/shared/lib/formatDate';
 
 const E = [0.22, 1, 0.36, 1];
@@ -147,9 +147,22 @@ function EventCard({ event, index }) {
 
 // ─── EventsPage ───────────────────────────────────────────────────────────────
 export function EventsPage() {
-  const [events] = useState(() => eventsRepository.getAll());
-  const [categories] = useState(() => eventCategoriesRepository.getAll());
+  const [events, setEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('Todos');
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([eventosApi.getAll(), categoriasEventosApi.getAll()])
+      .then(([evts, cats]) => {
+        if (!cancelled) {
+          setEvents(evts ?? []);
+          setCategories((cats ?? []).map(c => c.nombre ?? c));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = activeCategory === 'Todos'
     ? events
@@ -163,7 +176,7 @@ export function EventsPage() {
       {/* Hero */}
       <section style={{
         background: 'linear-gradient(135deg, #0A1628 0%, #1A3FAA 100%)',
-        padding: '80px 24px 60px',
+        padding: 'clamp(64px, 10vw, 96px) clamp(20px, 5vw, 48px) clamp(48px, 8vw, 72px)',
         textAlign: 'center',
       }}>
         <motion.div
@@ -194,7 +207,7 @@ export function EventsPage() {
         </motion.div>
       </section>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 clamp(16px, 4vw, 24px)' }}>
 
         {/* Category filters */}
         <motion.div

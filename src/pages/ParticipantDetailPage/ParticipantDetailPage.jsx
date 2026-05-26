@@ -6,8 +6,8 @@ import {
   CalendarDays, Briefcase, GraduationCap, Tag,
   ExternalLink, User,
 } from 'lucide-react';
-import { participantsRepository } from '@/storage/localStorageRepository';
 import { participantesApi } from '@/services/apiService';
+import { toSlug } from '@/shared/lib/toSlug';
 import { formatDate } from '@/shared/lib/formatDate';
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -105,37 +105,46 @@ function ActivityCard({ item, index }) {
 }
 
 export function ParticipantDetailPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
 
-  // Primero buscamos en localStorage (caché rápida)
-  const cached = participantsRepository.getById(id);
-  const [participant, setParticipant] = useState(cached);
-  const [loading, setLoading] = useState(!cached?.actividades?.length);
+  const [participant, setParticipant] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Siempre solicitamos al API para obtener actividades actualizadas
+    let cancelled = false;
     setLoading(true);
-    participantesApi.getById(id)
-      .then((data) => {
-        // normalizar campos al mismo formato del localStorage
-        setParticipant({
-          id:          String(data.id),
-          name:        data.name       ?? data.nombre   ?? '',
-          role:        data.role       ?? data.rol      ?? '',
-          career:      data.career     ?? data.carrera  ?? '',
-          semester:    data.semestre   ?? data.semester ?? null,
-          bio:         data.bio        ?? '',
-          skills:      data.skills     ?? data.habilidades ?? [],
-          linkedin:    data.linkedin   ?? '',
-          github:      data.github     ?? '',
-          email:       data.email      ?? '',
-          photo:       data.foto_path  ?? data.photo    ?? null,
-          actividades: data.actividades ?? [],
-        });
-      })
-      .catch(() => { /* usa datos cacheados */ })
-      .finally(() => setLoading(false));
-  }, [id]);
+    setParticipant(null);
+
+    async function load() {
+      // 1. Resolver slug → id consultando la API
+      const all = await participantesApi.getAll();
+      const found = all.find(
+        (p) => toSlug(p.name ?? p.nombre ?? '') === slug
+      );
+      if (!found) return;
+
+      // 2. Cargar perfil completo (incluye actividades)
+      const data = await participantesApi.getById(String(found.id));
+      if (cancelled) return;
+      setParticipant({
+        id:          String(data.id),
+        name:        data.name       ?? data.nombre   ?? '',
+        role:        data.role       ?? data.rol      ?? '',
+        career:      data.career     ?? data.carrera  ?? '',
+        semester:    data.semestre   ?? data.semester ?? null,
+        bio:         data.bio        ?? '',
+        skills:      data.skills     ?? data.habilidades ?? [],
+        linkedin:    data.linkedin   ?? '',
+        github:      data.github     ?? '',
+        email:       data.email      ?? '',
+        photo:       data.foto_path  ?? data.photo    ?? null,
+        actividades: data.actividades ?? [],
+      });
+    }
+
+    load().catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [slug]);
 
   if (!participant && !loading) return <Navigate to="/nosotros" replace />;
 
@@ -415,12 +424,7 @@ export function ParticipantDetailPage() {
         </motion.div>
       )}
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 640px) {
-          .participant-body-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </main>
   );
 }

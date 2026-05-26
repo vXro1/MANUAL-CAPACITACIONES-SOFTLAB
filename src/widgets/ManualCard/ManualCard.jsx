@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, BookOpen, ArrowRight, User } from 'lucide-react';
 import { formatDate } from '@/shared/lib/formatDate';
-import { participantsRepository } from '@/storage/localStorageRepository';
 
 const CATEGORY_PALETTE = {
   'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
@@ -25,11 +24,9 @@ function getCategoryPalette(cat) {
 const EASE = [0.22, 1, 0.36, 1];
 
 /* ─── ManualCard ──────────────────────────────────────────────────── */
-export function ManualCard({ manual, index = 0 }) {
+export function ManualCard({ manual, index = 0, speaker = null }) {
   const [imgError, setImgError] = useState(false);
   const coverSrc = manual.cover || manual.coverImage || null;
-  const speakerId = manual.speakerIds?.[0] ?? manual.speakerId ?? null;
-  const speaker = speakerId ? participantsRepository.getById(speakerId) : null;
   const palette = getCategoryPalette(manual.category);
 
   return (
@@ -228,11 +225,9 @@ export function ManualCard({ manual, index = 0 }) {
 }
 
 /* ─── ManualCardFeatured ──────────────────────────────────────────── */
-export function ManualCardFeatured({ manual }) {
+export function ManualCardFeatured({ manual, speaker = null }) {
   const [imgError, setImgError] = useState(false);
   const coverSrc = manual.cover || manual.coverImage || null;
-  const speakerId = manual.speakerIds?.[0] ?? manual.speakerId ?? null;
-  const speaker = speakerId ? participantsRepository.getById(speakerId) : null;
   const palette = getCategoryPalette(manual.category);
 
   return (

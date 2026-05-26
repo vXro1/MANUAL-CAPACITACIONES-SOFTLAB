@@ -18,6 +18,13 @@ import { BookViewer } from './BookViewer';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+const PROD_ORIGIN = 'https://semillerosoftlab.com';
+function normalizeUrl(url) {
+  if (!url) return url;
+  if (url.startsWith(PROD_ORIGIN + '/')) return url.slice(PROD_ORIGIN.length);
+  return url;
+}
+
 function NormalViewer({ url }) {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -169,6 +176,7 @@ function NormalViewer({ url }) {
 
 export function PDFViewer({ url, title, cover, institution }) {
   const [mode, setMode] = useState('normal');
+  const resolvedUrl = normalizeUrl(url);
 
   if (!url) {
     return (
@@ -232,10 +240,10 @@ export function PDFViewer({ url, title, cover, institution }) {
             className="h-full"
           >
             {mode === 'normal' ? (
-              <NormalViewer url={url} />
+              <NormalViewer url={resolvedUrl} />
             ) : (
               <BookViewer
-                url={url}
+                url={resolvedUrl}
                 title={title}
                 cover={cover}
                 institution={institution}

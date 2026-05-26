@@ -249,6 +249,7 @@ export function CtaSection() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.6 }}
+              className="cta-features"
               style={{
                 display: 'flex',
                 alignItems: 'center',

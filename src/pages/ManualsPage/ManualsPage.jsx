@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, SlidersHorizontal, BookOpen } from 'lucide-react';
 import { ManualCard } from '@/widgets/ManualCard/ManualCard';
-import { manualsRepository } from '@/storage/localStorageRepository';
+import { manualesApi, participantesApi } from '@/services/apiService';
 
 const CATEGORY_PALETTE = {
   'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
@@ -23,9 +23,23 @@ function getCategoryPalette(cat) {
 const EASE = [0.22, 1, 0.36, 1];
 
 export function ManualsPage() {
-  const manuals = manualsRepository.getAll();
+  const [manuals, setManuals] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([manualesApi.getAll(), participantesApi.getAll()])
+      .then(([m, p]) => {
+        if (!cancelled) {
+          setManuals(m ?? []);
+          setParticipants(p ?? []);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const categories = useMemo(() => {
     const cats = [...new Set(manuals.map((m) => m.category).filter(Boolean))];
@@ -350,9 +364,11 @@ export function ManualsPage() {
                 gap: 20,
               }}
             >
-              {filtered.map((manual, i) => (
-                <ManualCard key={manual.id} manual={manual} index={i} />
-              ))}
+              {filtered.map((manual, i) => {
+                const speakerId = manual.speakerIds?.[0] ?? manual.speakerId ?? null;
+                const speaker = speakerId ? participants.find(p => String(p.id) === String(speakerId)) ?? null : null;
+                return <ManualCard key={manual.id} manual={manual} index={i} speaker={speaker} />;
+              })}
             </motion.div>
           ) : (
             <motion.div

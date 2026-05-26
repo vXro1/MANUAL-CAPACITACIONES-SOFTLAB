@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Users, Images, ArrowRight } from 'lucide-react';
-import { eventsRepository } from '@/storage/localStorageRepository';
+import { eventosApi } from '@/services/apiService';
 import { formatDate } from '@/shared/lib/formatDate';
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -164,9 +165,17 @@ function EventCard({ event, index }) {
 }
 
 export function EventsSection() {
-  const events = eventsRepository.getAll()
-    .filter((ev) => ev && ev.title)   // descartar entradas corruptas
-    .slice(0, 3);
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    eventosApi.getAll()
+      .then(data => {
+        if (!cancelled) setEvents((data ?? []).filter(ev => ev && ev.title).slice(0, 3));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   if (events.length === 0) return null;
 
@@ -174,7 +183,7 @@ export function EventsSection() {
     <section
       aria-label="Eventos del semillero"
       style={{
-        padding: '96px 0',
+        padding: 'clamp(56px, 9vw, 96px) 0',
         background: 'linear-gradient(180deg, #F8FAFF 0%, #FFFFFF 100%)',
       }}
     >
@@ -213,14 +222,6 @@ export function EventsSection() {
             >
               Eventos recientes
             </h2>
-            <p
-              style={{
-                fontSize: 15, color: '#64748B', margin: '10px 0 0',
-                fontFamily: 'DM Sans, sans-serif', lineHeight: 1.6,
-              }}
-            >
-              Capacitaciones, salidas técnicas y movilidades del semillero.
-            </p>
           </div>
 
           <Link to="/eventos" style={{ textDecoration: 'none', flexShrink: 0 }}>
@@ -247,7 +248,7 @@ export function EventsSection() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: 24,
           }}
           className="events-grid"
