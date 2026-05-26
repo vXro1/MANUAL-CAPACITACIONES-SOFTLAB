@@ -16,11 +16,10 @@ export function removeToken()       { localStorage.removeItem(TOKEN_KEY); }
 
 // ─── Cliente base ──────────────────────────────────────────────────────────────
 
-// Si el servidor devuelve 401 limpiamos el token para que AdminLayout muestre login
-function handleUnauth(json) {
-  if (json.error?.toLowerCase().includes('sesión') || json.error?.toLowerCase().includes('token') || json.error?.toLowerCase().includes('autorizado')) {
+// Solo cierra sesión cuando el servidor responde con HTTP 401 (token inválido/expirado)
+function handleUnauth(status) {
+  if (status === 401) {
     removeToken();
-    // Recargar para que AdminLayout detecte token=null y muestre el login
     if (window.location.pathname.startsWith('/panel-softlab-admin')) {
       window.location.reload();
     }
@@ -35,7 +34,7 @@ async function request(path, options = {}) {
   const res  = await fetch(API_BASE + path, { ...options, headers });
   const json = await res.json();
   if (!json.ok) {
-    handleUnauth(json);
+    handleUnauth(res.status);
     throw new Error(json.error ?? 'Error del servidor');
   }
   return json.data;
@@ -50,7 +49,7 @@ async function requestForm(path, formData, method = 'POST') {
   const res  = await fetch(API_BASE + path, { method, body: formData, headers });
   const json = await res.json();
   if (!json.ok) {
-    handleUnauth(json);
+    handleUnauth(res.status);
     throw new Error(json.error ?? 'Error del servidor');
   }
   return json.data;
