@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Save, Camera, User, FileText, Link2, Plus,
+  X, Save, Camera, User, FileText, Link2, Plus, Check,
 } from 'lucide-react';
-import { participantesApi } from '@/services/apiService';
+import { participantesApi, rolesApi } from '@/services/apiService';
 import { syncParticipantes } from '@/services/dataSync';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -31,15 +31,11 @@ export const PARTICIPANT_ROLES = [
   'Investigador Principal',
 ];
 
+// Lista base — se enriquece con los roles reales de la BD al abrir el form
 export const ADDITIONAL_ROLE_OPTIONS = [
-  'Investigador',
-  'Desarrollador',
-  'Ponente',
-  'Diseñador UX',
-  'Tester QA',
-  'Auxiliar de Investigación',
-  'Co-Investigador',
-  'Investigador Principal',
+  'Investigador', 'Co-Investigador', 'Investigador Principal',
+  'Desarrollador', 'Ponente', 'Diseñador UX', 'Tester QA',
+  'Auxiliar de Investigación', 'Autor', 'Moderador',
 ];
 
 const ACCENT  = '#1A3FAA';
@@ -71,6 +67,8 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
   const [photo, setPhoto]           = useState(null);
   const [skills, setSkills]         = useState([]);
   const [additionalRoles, setAdditionalRoles] = useState([]);
+  const [globalRoles, setGlobalRoles]         = useState(ADDITIONAL_ROLE_OPTIONS);
+  const [newRoleInput, setNewRoleInput]       = useState('');
   const [skillInput, setSkillInput] = useState('');
   const [activeTab, setActiveTab]   = useState('foto');
   const [saving, setSaving]         = useState(false);
@@ -78,6 +76,22 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
   const fileRef = useRef();
 
   const isEdit = Boolean(participant?.id);
+
+  // Cargar etiquetas globales cada vez que se abre el form
+  useEffect(() => {
+    if (!isOpen) return;
+    rolesApi.getAll()
+      .then((remote) => {
+        if (Array.isArray(remote) && remote.length > 0) {
+          setGlobalRoles((prev) => {
+            const combined = [...new Set([...prev, ...remote])];
+            combined.sort();
+            return combined;
+          });
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -317,36 +331,76 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
                     </p>
                   </div>
 
-                  {/* Cargos adicionales */}
+                  {/* Cargos adicionales — dinámicos + creación de nuevos */}
                   <div>
                     <label style={labelStyle}>Cargos adicionales</label>
                     <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 8px', fontFamily: 'DM Sans, sans-serif' }}>
-                      Etiquetas extras visibles en la tarjeta del participante.
+                      Etiquetas visibles en la tarjeta. Escoge existentes o crea nuevas.
                     </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                      {ADDITIONAL_ROLE_OPTIONS.map((r) => {
-                        const active = additionalRoles.includes(r);
-                        return (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => setAdditionalRoles((prev) =>
-                              prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
-                            )}
-                            style={{
-                              padding: '5px 12px', borderRadius: 999,
-                              fontSize: 12, fontWeight: 600,
-                              background: active ? ACCENT : '#F8FAFF',
-                              color: active ? '#fff' : '#64748B',
-                              border: `1.5px solid ${active ? ACCENT : '#E2E8F0'}`,
-                              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            {active ? '✓ ' : ''}{r}
-                          </button>
-                        );
+                    {/* Chips existentes (excluye el rol principal seleccionado) */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                      {globalRoles
+                        .filter((r) => r !== form.role)
+                        .map((r) => {
+                          const active = additionalRoles.includes(r);
+                          return (
+                            <button key={r} type="button"
+                              onClick={() => setAdditionalRoles((prev) =>
+                                prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
+                              )}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                padding: '4px 11px', borderRadius: 999,
+                                fontSize: 12, fontWeight: 600,
+                                background: active ? ACCENT : '#F8FAFF',
+                                color: active ? '#fff' : '#64748B',
+                                border: `1.5px solid ${active ? ACCENT : '#E2E8F0'}`,
+                                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {active && <Check size={10} />}{r}
+                            </button>
+                          );
                       })}
+                    </div>
+                    {/* Input para crear nueva etiqueta */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        value={newRoleInput}
+                        onChange={(e) => setNewRoleInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ',') {
+                            e.preventDefault();
+                            const v = newRoleInput.trim().replace(',', '');
+                            if (v && !additionalRoles.includes(v)) {
+                              setAdditionalRoles((p) => [...p, v]);
+                              setGlobalRoles((p) => [...new Set([...p, v])].sort());
+                            }
+                            setNewRoleInput('');
+                          }
+                        }}
+                        placeholder="Nueva etiqueta… (Enter para agregar)"
+                        style={{ ...inputStyle, flex: 1 }}
+                        onFocus={onFocus} onBlur={onBlur}
+                      />
+                      <button type="button"
+                        onClick={() => {
+                          const v = newRoleInput.trim();
+                          if (v && !additionalRoles.includes(v)) {
+                            setAdditionalRoles((p) => [...p, v]);
+                            setGlobalRoles((p) => [...new Set([...p, v])].sort());
+                          }
+                          setNewRoleInput('');
+                        }}
+                        style={{
+                          padding: '0 14px', borderRadius: 10, border: 'none',
+                          background: ACCENT, color: '#fff', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center',
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
                     </div>
                   </div>
 

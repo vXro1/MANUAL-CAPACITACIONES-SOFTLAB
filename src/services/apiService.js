@@ -131,6 +131,11 @@ export const manualesApi = {
   },
 };
 
+// ─── Etiquetas de rol globales ─────────────────────────────────────────────────
+export const rolesApi = {
+  getAll() { return request('/participantes.php?action=roles'); },
+};
+
 // ─── Participantes ─────────────────────────────────────────────────────────────
 export const participantesApi = {
   getAll()    { return request('/participantes.php').then(data => (data ?? []).map(normalizeParticipant)); },

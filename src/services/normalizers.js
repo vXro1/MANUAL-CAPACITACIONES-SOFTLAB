@@ -27,10 +27,15 @@ export function normalizeManual(m) {
 }
 
 export function normalizeParticipant(p) {
+  const primaryRole = p.role ?? p.rol ?? '';
+  const rolesFromApi = Array.isArray(p.roles) ? p.roles : null;
+  const roles = rolesFromApi ?? (primaryRole ? [primaryRole] : []);
+
   return {
     id:         String(p.id),
     name:       p.name     ?? p.nombre   ?? '',
-    role:       p.role     ?? p.rol      ?? '',
+    role:       primaryRole,
+    roles,
     career:     p.career   ?? p.carrera  ?? '',
     semester:   p.semestre ?? p.semester ?? null,
     bio:        p.bio      ?? '',
@@ -40,6 +45,14 @@ export function normalizeParticipant(p) {
     email:      p.email    ?? '',
     photo:      p.foto_path ?? p.photo   ?? null,
     featured:   !!(p.featured ?? false),
+    proyectos:  (p.proyectos ?? []).map((pr) => ({
+      id:          String(pr.id),
+      titulo:      pr.titulo      ?? '',
+      descripcion: pr.descripcion ?? null,
+      url_link:    pr.url_link    ?? null,
+      imagen_path: pr.imagen_path ?? null,
+      tipo:        pr.url_link ? 'link' : 'imagen',
+    })),
     actividades: (p.actividades ?? []).map((a) => ({
       tipo:      a.tipo,
       id:        String(a.id),

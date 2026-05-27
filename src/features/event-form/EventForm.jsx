@@ -5,7 +5,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { eventsRepository, eventCategoriesRepository, participantsRepository } from '@/storage/localStorageRepository';
-import { eventosApi, eventosGaleriaApi, categoriasEventosApi, getToken } from '@/services/apiService';
+import { eventosApi, eventosGaleriaApi, categoriasEventosApi, rolesApi, getToken } from '@/services/apiService';
 import { syncEventos } from '@/services/dataSync';
 import { GalleryImagePicker } from '@/shared/ui/GalleryImagePicker';
 
@@ -115,17 +115,29 @@ function CategoryField({ value, onChange }) {
 }
 
 // ─── RoleSelector ─────────────────────────────────────────────────────────────
-const EVENT_ROLES = ['Ponente', 'Asistente', 'Organizador', 'Moderador', 'Coordinador', 'Invitado'];
-const OTRO_VALUE  = '__otro__';
+const BASE_EVENT_ROLES = ['Ponente', 'Asistente', 'Organizador', 'Moderador', 'Coordinador', 'Invitado', 'Autor', 'Auxiliar'];
+const OTRO_VALUE       = '__otro__';
 
-function RoleSelector({ participanteId, rol, onChangeRol, name }) {
-  const [custom, setCustom] = useState(() => Boolean(rol) && !EVENT_ROLES.includes(rol));
-  const selectValue = custom ? OTRO_VALUE : (EVENT_ROLES.includes(rol) ? rol : EVENT_ROLES[0]);
+function RoleSelector({ participanteId, rol, onChangeRol, name, globalRoles, onAddRole }) {
+  const allRoles    = [...new Set([...BASE_EVENT_ROLES, ...(globalRoles ?? [])])];
+  const isCustom    = Boolean(rol) && !allRoles.includes(rol);
+  const [custom, setCustom] = useState(isCustom);
+  const [customVal, setCustomVal] = useState(isCustom ? (rol ?? '') : '');
+
+  const selectValue = custom ? OTRO_VALUE : (allRoles.includes(rol) ? rol : allRoles[0]);
 
   const handleSelect = (e) => {
     const val = e.target.value;
-    if (val === OTRO_VALUE) { setCustom(true); }
+    if (val === OTRO_VALUE) { setCustom(true); setCustomVal(''); }
     else { setCustom(false); onChangeRol(participanteId, val); }
+  };
+
+  const confirmCustom = () => {
+    const v = customVal.trim();
+    if (!v) return;
+    onChangeRol(participanteId, v);
+    onAddRole?.(v);
+    setCustom(false);
   };
 
   return (
@@ -133,25 +145,32 @@ function RoleSelector({ participanteId, rol, onChangeRol, name }) {
       <select value={selectValue} onChange={handleSelect}
         aria-label={`Rol de ${name} en el evento`}
         style={{
-          width: 130, padding: '4px 8px', borderRadius: 8,
+          width: 140, padding: '4px 8px', borderRadius: 8,
           border: `1.5px solid ${BORDER}`, fontSize: 12,
           color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none',
         }}
       >
-        {EVENT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-        <option value={OTRO_VALUE}>Otro…</option>
+        {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+        <option value={OTRO_VALUE}>+ Nuevo rol…</option>
       </select>
       {custom && (
-        <input autoFocus type="text"
-          value={EVENT_ROLES.includes(rol) ? '' : (rol ?? '')}
-          onChange={(e) => onChangeRol(participanteId, e.target.value)}
-          placeholder="Escribe el rol…"
-          style={{
-            width: 130, padding: '4px 8px', borderRadius: 8,
-            border: `1.5px solid ${BORDER}`, fontSize: 12, color: '#374151', outline: 'none',
-          }}
-          aria-label={`Rol personalizado de ${name}`}
-        />
+        <div style={{ display: 'flex', gap: 4 }}>
+          <input autoFocus type="text"
+            value={customVal}
+            onChange={(e) => setCustomVal(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmCustom(); } if (e.key === 'Escape') setCustom(false); }}
+            placeholder="Nombre del rol…"
+            style={{
+              width: 106, padding: '4px 8px', borderRadius: 8,
+              border: `1.5px solid ${BORDER}`, fontSize: 12, color: '#374151', outline: 'none',
+            }}
+            aria-label={`Rol personalizado de ${name}`}
+          />
+          <button type="button" onClick={confirmCustom}
+            style={{ padding: '4px 7px', borderRadius: 7, background: ACCENT, border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <Check size={11} />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -160,17 +179,31 @@ function RoleSelector({ participanteId, rol, onChangeRol, name }) {
 // ─── ParticipantsField ────────────────────────────────────────────────────────
 function ParticipantsField({ value, onChange }) {
   const [search, setSearch] = useState('');
+  const [globalRoles, setGlobalRoles] = useState(BASE_EVENT_ROLES);
   const all      = participantsRepository.getAll();
   const filtered = all.filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()));
   const selectedIds = value.map((pr) => pr.participante_id);
 
+  useEffect(() => {
+    rolesApi.getAll()
+      .then((remote) => {
+        if (Array.isArray(remote) && remote.length > 0) {
+          setGlobalRoles((prev) => [...new Set([...prev, ...remote])].sort());
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const toggle = (id) => {
     if (selectedIds.includes(id)) onChange(value.filter((pr) => pr.participante_id !== id));
-    else onChange([...value, { participante_id: id, rol: EVENT_ROLES[0] }]);
+    else onChange([...value, { participante_id: id, rol: BASE_EVENT_ROLES[0] }]);
   };
 
   const setRol = (id, rol) =>
     onChange(value.map((pr) => pr.participante_id === id ? { ...pr, rol } : pr));
+
+  const addRole = (rol) =>
+    setGlobalRoles((prev) => [...new Set([...prev, rol])].sort());
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -229,7 +262,7 @@ function ParticipantsField({ value, onChange }) {
                       <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.career || p.role || ''}</p>
                     </div>
                     {selected && (
-                      <RoleSelector participanteId={p.id} rol={pr?.rol ?? EVENT_ROLES[0]} onChangeRol={setRol} name={p.name} />
+                      <RoleSelector participanteId={p.id} rol={pr?.rol ?? BASE_EVENT_ROLES[0]} onChangeRol={setRol} name={p.name} globalRoles={globalRoles} onAddRole={addRole} />
                     )}
                   </div>
                 );

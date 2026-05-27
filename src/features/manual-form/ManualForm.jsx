@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, AlignLeft, Users, Upload, X, Plus, Check,
   Link as LinkIcon, FileText, Image as ImageIcon, Search,
-  User, Mic, CheckCircle, ImagePlus,
+  CheckCircle, ImagePlus,
 } from 'lucide-react';
 import { CATEGORIES } from '@/shared/constants';
-import { manualesApi, evidenciasApi } from '@/services/apiService';
+import { manualesApi, evidenciasApi, rolesApi } from '@/services/apiService';
 import { syncManuales } from '@/services/dataSync';
 import { participantsRepository } from '@/storage/localStorageRepository';
 import { GalleryImagePicker } from '@/shared/ui/GalleryImagePicker';
@@ -220,69 +220,112 @@ function CoverImageField({ value, onChange, onPickFromGallery }) {
   );
 }
 
-// ─── ParticipantPicker ────────────────────────────────────────────────────────
-function ParticipantPicker({ label, icon: Icon, participants, value, onChange }) {
-  const [search, setSearch] = useState('');
-  const filtered = participants.filter((p) =>
+const BASE_MANUAL_ROLES = ['Ponente', 'Autor', 'Auxiliar', 'Coordinador', 'Moderador', 'Asistente', 'Investigador'];
+
+// ─── ParticipantRolePicker ─────────────────────────────────────────────────────
+function ParticipantRolePicker({ participants, value, onChange, globalRoles, onAddRole }) {
+  const [search,    setSearch]    = useState('');
+  const [customId,  setCustomId]  = useState(null);
+  const [customVal, setCustomVal] = useState('');
+
+  const allRoles    = [...new Set([...BASE_MANUAL_ROLES, ...(globalRoles ?? [])])];
+  const selectedIds = value.map((r) => r.participante_id);
+  const filtered    = participants.filter((p) =>
+    !search ||
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.career ?? '').toLowerCase().includes(search.toLowerCase())
   );
-  const toggle = (id) =>
-    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+
+  const toggle = (id) => {
+    if (selectedIds.includes(id))
+      onChange(value.filter((r) => r.participante_id !== id));
+    else
+      onChange([...value, { participante_id: id, rol: BASE_MANUAL_ROLES[1] }]);
+  };
+
+  const setRol = (id, rol) =>
+    onChange(value.map((r) => r.participante_id === id ? { ...r, rol } : r));
+
+  const confirmCustom = (id) => {
+    const v = customVal.trim();
+    if (v) { setRol(id, v); onAddRole?.(v); }
+    setCustomId(null); setCustomVal('');
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {Icon && <Icon size={14} style={{ color: ACCENT }} />}
-        <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{label}</label>
+        <Users size={14} style={{ color: ACCENT }} />
+        <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Participantes y roles</label>
         {value.length > 0 && (
-          <span style={{ marginLeft: 'auto', fontSize: 11, background: BG, color: ACCENT, padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>{value.length}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, background: BG, color: ACCENT, padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>
+            {value.length} seleccionado{value.length !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
       <div style={{ position: 'relative' }}>
         <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre..."
+          placeholder="Buscar participante…"
           style={{ width: '100%', borderRadius: 10, border: '1.5px solid #E2E8F0', padding: '7px 12px 7px 32px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
         />
       </div>
-      <div style={{ maxHeight: 160, overflowY: 'auto', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: 6, background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ maxHeight: 280, overflowY: 'auto', border: '1.5px solid #E2E8F0', borderRadius: 10, background: '#fff' }}>
         {filtered.length === 0
-          ? <p style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', padding: '8px 0' }}>Sin resultados</p>
+          ? <p style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', padding: '12px 0' }}>Sin resultados</p>
           : filtered.map((p) => {
-              const selected = value.includes(p.id);
+              const selected = selectedIds.includes(p.id);
+              const pr       = value.find((r) => r.participante_id === p.id);
+              const rolVal   = pr?.rol ?? BASE_MANUAL_ROLES[1];
               return (
-                <label key={p.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: selected ? BG : 'transparent', border: selected ? `1px solid ${BORDER}` : '1px solid transparent', transition: 'all .15s' }}>
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderBottom: '1px solid #F1F5F9',
+                  background: selected ? BG : 'transparent', transition: 'background .15s',
+                }}>
                   <input type="checkbox" checked={selected} onChange={() => toggle(p.id)}
-                    style={{ accentColor: ACCENT }} />
+                    style={{ accentColor: ACCENT, flexShrink: 0, cursor: 'pointer', width: 15, height: 15 }} />
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: BG, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
                     {p.photo ? <img src={p.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name?.[0] ?? '?')}
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                    <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.career ?? p.role ?? ''}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{p.name}</p>
+                    <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{p.career ?? p.role ?? ''}</p>
                   </div>
-                </label>
+                  {selected && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                      {customId === p.id ? (
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          <input autoFocus type="text" value={customVal}
+                            onChange={(e) => setCustomVal(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmCustom(p.id); } if (e.key === 'Escape') { setCustomId(null); setCustomVal(''); } }}
+                            placeholder="Nuevo rol…"
+                            style={{ width: 100, padding: '3px 7px', borderRadius: 7, border: `1.5px solid ${BORDER}`, fontSize: 12, outline: 'none' }}
+                          />
+                          <button type="button" onClick={() => confirmCustom(p.id)}
+                            style={{ padding: '3px 7px', borderRadius: 7, background: ACCENT, border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <Check size={11} />
+                          </button>
+                        </div>
+                      ) : (
+                        <select value={rolVal}
+                          onChange={(e) => {
+                            if (e.target.value === '__nuevo__') { setCustomId(p.id); setCustomVal(''); }
+                            else setRol(p.id, e.target.value);
+                          }}
+                          style={{ width: 130, padding: '3px 7px', borderRadius: 7, border: `1.5px solid ${BORDER}`, fontSize: 12, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}
+                        >
+                          {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+                          <option value="__nuevo__">+ Nuevo rol…</option>
+                        </select>
+                      )}
+                    </div>
+                  )}
+                </div>
               );
             })
         }
       </div>
-      {value.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {value.map((id) => {
-            const p = participants.find((x) => x.id === id);
-            return p ? (
-              <span key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, background: BG, border: `1px solid ${BORDER}`, fontSize: 12, fontWeight: 500, color: ACCENT }}>
-                {p.name}
-                <button type="button" onClick={() => toggle(id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4B5FD', padding: 0, display: 'flex' }} aria-label={`Quitar ${p.name}`}>
-                  <X size={10} />
-                </button>
-              </span>
-            ) : null;
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -296,11 +339,14 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
   const [objectives,     setObjectives]     = useState(() =>
     manual?.objectives?.length ? manual.objectives : ['']
   );
-  const [speakerIds,     setSpeakerIds]     = useState(() =>
-    manual?.speakerId ? [manual.speakerId] : (manual?.speakerIds ?? [])
-  );
-  const [authorIds,      setAuthorIds]      = useState(() => manual?.authorIds ?? []);
-  const [auxiliaresIds,  setAuxiliaresIds]  = useState(() => manual?.auxiliaresIds ?? []);
+  const [participantRoles, setParticipantRoles] = useState(() => {
+    const sp  = (manual?.speakerIds ?? (manual?.speakerId ? [manual.speakerId] : [])).map((id) => ({ participante_id: id, rol: 'Ponente' }));
+    const au  = (manual?.authorIds  ?? []).map((id) => ({ participante_id: id, rol: 'Autor' }));
+    const aux = (manual?.auxiliaresIds ?? []).map((id) => ({ participante_id: id, rol: 'Auxiliar' }));
+    const seen = new Set();
+    return [...sp, ...au, ...aux].filter((r) => { if (seen.has(r.participante_id)) return false; seen.add(r.participante_id); return true; });
+  });
+  const [globalRoles, setGlobalRoles] = useState(BASE_MANUAL_ROLES);
 
   const [galleryItems,   setGalleryItems]   = useState(() =>
     (manual?.gallery ?? []).filter((v) => typeof v === 'string' && v.startsWith('http'))
@@ -331,15 +377,24 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
     if (isOpen) {
       setForm(buildForm(manual));
       setObjectives(manual?.objectives?.length ? manual.objectives : ['']);
-      setSpeakerIds(manual?.speakerId ? [manual.speakerId] : (manual?.speakerIds ?? []));
-      setAuthorIds(manual?.authorIds ?? []);
-      setAuxiliaresIds(manual?.auxiliaresIds ?? []);
+      const sp  = (manual?.speakerIds ?? (manual?.speakerId ? [manual.speakerId] : [])).map((id) => ({ participante_id: id, rol: 'Ponente' }));
+      const au  = (manual?.authorIds  ?? []).map((id) => ({ participante_id: id, rol: 'Autor' }));
+      const aux = (manual?.auxiliaresIds ?? []).map((id) => ({ participante_id: id, rol: 'Auxiliar' }));
+      const seen = new Set();
+      setParticipantRoles([...sp, ...au, ...aux].filter((r) => { if (seen.has(r.participante_id)) return false; seen.add(r.participante_id); return true; }));
       setGalleryItems((manual?.gallery ?? []).filter((v) => typeof v === 'string' && v.startsWith('http')));
       setGalleryUrlInput('');
       setGalleryError('');
       setErrors({});
       setSaveError('');
       setActiveTab('general');
+      // Cargar roles globales
+      rolesApi.getAll()
+        .then((remote) => {
+          if (Array.isArray(remote) && remote.length > 0)
+            setGlobalRoles((prev) => [...new Set([...prev, ...remote])].sort());
+        })
+        .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -402,10 +457,13 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
       descripcion:  form.description,
       fecha:        form.date,
       destacado:    manual?.featured ?? false,
-      autor_ids:    authorIds,
-      speakerId:    speakerIds[0] ?? null,
-      speakerIds,
-      auxiliaresIds,
+      // Nuevo formato unificado (tiene prioridad en el backend)
+      participantes: participantRoles,
+      // Formato legacy para compatibilidad
+      autor_ids:    participantRoles.filter((r) => r.rol === 'Autor').map((r) => r.participante_id),
+      speakerId:    participantRoles.find((r) => r.rol === 'Ponente')?.participante_id ?? null,
+      speakerIds:   participantRoles.filter((r) => r.rol === 'Ponente').map((r) => r.participante_id),
+      auxiliaresIds: participantRoles.filter((r) => r.rol === 'Auxiliar').map((r) => r.participante_id),
       subtitle:     form.subtitle,
       introduction: form.introduction,
       time:         form.time,
@@ -616,13 +674,13 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
 
                     {/* ── Tab: Personas ── */}
                     {activeTab === 'personas' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <ParticipantPicker label="Ponente(s)" icon={Mic} participants={participants} value={speakerIds} onChange={setSpeakerIds} />
-                        <div style={{ height: 1, background: '#F1F5F9' }} />
-                        <ParticipantPicker label="Autores / Estudiantes encargados" icon={Users} participants={participants} value={authorIds} onChange={setAuthorIds} />
-                        <div style={{ height: 1, background: '#F1F5F9' }} />
-                        <ParticipantPicker label="Auxiliares externos" icon={User} participants={participants} value={auxiliaresIds} onChange={setAuxiliaresIds} />
-                      </div>
+                      <ParticipantRolePicker
+                        participants={participants}
+                        value={participantRoles}
+                        onChange={setParticipantRoles}
+                        globalRoles={globalRoles}
+                        onAddRole={(r) => setGlobalRoles((prev) => [...new Set([...prev, r])].sort())}
+                      />
                     )}
 
                     {/* ── Tab: Archivos ── */}

@@ -576,7 +576,7 @@ export function ParticipantsSection({
     const groups = ROLE_GROUPS
       .map((group) => ({
         group,
-        members: participants.filter((p) => group.roles.includes(p.role ?? '')),
+        members: participants.filter((p) => getRoles(p).some((r) => group.roles.includes(r))),
       }))
       .filter(({ members }) => members.length > 0);
 
