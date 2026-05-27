@@ -27,8 +27,8 @@ foreach (['pdfs', 'portadas', 'galeria', 'participantes', 'evidencias', 'eventos
 }
 
 // ─── Límites de tamaño ────────────────────────────────────────────────────────
-define('MAX_IMG', 10 * 1024 * 1024);   // 10 MB
-define('MAX_PDF', 50 * 1024 * 1024);   // 50 MB
+define('MAX_IMG',  5 * 1024 * 1024);   //  5 MB
+define('MAX_PDF', 20 * 1024 * 1024);   // 20 MB
 
 // ─── Tipos MIME permitidos ────────────────────────────────────────────────────
 $ALLOWED_IMG = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];

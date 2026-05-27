@@ -48,7 +48,8 @@ function PDFUploadField({ value, onChange }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { alert('Solo se permiten archivos PDF.'); return; }
+    if (file.type !== 'application/pdf') { alert('Solo se permiten archivos PDF.'); e.target.value = ''; return; }
+    if (file.size > 20 * 1024 * 1024) { alert(`El PDF supera el límite de 20 MB (tiene ${(file.size / 1024 / 1024).toFixed(1)} MB).`); e.target.value = ''; return; }
     onChange(file);
   };
 
@@ -131,7 +132,7 @@ function CoverImageField({ value, onChange, onPickFromGallery }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes.'); return; }
-    if (file.size > 3 * 1024 * 1024) { alert('La imagen no puede superar 3 MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert(`La imagen supera el límite de 5 MB (tiene ${(file.size / 1024 / 1024).toFixed(1)} MB).`); e.target.value = ''; return; }
     const reader = new FileReader();
     reader.onload = (ev) => onChange(ev.target.result);
     reader.readAsDataURL(file);
@@ -413,6 +414,8 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
   const uploadGalleryFiles = async (files) => {
     const images = files.filter((f) => f.type.startsWith('image/'));
     if (!images.length) return;
+    const oversize = images.find((f) => f.size > 5 * 1024 * 1024);
+    if (oversize) { setGalleryError(`"${oversize.name}" supera el límite de 5 MB (${(oversize.size / 1024 / 1024).toFixed(1)} MB).`); return; }
     setUploadingGallery(true); setGalleryError('');
     try {
       const results = await Promise.all(images.map((f) => evidenciasApi.upload(f)));

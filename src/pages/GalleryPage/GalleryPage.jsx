@@ -5,22 +5,137 @@ import { galeriaApi } from '@/services/apiService';
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 function downloadImage(url, title) {
-  fetch(url)
-    .then(r => r.blob())
-    .then(blob => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = (title || 'softlab').replace(/[^\w\s-]/g, '') || 'softlab';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    })
-    .catch(() => {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = title || 'softlab';
-      a.target = '_blank';
-      a.click();
-    });
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (title || 'softlab').replace(/[^\w\s-]/g, '') || 'softlab';
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ─── Mobile Action Sheet ──────────────────────────────────────────────────────
+function MobileActionSheet({ photo, onZoom, onDownload, onClose }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9998,
+        background: 'rgba(3,7,18,0.82)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 34, stiffness: 400 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(180deg, #141e35 0%, #0D1525 100%)',
+          borderRadius: '24px 24px 0 0',
+          padding: '0 20px 32px',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderBottom: 'none',
+          boxShadow: '0 -24px 72px rgba(0,0,0,0.55)',
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{
+          width: 40, height: 4, borderRadius: 9,
+          background: 'rgba(255,255,255,0.2)',
+          margin: '14px auto 20px',
+        }} />
+
+        {/* Image preview */}
+        <div style={{
+          borderRadius: 16, overflow: 'hidden', marginBottom: 16,
+          background: '#0d1525',
+          boxShadow: '0 4px 28px rgba(0,0,0,0.45)',
+          maxHeight: '44vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <img
+            src={photo.src}
+            alt={photo.title || 'Imagen'}
+            style={{ width: '100%', maxHeight: '44vh', objectFit: 'contain', display: 'block' }}
+            loading="eager"
+          />
+        </div>
+
+        {/* Title */}
+        {photo.title && (
+          <p style={{
+            color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 600,
+            margin: '0 0 16px', textAlign: 'center', fontFamily: 'DM Sans, sans-serif',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {photo.title}
+          </p>
+        )}
+
+        {/* Primary actions */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <button
+            onClick={onZoom}
+            style={{
+              flex: 1, padding: '15px 12px', borderRadius: 16,
+              background: 'linear-gradient(135deg, #1A3FAA 0%, #2755dd 100%)',
+              color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontFamily: 'DM Sans, sans-serif',
+              boxShadow: '0 4px 22px rgba(26,63,170,0.4)',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <ZoomIn size={18} strokeWidth={2.4} />
+            Ver en grande
+          </button>
+          <button
+            onClick={onDownload}
+            style={{
+              flex: 1, padding: '15px 12px', borderRadius: 16,
+              background: 'rgba(255,255,255,0.07)',
+              color: '#fff', fontSize: 15, fontWeight: 700,
+              border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontFamily: 'DM Sans, sans-serif',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <Download size={18} strokeWidth={2.4} />
+            Descargar
+          </button>
+        </div>
+
+        {/* Cancel */}
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', padding: '13px', borderRadius: 16,
+            background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.38)',
+            fontSize: 14, fontWeight: 500, border: '1px solid rgba(255,255,255,0.07)',
+            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          Cancelar
+        </button>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
@@ -29,6 +144,7 @@ function Lightbox({ photos, startIndex, onClose }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const count = photos.length;
   const thumbsRef = useRef(null);
+  const touchStartX = useRef(null);
 
   const go = useCallback((n) => {
     setImgLoaded(false);
@@ -50,12 +166,19 @@ function Lightbox({ photos, startIndex, onClose }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Scroll thumbnail into view
   useEffect(() => {
     if (!thumbsRef.current) return;
     const btn = thumbsRef.current.children[current];
     btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [current]);
+
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 48) go(current + (delta < 0 ? 1 : -1));
+    touchStartX.current = null;
+  };
 
   const photo = photos[current];
 
@@ -120,10 +243,12 @@ function Lightbox({ photos, startIndex, onClose }) {
         </div>
       </div>
 
-      {/* Main image */}
+      {/* Main image — swipeable on touch */}
       <div
         style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(52px, 8vw, 72px)' }}
         onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {!imgLoaded && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -216,46 +341,69 @@ function Lightbox({ photos, startIndex, onClose }) {
 }
 
 // ─── Card animada ─────────────────────────────────────────────────────────────
-function GalleryCard({ photo, index, onOpen }) {
+function GalleryCard({ photo, index, onOpen, onBroken }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '0px 0px -60px 0px' });
+  const [showSheet, setShowSheet] = useState(false);
+
+  const handleClick = () => {
+    if (window.matchMedia('(hover: none)').matches) {
+      setShowSheet(true);
+    } else {
+      onOpen(index);
+    }
+  };
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 28 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.52, delay: Math.min(index * 0.05, 0.38), ease: [0.22, 1, 0.36, 1] }}
-      onClick={() => onOpen(index)}
-      role="button"
-      tabIndex={0}
-      aria-label={`Ver imagen ${index + 1}`}
-      onKeyDown={e => e.key === 'Enter' && onOpen(index)}
-      className="gp-card"
-    >
-      <img
-        src={photo.src}
-        alt={`Fotografía del semillero Softlab ${index + 1}`}
-        loading="lazy"
-        style={{ width: '100%', display: 'block', borderRadius: 14 }}
-      />
+    <>
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 32 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.56, delay: Math.min(index * 0.045, 0.4), ease: [0.22, 1, 0.36, 1] }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        aria-label={`Ver imagen ${index + 1}`}
+        onKeyDown={e => e.key === 'Enter' && handleClick()}
+        className="gp-card"
+      >
+        <img
+          src={photo.src}
+          alt={`Fotografía del semillero Softlab ${index + 1}`}
+          loading="lazy"
+          style={{ width: '100%', display: 'block', borderRadius: 16 }}
+          onError={() => onBroken(photo.src)}
+        />
 
-      {/* Hover overlay — only action buttons, no caption text */}
-      <div className="gp-overlay">
-        <div className="gp-actions">
-          <div className="gp-btn" aria-hidden="true">
-            <ZoomIn size={18} color="#1A3FAA" strokeWidth={2.2} />
-          </div>
-          <div
-            className="gp-btn gp-btn-dl"
-            aria-hidden="true"
-            onClick={e => { e.stopPropagation(); downloadImage(photo.src, photo.title); }}
-          >
-            <Download size={18} color="#1A3FAA" strokeWidth={2.2} />
+        {/* Hover overlay — hidden on touch via CSS, JS handles tap via action sheet */}
+        <div className="gp-overlay">
+          <div className="gp-actions">
+            <div className="gp-btn" aria-hidden="true">
+              <ZoomIn size={20} color="#1A3FAA" strokeWidth={2.2} />
+            </div>
+            <div
+              className="gp-btn gp-btn-dl"
+              aria-hidden="true"
+              onClick={e => { e.stopPropagation(); downloadImage(photo.src, photo.title); }}
+            >
+              <Download size={20} color="#1A3FAA" strokeWidth={2.2} />
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      <AnimatePresence>
+        {showSheet && (
+          <MobileActionSheet
+            photo={photo}
+            onZoom={() => { setShowSheet(false); onOpen(index); }}
+            onDownload={() => { downloadImage(photo.src, photo.title); setShowSheet(false); }}
+            onClose={() => setShowSheet(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -264,59 +412,72 @@ export function GalleryPage() {
   const [photos, setPhotos] = useState([]);
   const [search, setSearch] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [brokenSrcs, setBrokenSrcs] = useState(new Set());
+
+  const handleBroken = useCallback((src) => {
+    setBrokenSrcs(prev => new Set([...prev, src]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     galeriaApi.getAll()
       .then(data => {
         if (!cancelled) {
-          setPhotos((data ?? []).map(img => ({ src: img.src, title: img.title || img.titulo || '' })).filter(p => p.src));
+          setPhotos((data ?? []).map(img => ({
+            src: img.src,
+            title: img.title || img.titulo || '',
+          })).filter(p => p.src));
         }
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = search.trim()
+  const filtered = (search.trim()
     ? photos.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
-    : photos;
+    : photos
+  ).filter(p => !brokenSrcs.has(p.src));
 
   const count = filtered.length;
-
-  // Determina número de columnas semántico para el hero
   const colLabel = count === 0 ? '' : count === 1 ? '1 imagen' : `${count} imágenes`;
 
+  const gridClass = count <= 2 ? 'few' : count <= 5 ? 'small' : count <= 12 ? 'medium' : 'large';
+
   return (
-    <main id="main-content" style={{ minHeight: '100vh', background: '#0B0F1A' }}>
+    <main id="main-content" style={{ minHeight: '100vh', background: '#080D1A' }}>
 
       {/* ── Hero ── */}
-      <section style={{ position: 'relative', overflow: 'hidden', padding: 'clamp(80px,12vw,130px) clamp(20px,6vw,64px) clamp(56px,8vw,88px)', background: 'linear-gradient(145deg, #050913 0%, #0F1E55 55%, #1A3FAA 100%)' }}>
-
-        {/* Patrón puntillado */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
+      <section style={{
+        position: 'relative', overflow: 'hidden',
+        padding: 'clamp(80px,12vw,130px) clamp(20px,6vw,64px) clamp(56px,8vw,88px)',
+        background: 'linear-gradient(145deg, #040810 0%, #0D1C50 50%, #172d8a 100%)',
+      }}>
+        {/* Dot pattern */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.032) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
 
         {/* Glow orbs */}
-        <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,140,255,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '-30%', left: '10%', width: 360, height: 360, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,63,170,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,140,255,0.16) 0%, transparent 68%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-30%', left: '8%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,63,170,0.2) 0%, transparent 68%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '30%', left: '50%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,197,253,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#93C5FD', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}
+            style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#93C5FD', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}
           >
             Semillero Softlab
           </motion.p>
 
           <motion.h1
-            initial={{ opacity: 0, y: 18 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.07 }}
+            transition={{ duration: 0.58, delay: 0.07 }}
             style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(36px,6vw,68px)', fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1.08, margin: '0 0 18px' }}
           >
             Galería de<br />
-            <span style={{ background: 'linear-gradient(90deg, #93C5FD 0%, #fff 60%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(90deg, #93C5FD 0%, #c7dcff 60%, #fff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               momentos
             </span>
           </motion.h1>
@@ -325,7 +486,7 @@ export function GalleryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.18 }}
-            style={{ fontSize: 16, color: 'rgba(255,255,255,0.55)', margin: '0 0 32px', fontFamily: 'DM Sans, sans-serif', maxWidth: 480, lineHeight: 1.65 }}
+            style={{ fontSize: 16, color: 'rgba(255,255,255,0.52)', margin: '0 0 32px', fontFamily: 'DM Sans, sans-serif', maxWidth: 480, lineHeight: 1.65 }}
           >
             Capacitaciones, sesiones de trabajo y momentos del equipo. Descarga las imágenes que quieras.
           </motion.p>
@@ -337,13 +498,12 @@ export function GalleryPage() {
             style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}
           >
             {count > 0 && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.13)' }}>
                 <Images size={14} color="rgba(255,255,255,0.6)" />
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>{colLabel}</span>
               </div>
             )}
 
-            {/* Búsqueda inline */}
             {count > 6 && (
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
@@ -362,7 +522,6 @@ export function GalleryPage() {
       {/* ── Galería ── */}
       <section style={{ padding: 'clamp(32px,5vw,64px) clamp(16px,4vw,48px) clamp(64px,8vw,100px)', maxWidth: 1440, margin: '0 auto' }}>
 
-        {/* Sin imágenes */}
         {count === 0 && photos.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -379,7 +538,6 @@ export function GalleryPage() {
           </motion.div>
         )}
 
-        {/* Sin resultados de búsqueda */}
         {count === 0 && photos.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '60px 20px', textAlign: 'center' }}>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'DM Sans, sans-serif', fontSize: 15 }}>Sin resultados para "{search}"</p>
@@ -389,17 +547,15 @@ export function GalleryPage() {
           </motion.div>
         )}
 
-        {/* Grid adaptivo por cantidad */}
         {count > 0 && (
-          <div className={`gp-grid gp-grid-${count <= 2 ? 'few' : count <= 5 ? 'small' : count <= 12 ? 'medium' : 'large'}`}>
+          <div className={`gp-grid gp-grid-${gridClass}`}>
             {filtered.map((photo, i) => (
-              <GalleryCard key={photo.src + i} photo={photo} index={i} onOpen={setLightboxIndex} />
+              <GalleryCard key={photo.src + i} photo={photo} index={i} onOpen={setLightboxIndex} onBroken={handleBroken} />
             ))}
           </div>
         )}
       </section>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {lightboxIndex !== null && filtered.length > 0 && (
           <Lightbox

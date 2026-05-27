@@ -176,6 +176,36 @@ function parseParticipante($row, $includeActividades = false) {
 
 if ($method === 'GET') {
 
+    // ── Todas las etiquetas de rol del sistema ──────────────────
+    if (($action ?? null) === 'roles') {
+        $roles = [];
+
+        $rows = db()->query("SELECT DISTINCT rol FROM participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
+        foreach ($rows as $r) $roles[] = trim($r['rol']);
+
+        try {
+            $rows = db()->query("SELECT roles_adicionales FROM participantes WHERE roles_adicionales IS NOT NULL AND roles_adicionales != '[]'")->fetchAll();
+            foreach ($rows as $r) {
+                $arr = json_decode($r['roles_adicionales'], true);
+                if (is_array($arr)) foreach ($arr as $rol) if (trim((string)$rol)) $roles[] = trim($rol);
+            }
+        } catch (Throwable $e) {}
+
+        try {
+            $rows = db()->query("SELECT DISTINCT rol FROM eventos_participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
+            foreach ($rows as $r) $roles[] = trim($r['rol']);
+        } catch (Throwable $e) {}
+
+        try {
+            $rows = db()->query("SELECT DISTINCT rol FROM manuales_participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
+            foreach ($rows as $r) $roles[] = trim($r['rol']);
+        } catch (Throwable $e) {}
+
+        $unique = array_values(array_unique(array_filter($roles, fn($r) => !empty($r))));
+        sort($unique);
+        ok($unique);
+    }
+
     // Obtener uno (incluye historial de actividades)
     if ($id) {
 
@@ -458,42 +488,7 @@ if ($method === 'DELETE') {
     ]);
 }
 
-// ─────────────────────────────────────────────────────────────
-// ROLES — Todas las etiquetas de rol en el sistema (?action=roles)
-// ─────────────────────────────────────────────────────────────
 
-if ($action === 'roles') {
-    $roles = [];
-
-    // Roles principales
-    $rows = db()->query("SELECT DISTINCT rol FROM participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
-    foreach ($rows as $r) $roles[] = trim($r['rol']);
-
-    // Roles adicionales (JSON arrays)
-    try {
-        $rows = db()->query("SELECT roles_adicionales FROM participantes WHERE roles_adicionales IS NOT NULL AND roles_adicionales != '[]'")->fetchAll();
-        foreach ($rows as $r) {
-            $arr = json_decode($r['roles_adicionales'], true);
-            if (is_array($arr)) foreach ($arr as $rol) if (trim((string)$rol)) $roles[] = trim($rol);
-        }
-    } catch (Throwable $e) {}
-
-    // Roles en eventos
-    try {
-        $rows = db()->query("SELECT DISTINCT rol FROM eventos_participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
-        foreach ($rows as $r) $roles[] = trim($r['rol']);
-    } catch (Throwable $e) {}
-
-    // Roles en manuales
-    try {
-        $rows = db()->query("SELECT DISTINCT rol FROM manuales_participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
-        foreach ($rows as $r) $roles[] = trim($r['rol']);
-    } catch (Throwable $e) {}
-
-    $unique = array_values(array_unique(array_filter($roles, fn($r) => !empty($r))));
-    sort($unique);
-    ok($unique);
-}
 
 // ─────────────────────────────────────────────────────────────
 // PROYECTOS — CRUD  (?action=proyecto_add|proyecto_update|proyecto_delete)

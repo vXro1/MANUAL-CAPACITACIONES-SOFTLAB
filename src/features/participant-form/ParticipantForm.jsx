@@ -126,7 +126,7 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
 
   const handlePhoto = (file) => {
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) { alert('La foto supera los 3 MB permitidos'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert(`La foto supera el límite de 5 MB (tiene ${(file.size / 1024 / 1024).toFixed(1)} MB).`); return; }
     const reader = new FileReader();
     reader.onload = (e) => setPhoto(e.target.result);
     reader.readAsDataURL(file);

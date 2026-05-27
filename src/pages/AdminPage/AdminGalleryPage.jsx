@@ -197,7 +197,7 @@ function UploadZone({ onFiles, uploading }) {
         {uploading ? 'Subiendo imágenes…' : dragOver ? 'Suelta aquí' : 'Subir imágenes'}
       </p>
       <p style={{ fontSize: 12, color: '#94A3B8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-        {uploading ? 'Por favor espera' : 'Arrastra y suelta o haz clic · PNG, JPG, WEBP'}
+        {uploading ? 'Por favor espera' : 'Arrastra y suelta o haz clic · PNG, JPG, WEBP · Máx. 5 MB por imagen'}
       </p>
     </div>
   );
@@ -456,6 +456,11 @@ export function AdminGalleryPage() {
   }, []);
 
   const handleFiles = useCallback(async (files) => {
+    const oversize = files.find(f => f.size > 5 * 1024 * 1024);
+    if (oversize) {
+      setUploadError(`"${oversize.name}" supera el límite de 5 MB (${(oversize.size / 1024 / 1024).toFixed(1)} MB).`);
+      return;
+    }
     setUploading(true);
     setUploadError('');
     try {
