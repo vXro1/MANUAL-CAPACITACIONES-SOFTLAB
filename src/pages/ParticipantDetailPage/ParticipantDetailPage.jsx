@@ -116,33 +116,39 @@ export function ParticipantDetailPage() {
     setParticipant(null);
 
     async function load() {
-      // 1. Resolver slug → id consultando la API
-      const all = await participantesApi.getAll();
-      const found = all.find(
-        (p) => toSlug(p.name ?? p.nombre ?? '') === slug
-      );
-      if (!found) return;
+      try {
+        // 1. Resolver slug → id consultando la API
+        const all = await participantesApi.getAll();
+        const found = all.find(
+          (p) => toSlug(p.name ?? p.nombre ?? '') === slug
+        );
+        if (!found) return;
 
-      // 2. Cargar perfil completo (incluye actividades)
-      const data = await participantesApi.getById(String(found.id));
-      if (cancelled) return;
-      setParticipant({
-        id:          String(data.id),
-        name:        data.name       ?? data.nombre   ?? '',
-        role:        data.role       ?? data.rol      ?? '',
-        career:      data.career     ?? data.carrera  ?? '',
-        semester:    data.semestre   ?? data.semester ?? null,
-        bio:         data.bio        ?? '',
-        skills:      data.skills     ?? data.habilidades ?? [],
-        linkedin:    data.linkedin   ?? '',
-        github:      data.github     ?? '',
-        email:       data.email      ?? '',
-        photo:       data.foto_path  ?? data.photo    ?? null,
-        actividades: data.actividades ?? [],
-      });
+        // 2. Cargar perfil completo (incluye actividades)
+        const data = await participantesApi.getById(String(found.id));
+        if (cancelled) return;
+        
+        // Normalizar datos - aceptar variaciones de nombres de campos
+        setParticipant({
+          id:          String(data.id),
+          name:        data.name       ?? data.nombre   ?? '',
+          role:        data.role       ?? data.rol      ?? '',
+          career:      data.career     ?? data.carrera  ?? '',
+          semester:    data.semestre   ?? data.semester ?? null,
+          bio:         data.bio        ?? data.descripcion ?? '',
+          skills:      data.skills     ?? data.habilidades ?? [],
+          linkedin:    data.linkedin   ?? '',
+          github:      data.github     ?? '',
+          email:       data.email      ?? '',
+          photo:       data.foto_path  ?? data.photo    ?? null,
+          actividades: data.actividades ?? [],
+        });
+      } catch (err) {
+        console.error('Error cargando participante:', err);
+      }
     }
 
-    load().catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    load().finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [slug]);
 

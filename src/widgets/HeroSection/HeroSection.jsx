@@ -9,6 +9,16 @@ import {
 } from 'framer-motion';
 import { ArrowRight, Users, FileText, Calendar, MapPin } from 'lucide-react';
 import { manualesApi, participantesApi, eventosApi } from '@/services/apiService';
+import { FocusCarousel } from '@/shared/ui/FocusCarousel';
+
+/* ─── Fallback images (shown when API returns nothing) ───────────────────── */
+const foto1 = new URL('/src/assets/foto1semillero.png', import.meta.url).href;
+const foto2 = new URL('/src/assets/foto2semillero.png', import.meta.url).href;
+const foto3 = new URL('/src/assets/foto3semillero.png', import.meta.url).href;
+const foto4 = new URL('/src/assets/foto4semillero.JPG', import.meta.url).href;
+const foto5 = new URL('/src/assets/foto5semillero.JPG', import.meta.url).href;
+
+const FALLBACK_SLIDES = [foto1, foto2, foto3, foto4, foto5].map(src => ({ image: src }));
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -24,7 +34,6 @@ const ORBS = [
 function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx, my, dur, delay }) {
   const x = useTransform(springX, [-0.5, 0.5], [-mx, mx]);
   const y = useTransform(springY, [-0.5, 0.5], [-my, my]);
-
   return (
     <motion.div
       aria-hidden="true"
@@ -62,10 +71,10 @@ function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx,
 
 /* ─── Counter ────────────────────────────────────────────────────────────── */
 function Counter({ end, suffix = '+', delay = 0 }) {
-  const [count, setCount]  = useState(0);
-  const ref                = useRef(null);
-  const rafRef             = useRef(null);
-  const startedAt          = useRef(null);
+  const [count, setCount] = useState(0);
+  const ref        = useRef(null);
+  const rafRef     = useRef(null);
+  const startedAt  = useRef(null);
 
   const runAnimation = useCallback((target) => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -107,13 +116,22 @@ function useBreakpoint(px) {
 }
 
 /* ─── HeroSection ─────────────────────────────────────────────────────────── */
-export function HeroSection() {
+export function HeroSection({ slides: apiSlides = [] }) {
+  /*
+    slides shape from API: [{ src, alt }]
+    FocusCarousel expects:  [{ image, alt?, title?, subtitle?, badge? }]
+  */
+  const carouselItems = (apiSlides.length > 0 ? apiSlides : FALLBACK_SLIDES).map(s =>
+    s.image ? s : { image: s.src, alt: s.alt }
+  );
+
   const isMobile = useBreakpoint(640);
   const isTablet = useBreakpoint(960);
 
   const sectionRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
-  const contentY = useTransform(scrollYProgress, [0, 1], ['0px', '-28px']);
+  const imgY     = useTransform(scrollYProgress, [0, 1], ['0px', '-48px']);
+  const contentY = useTransform(scrollYProgress, [0, 1], ['0px', '-24px']);
 
   const mouseXMv = useMotionValue(0);
   const mouseYMv = useMotionValue(0);
@@ -166,7 +184,7 @@ export function HeroSection() {
         overflow: 'hidden',
       }}
     >
-      {/* Grid tecnológico sutil */}
+      {/* Grid sutil */}
       <div aria-hidden="true" style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         backgroundImage: `
@@ -202,28 +220,29 @@ export function HeroSection() {
         pointerEvents: 'none',
       }} />
 
-      {/* ── Layout principal ── */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          maxWidth: 720,
-          margin: '0 auto',
-          width: '100%',
-          padding: isMobile
-            ? '44px 20px 80px'
-            : isTablet
-              ? '60px 32px 88px'
-              : 'clamp(68px, 7.5vw, 100px) clamp(32px, 5vw, 56px)',
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          boxSizing: 'border-box',
-        }}
-      >
-        <motion.div style={{ y: contentY }}>
+      {/* ── Layout: 2 columns on desktop, stacked on tablet/mobile ────── */}
+      <div style={{
+        position: 'relative', zIndex: 2,
+        maxWidth: 1240, margin: '0 auto', width: '100%',
+        padding: isMobile
+          ? '44px 20px 80px'
+          : isTablet
+            ? '60px 32px 88px'
+            : 'clamp(68px, 7.5vw, 100px) clamp(32px, 5vw, 56px)',
+        display: 'grid',
+        gridTemplateColumns: isTablet ? '1fr' : '50% 50%',
+        gap: isMobile ? '36px' : isTablet ? '44px' : 'clamp(40px, 4vw, 60px)',
+        alignItems: 'center',
+        boxSizing: 'border-box',
+      }}>
+
+        {/* ════ LEFT — Text content ════ */}
+        <motion.div
+          style={{ y: contentY, order: isTablet ? 1 : 0 }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.2vw, 26px)' }}>
 
-            {/* Pill institucional */}
+            {/* Pill */}
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -251,7 +270,7 @@ export function HeroSection() {
               </span>
             </motion.div>
 
-            {/* Titular */}
+            {/* Heading */}
             <div>
               <motion.h1
                 initial={{ opacity: 0, y: 28 }}
@@ -263,7 +282,7 @@ export function HeroSection() {
                     ? 'clamp(28px, 8vw, 38px)'
                     : isTablet
                       ? 'clamp(36px, 5.5vw, 50px)'
-                      : 'clamp(38px, 3.8vw, 52px)',
+                      : 'clamp(36px, 3.6vw, 50px)',
                   fontWeight: 800, lineHeight: 1.06, letterSpacing: '-1.8px',
                   color: '#0F172A',
                 }}
@@ -286,7 +305,7 @@ export function HeroSection() {
                     ? 'clamp(28px, 8vw, 38px)'
                     : isTablet
                       ? 'clamp(36px, 5.5vw, 50px)'
-                      : 'clamp(38px, 3.8vw, 52px)',
+                      : 'clamp(36px, 3.6vw, 50px)',
                   fontWeight: 800, lineHeight: 1.06, letterSpacing: '-1.8px',
                   color: '#0F172A',
                 }}
@@ -295,14 +314,14 @@ export function HeroSection() {
               </motion.span>
             </div>
 
-            {/* Descripción */}
+            {/* Description */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.48, duration: 0.62, ease: EASE }}
               style={{
                 fontSize: 'clamp(14px, 1.2vw, 16px)', lineHeight: 1.78,
-                color: '#475569', maxWidth: 440, margin: 0,
+                color: '#475569', maxWidth: 420, margin: 0,
                 fontFamily: 'DM Sans, sans-serif',
               }}
             >
@@ -435,9 +454,26 @@ export function HeroSection() {
 
           </div>
         </motion.div>
+
+        {/* ════ RIGHT — 3D Focus Carousel ════ */}
+        <motion.div
+          initial={{ opacity: 0, x: isTablet ? 0 : 36, y: isTablet ? 14 : 0, scale: 0.96 }}
+          animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+          transition={{ delay: 0.28, duration: 0.88, ease: EASE }}
+          style={{
+            y: imgY,
+            order: isTablet ? 0 : 1,
+            width: '100%',
+            maxWidth: isTablet ? (isMobile ? '100%' : '600px') : 'none',
+            margin: isTablet ? '0 auto' : '0',
+          }}
+        >
+          <FocusCarousel items={carouselItems} autoplay />
+        </motion.div>
+
       </div>
 
-      {/* Indicador de scroll */}
+      {/* Scroll indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
