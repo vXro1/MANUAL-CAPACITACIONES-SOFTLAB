@@ -32,6 +32,22 @@ function ensure_columns() {
         if (!in_array('featured', $existing)) {
             db()->exec("ALTER TABLE participantes ADD COLUMN featured TINYINT(1) NOT NULL DEFAULT 0");
         }
+        if (!in_array('roles_adicionales', $existing)) {
+            db()->exec("ALTER TABLE participantes ADD COLUMN roles_adicionales TEXT NULL DEFAULT NULL");
+        }
+        db()->exec("
+            CREATE TABLE IF NOT EXISTS participante_proyectos (
+                id               INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+                participante_id  INT UNSIGNED  NOT NULL,
+                titulo           VARCHAR(255)  NOT NULL,
+                descripcion      VARCHAR(500)  NULL,
+                url_link         VARCHAR(500)  NULL,
+                imagen_path      VARCHAR(500)  NULL,
+                creado_en        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_participante_id (participante_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
     } catch (Throwable $e) {}
 }
 ensure_columns();
@@ -69,6 +85,34 @@ function parseParticipante($row, $includeActividades = false) {
     $row['career']      = $row['carrera'];
     $row['skills']      = $row['habilidades'];
     $row['featured']    = (bool)($row['featured'] ?? false);
+
+    // Multi-rol: roles = [rol_principal, ...roles_adicionales]
+    $primaryRole      = trim((string)($row['rol'] ?? ''));
+    $addRaw           = json_decode($row['roles_adicionales'] ?? '[]', true);
+    $addRoles         = is_array($addRaw) ? $addRaw : [];
+    $allRoles         = array_values(array_filter(
+        array_merge([$primaryRole], $addRoles),
+        fn($r) => !empty(trim((string)$r))
+    ));
+    $row['roles']     = $allRoles;
+
+    // Proyectos del participante
+    try {
+        $stmtP = db()->prepare('
+            SELECT id, titulo, descripcion, url_link, imagen_path, creado_en
+            FROM participante_proyectos
+            WHERE participante_id = ?
+            ORDER BY creado_en ASC
+        ');
+        $stmtP->execute([(int)$row['id']]);
+        $row['proyectos'] = array_map(function ($p) {
+            $p['id']   = (string)$p['id'];
+            $p['tipo'] = !empty($p['url_link']) ? 'link' : 'imagen';
+            return $p;
+        }, $stmtP->fetchAll());
+    } catch (Throwable $e) {
+        $row['proyectos'] = [];
+    }
 
     // Historial de actividades (solo se carga en peticiones individuales o cuando se solicita)
     if ($includeActividades) {
@@ -191,9 +235,10 @@ if ($method === 'POST') {
             linkedin,
             github,
             email,
-            foto_path
+            foto_path,
+            roles_adicionales
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
 
     $stmt->execute([
@@ -237,7 +282,12 @@ if ($method === 'POST') {
         $data['email']
             ?? null,
 
-        $fotoUrl
+        $fotoUrl,
+
+        json_encode(
+            $data['roles_adicionales'] ?? [],
+            JSON_UNESCAPED_UNICODE
+        ),
     ]);
 
     $newId = (int)db()->lastInsertId();
@@ -307,7 +357,8 @@ if ($method === 'PUT') {
             linkedin=?,
             github=?,
             email=?,
-            foto_path=?
+            foto_path=?,
+            roles_adicionales=?
         WHERE id=?
     ');
 
@@ -358,6 +409,12 @@ if ($method === 'PUT') {
         $fotoUrl
             ?? ($data['foto_path'] ?? $old['foto_path']),
 
+        json_encode(
+            $data['roles_adicionales']
+                ?? (json_decode($old['roles_adicionales'] ?? '[]', true) ?? []),
+            JSON_UNESCAPED_UNICODE
+        ),
+
         $id
     ]);
 
@@ -399,6 +456,100 @@ if ($method === 'DELETE') {
     ok([
         'deleted' => $id
     ]);
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROYECTOS — CRUD  (?action=proyecto_add|proyecto_update|proyecto_delete)
+// ─────────────────────────────────────────────────────────────
+
+$action = $_GET['action'] ?? null;
+
+if ($action === 'proyecto_add') {
+
+    requireAdmin();
+
+    if (!$id) err('ID de participante requerido');
+
+    $data = json_decode($_POST['data'] ?? '{}', true) ?? [];
+
+    $titulo      = trim($data['titulo'] ?? '');
+    $descripcion = trim($data['descripcion'] ?? '') ?: null;
+    $urlLink     = trim($data['url_link'] ?? '') ?: null;
+
+    if (empty($titulo)) err('El título del proyecto es requerido');
+
+    $imagenPath = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
+
+    if (!$urlLink && !$imagenPath) err('Debes proporcionar un link o una imagen de evidencia');
+
+    db()->prepare('
+        INSERT INTO participante_proyectos (participante_id, titulo, descripcion, url_link, imagen_path)
+        VALUES (?, ?, ?, ?, ?)
+    ')->execute([$id, $titulo, $descripcion, $urlLink, $imagenPath]);
+
+    $row = db()->query("SELECT * FROM participantes WHERE id = {$id}")->fetch();
+    if (!$row) err('Participante no encontrado', 404);
+    ok(parseParticipante($row, true));
+}
+
+if ($action === 'proyecto_update') {
+
+    requireAdmin();
+
+    $proyectoId = isset($_GET['proyecto_id']) ? (int)$_GET['proyecto_id'] : null;
+    if (!$proyectoId) err('proyecto_id requerido');
+
+    $old = db()->prepare('SELECT * FROM participante_proyectos WHERE id = ?');
+    $old->execute([$proyectoId]);
+    $oldProyecto = $old->fetch();
+    if (!$oldProyecto) err('Proyecto no encontrado', 404);
+
+    $data = json_decode($_POST['data'] ?? '{}', true) ?? [];
+
+    $titulo      = trim($data['titulo'] ?? $oldProyecto['titulo']);
+    $descripcion = array_key_exists('descripcion', $data)
+        ? (trim($data['descripcion']) ?: null)
+        : $oldProyecto['descripcion'];
+    $urlLink     = array_key_exists('url_link', $data)
+        ? (trim($data['url_link']) ?: null)
+        : $oldProyecto['url_link'];
+
+    $imagenPath = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
+    if ($imagenPath) {
+        removeFile($oldProyecto['imagen_path']);
+    } else {
+        $imagenPath = $oldProyecto['imagen_path'];
+    }
+
+    db()->prepare('
+        UPDATE participante_proyectos
+        SET titulo=?, descripcion=?, url_link=?, imagen_path=?
+        WHERE id=?
+    ')->execute([$titulo, $descripcion, $urlLink, $imagenPath, $proyectoId]);
+
+    $pid = $id ?? (int)$oldProyecto['participante_id'];
+    $row = db()->query("SELECT * FROM participantes WHERE id = {$pid}")->fetch();
+    if (!$row) err('Participante no encontrado', 404);
+    ok(parseParticipante($row, true));
+}
+
+if ($action === 'proyecto_delete') {
+
+    requireAdmin();
+
+    $proyectoId = isset($_GET['proyecto_id']) ? (int)$_GET['proyecto_id'] : null;
+    if (!$proyectoId) err('proyecto_id requerido');
+
+    $stmt = db()->prepare('SELECT * FROM participante_proyectos WHERE id = ?');
+    $stmt->execute([$proyectoId]);
+    $proyecto = $stmt->fetch();
+
+    if ($proyecto) {
+        removeFile($proyecto['imagen_path']);
+        db()->prepare('DELETE FROM participante_proyectos WHERE id = ?')->execute([$proyectoId]);
+    }
+
+    ok(['deleted' => $proyectoId]);
 }
 
 // ─────────────────────────────────────────────────────────────

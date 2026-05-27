@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Mail, BookOpen,
   CalendarDays, Briefcase, GraduationCap, Tag,
-  ExternalLink, User,
+  ExternalLink, User, ZoomIn, X, Globe, FolderOpen, FileImage,
 } from 'lucide-react';
 import { participantesApi } from '@/services/apiService';
 import { toSlug } from '@/shared/lib/toSlug';
@@ -24,6 +24,79 @@ const TIPO_STYLE = {
   evento: { bg: '#EEF3FF', color: '#1A3FAA', label: 'Evento' },
   manual: { bg: '#ECFDF5', color: '#065F46', label: 'Manual'  },
 };
+
+function ProjectCard({ project, index }) {
+  const isLink = project.tipo === 'link';
+  return (
+    <motion.div
+      variants={fadeUp}
+      custom={index}
+      style={{
+        padding: '14px 16px', borderRadius: 14,
+        background: '#fff', border: '1px solid #f1f5f9',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+        transition: 'border-color 0.18s, box-shadow 0.18s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#c7d7f8'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(26,63,170,0.07)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = '#f1f5f9'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)'; }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          background: isLink ? '#EEF3FF' : '#F0FDF4',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {isLink
+            ? <Globe size={16} style={{ color: '#1A3FAA' }} />
+            : <FileImage size={16} style={{ color: '#065F46' }} />
+          }
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#0A0F1E', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+            {project.titulo}
+          </p>
+          {project.descripcion && (
+            <p style={{ fontSize: 12.5, color: '#64748B', margin: '4px 0 0', lineHeight: 1.6, fontFamily: 'DM Sans, sans-serif' }}>
+              {project.descripcion}
+            </p>
+          )}
+          {project.url_link && (
+            <a
+              href={project.url_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                marginTop: 8, fontSize: 12, fontWeight: 600,
+                color: '#1A3FAA', textDecoration: 'none',
+                fontFamily: 'DM Sans, sans-serif', transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.7'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+            >
+              Ver proyecto <ExternalLink size={11} />
+            </a>
+          )}
+        </div>
+
+        {project.imagen_path && (
+          <a href={project.imagen_path} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
+            <img
+              src={project.imagen_path}
+              alt={`Evidencia: ${project.titulo}`}
+              style={{
+                width: 64, height: 64, borderRadius: 10,
+                objectFit: 'cover', cursor: 'zoom-in',
+                border: '1px solid #e2e8f0',
+              }}
+            />
+          </a>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 function ActivityCard({ item, index }) {
   const style = TIPO_STYLE[item.tipo] ?? { bg: '#F1F5F9', color: '#475569', label: item.tipo };
@@ -108,7 +181,17 @@ export function ParticipantDetailPage() {
   const { slug } = useParams();
 
   const [participant, setParticipant] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]         = useState(true);
+  const [lightbox, setLightbox]       = useState(false);
+  const [avatarHover, setAvatarHover] = useState(false);
+
+  const closeLightbox = useCallback(() => setLightbox(false), []);
+  useEffect(() => {
+    if (!lightbox) return;
+    const esc = (e) => { if (e.key === 'Escape') closeLightbox(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [lightbox, closeLightbox]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,10 +212,15 @@ export function ParticipantDetailPage() {
         if (cancelled) return;
         
         // Normalizar datos - aceptar variaciones de nombres de campos
+        const primaryRole = data.role ?? data.rol ?? '';
+        const rolesArr    = Array.isArray(data.roles) && data.roles.length > 0
+          ? data.roles
+          : primaryRole ? [primaryRole] : [];
         setParticipant({
           id:          String(data.id),
           name:        data.name       ?? data.nombre   ?? '',
-          role:        data.role       ?? data.rol      ?? '',
+          role:        primaryRole,
+          roles:       rolesArr,
           career:      data.career     ?? data.carrera  ?? '',
           semester:    data.semestre   ?? data.semester ?? null,
           bio:         data.bio        ?? data.descripcion ?? '',
@@ -142,6 +230,7 @@ export function ParticipantDetailPage() {
           email:       data.email      ?? '',
           photo:       data.foto_path  ?? data.photo    ?? null,
           actividades: data.actividades ?? [],
+          proyectos:   data.proyectos   ?? [],
         });
       } catch (err) {
         console.error('Error cargando participante:', err);
@@ -157,6 +246,7 @@ export function ParticipantDetailPage() {
   const p           = participant;
   const initials    = p ? p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase() : '';
   const actividades = p?.actividades ?? [];
+  const proyectos   = p?.proyectos   ?? [];
   const eventos     = actividades.filter((a) => a.tipo === 'evento');
   const manuales    = actividades.filter((a) => a.tipo === 'manual');
 
@@ -214,22 +304,43 @@ export function ParticipantDetailPage() {
               flexWrap: 'wrap',
             }}
           >
-            {/* Avatar */}
-            <div style={{
-              width: 88, height: 88, borderRadius: 20,
-              background: '#C7D7F8', border: '3px solid #fff',
-              overflow: 'hidden', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(26,63,170,0.15)',
-            }}>
+            {/* Avatar — clicable cuando hay foto */}
+            <motion.div
+              whileHover={p.photo ? { scale: 1.04 } : {}}
+              onClick={p.photo ? () => setLightbox(true) : undefined}
+              style={{
+                width: 88, height: 88, borderRadius: 20,
+                background: 'linear-gradient(135deg, #1A3FAA, #3B6FE8)',
+                border: '3px solid #fff',
+                overflow: 'hidden', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(26,63,170,0.18)',
+                cursor: p.photo ? 'zoom-in' : 'default',
+                position: 'relative',
+              }}
+            >
               {p.photo ? (
-                <img src={p.photo} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <>
+                  <img src={p.photo} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <div
+                    onMouseEnter={() => setAvatarHover(true)}
+                    onMouseLeave={() => setAvatarHover(false)}
+                    style={{
+                      position: 'absolute', inset: 0,
+                      background: avatarHover ? 'rgba(0,0,0,0.34)' : 'rgba(0,0,0,0)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'background 0.18s',
+                    }}
+                  >
+                    <ZoomIn size={20} color="#fff" style={{ opacity: avatarHover ? 1 : 0, transition: 'opacity 0.18s' }} />
+                  </div>
+                </>
               ) : (
-                <span style={{ fontSize: 26, fontWeight: 800, color: '#1A3FAA', fontFamily: 'Syne, sans-serif' }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: 'Syne, sans-serif' }}>
                   {initials}
                 </span>
               )}
-            </div>
+            </motion.div>
 
             {/* Info */}
             <div style={{ flex: 1, minWidth: 200 }}>
@@ -237,22 +348,29 @@ export function ParticipantDetailPage() {
                 fontFamily: 'Syne, sans-serif',
                 fontSize: 'clamp(20px, 3.5vw, 30px)',
                 fontWeight: 800, color: '#0A0F1E',
-                margin: '0 0 6px', lineHeight: 1.2,
+                margin: '0 0 8px', lineHeight: 1.2,
               }}>
                 {p.name}
               </h1>
 
-              {p.role && (
-                <span style={{
-                  display: 'inline-block',
-                  background: '#1A3FAA', color: '#fff',
-                  fontSize: 11, fontWeight: 700,
-                  padding: '3px 12px', borderRadius: 99,
-                  fontFamily: 'DM Sans, sans-serif',
-                  letterSpacing: '0.05em', marginBottom: 10,
-                }}>
-                  {p.role}
-                </span>
+              {/* Todos los roles: primario destacado, adicionales más suaves */}
+              {(p.roles?.length > 0 || p.role) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {(p.roles?.length > 0 ? p.roles : [p.role]).map((r, i) => (
+                    <span key={r} style={{
+                      display: 'inline-block',
+                      background: i === 0 ? '#1A3FAA' : '#EEF3FF',
+                      color: i === 0 ? '#fff' : '#1A3FAA',
+                      fontSize: 11, fontWeight: 700,
+                      padding: '3px 12px', borderRadius: 99,
+                      fontFamily: 'DM Sans, sans-serif',
+                      letterSpacing: '0.04em',
+                      border: i === 0 ? 'none' : '1px solid #C7D7F8',
+                    }}>
+                      {r}
+                    </span>
+                  ))}
+                </div>
               )}
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
@@ -317,6 +435,19 @@ export function ParticipantDetailPage() {
                   <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.8, margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
                     {p.bio}
                   </p>
+                </motion.section>
+              )}
+
+              {/* Proyectos */}
+              {proyectos.length > 0 && (
+                <motion.section variants={fadeUp} initial="hidden" animate="visible" custom={1.5}>
+                  <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 700, color: '#0A0F1E', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <FolderOpen size={15} style={{ color: '#1A3FAA' }} />
+                    Proyectos ({proyectos.length})
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {proyectos.map((pr, i) => <ProjectCard key={pr.id} project={pr} index={i} />)}
+                  </div>
                 </motion.section>
               )}
 
@@ -430,6 +561,82 @@ export function ParticipantDetailPage() {
         </motion.div>
       )}
 
+      {/* ── Lightbox de foto ── */}
+      <AnimatePresence>
+        {lightbox && p?.photo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={closeLightbox}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 3000,
+              background: 'rgba(10,15,30,0.92)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 24, cursor: 'zoom-out',
+            }}
+          >
+            {/* Botón cerrar */}
+            <button
+              onClick={closeLightbox}
+              aria-label="Cerrar foto"
+              style={{
+                position: 'absolute', top: 20, right: 20,
+                width: 38, height: 38, borderRadius: 10,
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                color: '#fff', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <motion.img
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.88 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              src={p.photo}
+              alt={p.name}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '88vw',
+                maxHeight: '88vh',
+                borderRadius: 20,
+                boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
+                objectFit: 'contain',
+                cursor: 'default',
+              }}
+            />
+
+            {/* Nombre debajo */}
+            <div style={{
+              position: 'absolute', bottom: 28,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            }}>
+              <span style={{
+                fontSize: 14, fontWeight: 700, color: '#fff',
+                fontFamily: 'Syne, sans-serif', letterSpacing: '-0.2px',
+              }}>
+                {p.name}
+              </span>
+              {p.role && (
+                <span style={{
+                  fontSize: 11, color: 'rgba(255,255,255,0.6)',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  {p.role}
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </main>
   );

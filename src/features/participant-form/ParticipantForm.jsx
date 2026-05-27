@@ -9,17 +9,37 @@ import { syncParticipantes } from '@/services/dataSync';
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 export const PARTICIPANT_ROLES = [
+  // Estudiantes
+  'Estudiante',
+  // Directivos
+  'Coordinador',
+  'Docente',
+  'Docente Acompañante',
+  'Profesor',
+  'Director del Semillero',
+  'Co-Director del Semillero',
+  'Docente Investigador',
+  // Ponentes
+  'Ponente',
+  'Conferencista',
+  // Colaboradores
+  'Auxiliar de Investigación',
+  'Colaborador Externo',
+  // Legacy (compatibilidad con datos existentes)
   'Investigador',
   'Co-Investigador',
   'Investigador Principal',
-  'Estudiante',
-  'Docente',
-  'Docente Investigador',
+];
+
+export const ADDITIONAL_ROLE_OPTIONS = [
+  'Investigador',
+  'Desarrollador',
   'Ponente',
-  'Director del Semillero',
-  'Co-Director del Semillero',
+  'Diseñador UX',
+  'Tester QA',
   'Auxiliar de Investigación',
-  'Colaborador Externo',
+  'Co-Investigador',
+  'Investigador Principal',
 ];
 
 const ACCENT  = '#1A3FAA';
@@ -47,9 +67,10 @@ function getInitials(name = '') {
 // ─── ParticipantForm (modal con tabs) ────────────────────────────────────────
 
 export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
-  const [form, setForm]       = useState(DEFAULT_FORM);
-  const [photo, setPhoto]     = useState(null);
-  const [skills, setSkills]   = useState([]);
+  const [form, setForm]             = useState(DEFAULT_FORM);
+  const [photo, setPhoto]           = useState(null);
+  const [skills, setSkills]         = useState([]);
+  const [additionalRoles, setAdditionalRoles] = useState([]);
   const [skillInput, setSkillInput] = useState('');
   const [activeTab, setActiveTab]   = useState('foto');
   const [saving, setSaving]         = useState(false);
@@ -75,9 +96,13 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
       });
       setSkills(participant.skills ?? []);
       setPhoto(participant.photo  ?? null);
+      // Roles adicionales: roles[1..] si vienen del API, o arreglo vacío
+      const allRoles = participant.roles ?? [];
+      setAdditionalRoles(allRoles.length > 1 ? allRoles.slice(1) : []);
     } else {
       setForm(DEFAULT_FORM);
       setSkills([]);
+      setAdditionalRoles([]);
       setPhoto(null);
     }
     setSkillInput('');
@@ -114,15 +139,16 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
         fotoFile = new File([bytes], 'foto.jpg', { type: mime });
       }
       const payload = {
-        nombre:      form.name,
-        rol:         form.role,
-        carrera:     form.career,
-        semestre:    form.semester || null,
-        bio:         form.bio,
-        email:       form.email,
-        linkedin:    form.linkedin,
-        github:      form.github,
-        habilidades: skills,
+        nombre:            form.name,
+        rol:               form.role,
+        carrera:           form.career,
+        semestre:          form.semester || null,
+        bio:               form.bio,
+        email:             form.email,
+        linkedin:          form.linkedin,
+        github:            form.github,
+        habilidades:       skills,
+        roles_adicionales: additionalRoles,
       };
       if (isEdit) {
         await participantesApi.update(participant.id, payload, fotoFile);
@@ -282,11 +308,48 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
                     <input style={inputStyle} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Nombre y apellidos" onFocus={onFocus} onBlur={onBlur} />
                   </div>
                   <div>
-                    <label style={labelStyle}>Rol en el semillero *</label>
+                    <label style={labelStyle}>Rol principal *</label>
                     <select style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }} value={form.role} onChange={(e) => set('role', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
                       {PARTICIPANT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
+                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '5px 0 0', fontFamily: 'DM Sans, sans-serif' }}>
+                      Determina en qué sección aparece la persona en "Nosotros".
+                    </p>
                   </div>
+
+                  {/* Cargos adicionales */}
+                  <div>
+                    <label style={labelStyle}>Cargos adicionales</label>
+                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 8px', fontFamily: 'DM Sans, sans-serif' }}>
+                      Etiquetas extras visibles en la tarjeta del participante.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                      {ADDITIONAL_ROLE_OPTIONS.map((r) => {
+                        const active = additionalRoles.includes(r);
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setAdditionalRoles((prev) =>
+                              prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
+                            )}
+                            style={{
+                              padding: '5px 12px', borderRadius: 999,
+                              fontSize: 12, fontWeight: 600,
+                              background: active ? ACCENT : '#F8FAFF',
+                              color: active ? '#fff' : '#64748B',
+                              border: `1.5px solid ${active ? ACCENT : '#E2E8F0'}`,
+                              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {active ? '✓ ' : ''}{r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div>
                       <label style={labelStyle}>Carrera / Programa</label>

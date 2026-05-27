@@ -31,36 +31,22 @@
 @media (max-width: 960px) {
   .hero-layout {
     grid-template-columns: 1fr !important;
-    padding: clamp(48px, 7vw, 72px) clamp(20px, 5vw, 40px) clamp(56px, 7vw, 80px) !important;
-    gap: clamp(40px, 6vw, 56px) !important;
+    gap: clamp(32px, 5vw, 48px) !important;
   }
 
-  /* Carousel en tablet: landscape ratio, más ancho */
+  /* Carousel siempre centrado en tablet/móvil */
   .hero-visual {
     order: -1 !important;
-    max-width: 520px !important;
-    margin: 0 auto !important;
     width: 100% !important;
+    align-items: center !important;
   }
-
-  .cinematic-frame {
-    aspect-ratio: 16 / 9 !important;
-  }
-
-  /* Badges flotantes: ajuste posición */
-  .cinematic-badge-top  { top: -10px !important; right: -8px !important; }
-  .cinematic-badge-bottom { bottom: 36px !important; left: -10px !important; }
 }
 
 /* Mobile grande */
 @media (max-width: 640px) {
   .hero-layout {
-    padding: 40px 18px 56px !important;
+    padding: 44px 20px 80px !important;
     gap: 32px !important;
-  }
-
-  .hero-visual {
-    max-width: 100% !important;
   }
 
   /* Botones CTA — full width en móvil */
@@ -68,11 +54,12 @@
     flex-direction: column !important;
     gap: 10px !important;
   }
-  .hero-ctas > a {
-    display: block !important;
+  .hero-ctas > a,
+  .hero-ctas > div {
     width: 100% !important;
   }
-  .hero-ctas > a > button {
+  .hero-ctas > a > button,
+  .hero-ctas > div > button {
     width: 100% !important;
     justify-content: center !important;
     box-sizing: border-box !important;
@@ -82,43 +69,27 @@
 /* Mobile pequeño */
 @media (max-width: 420px) {
   .hero-layout {
-    padding: 32px 16px 48px !important;
+    padding: 32px 16px 52px !important;
     gap: 28px !important;
   }
 
-  /* Stats — wrap a 2 columnas */
+  /* Stats — colapsar a 2 columnas en móvil pequeño */
   .hero-stats {
-    flex-wrap: wrap !important;
-    gap: 14px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
     padding-top: 16px !important;
-  }
-  .hero-stats > div {
-    flex: 0 0 calc(50% - 7px) !important;
-    min-width: 0 !important;
-  }
-  /* Ocultar divisores verticales en wrap */
-  .hero-stats > div > [aria-hidden="true"] {
-    display: none !important;
-  }
-
-  /* Badges flotantes — reposicionar para no salir del viewport */
-  .cinematic-badge-bottom { display: none !important; }
-  .cinematic-badge-top    { top: 8px !important; right: 8px !important; }
-
-  /* Stats label: quitar padding-left grande y truncar elegantemente */
-  .hero-stat-label {
-    padding-left: 0 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    max-width: 70px !important;
   }
 }
 
 /* Extra pequeño */
 @media (max-width: 360px) {
-  .hero-layout { padding: 28px 14px 44px !important; }
-  .cinematic-badge-top { display: none !important; }
+  .hero-layout {
+    padding: 28px 14px 44px !important;
+  }
+  /* Stats — 1 columna en pantallas muy pequeñas */
+  .hero-stats {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -126,8 +97,6 @@
 ═══════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
-  .featured-container { padding: 0 20px !important; }
-
   /* altura fija para que el position:absolute de Framer Motion funcione */
   .carousel-wrapper   { height: 560px !important; }
 
@@ -139,11 +108,11 @@
 }
 
 @media (max-width: 480px) {
-  .carousel-wrapper { height: 540px !important; }
+  .carousel-wrapper { height: 520px !important; }
 }
 
 @media (max-width: 380px) {
-  .carousel-wrapper { height: 580px !important; }
+  .carousel-wrapper { height: 560px !important; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -151,9 +120,8 @@
 ═══════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
-  .gallery-container    { padding: 0 24px !important; }
-  .gallery-main-grid    { grid-template-columns: 1fr !important; gap: 40px !important; }
-  .photo-grid           { grid-template-columns: 1fr 1fr !important; }
+  .gallery-main-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+  .photo-grid        { grid-template-columns: 1fr 1fr !important; }
   .photo-grid > div:first-child {
     grid-row: auto !important;
     min-height: 200px !important;
@@ -162,8 +130,7 @@
 }
 
 @media (max-width: 480px) {
-  .gallery-container { padding: 0 20px !important; }
-  .photo-grid        { grid-template-columns: 1fr !important; }
+  .photo-grid { grid-template-columns: 1fr !important; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -171,16 +138,12 @@
 ═══════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
-  .events-section-container { padding: 0 24px !important; }
-  .events-grid { grid-template-columns: 1fr 1fr !important; }
+  .events-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 580px) {
+  /* minmax(280px) causaría overflow en viewports pequeños — forzar 1 col */
   .events-grid { grid-template-columns: 1fr !important; }
-}
-
-@media (max-width: 480px) {
-  .events-section-container { padding: 0 20px !important; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -272,20 +235,16 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   ABOUT PAGE
+   ABOUT PAGE / ABOUT SECTION
 ═══════════════════════════════════════════════════ */
 
 @media (max-width: 1024px) {
-  .about-container  { padding: 0 28px !important; }
-  .directors-grid   { flex-direction: column !important; }
+  .directors-grid { flex-direction: column !important; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 860px) {
+  /* Colapsar grid 2col antes de que las columnas sean demasiado estrechas */
   .about-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-}
-
-@media (max-width: 480px) {
-  .about-container { padding: 0 20px !important; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -297,15 +256,17 @@
 }
 
 @media (max-width: 900px) {
-  .participants-container    { padding: 0 24px !important; }
   .participants-grid         { grid-template-columns: repeat(2, 1fr) !important; }
   .participants-grid-compact { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
-@media (max-width: 560px) {
-  .participants-container    { padding: 0 20px !important; }
+/* En móvil ancho (≤640px) la tarjeta tiene min 260px — forzar 1 col explícitamente */
+@media (max-width: 640px) {
   .participants-grid         { grid-template-columns: 1fr !important; }
-  .participants-grid-compact { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 480px) {
+  .participants-grid-compact { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 400px) {
@@ -317,13 +278,11 @@
 ═══════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
-  .footer-inner                     { padding: 40px 24px 0 !important; }
-  .footer-grid                      { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
-  .footer-grid > div:first-child    { grid-column: 1 / -1; }
+  .footer-grid                   { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
+  .footer-grid > div:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 480px) {
-  .footer-inner  { padding: 32px 20px 0 !important; }
   .footer-grid   { grid-template-columns: 1fr !important; }
   .footer-bottom {
     flex-direction: column !important;

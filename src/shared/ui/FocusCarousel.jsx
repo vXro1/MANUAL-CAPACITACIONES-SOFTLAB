@@ -195,7 +195,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
           style={{
             position: 'relative',
             width: '100%',
-            height: 'clamp(180px, 28vw, 320px)',
+            height: 'clamp(220px, 42vw, 340px)',
             overflow: 'hidden',
             borderRadius: 20,
           }}

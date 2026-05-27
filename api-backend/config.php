@@ -21,7 +21,7 @@ define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 define('UPLOAD_URL', 'https://semillerosoftlab.com/uploads/');
 
 // Crear subcarpetas de uploads si no existen
-foreach (['pdfs', 'portadas', 'galeria', 'participantes', 'evidencias', 'eventos_galeria'] as $_subdir) {
+foreach (['pdfs', 'portadas', 'galeria', 'participantes', 'evidencias', 'eventos_galeria', 'proyectos_participantes'] as $_subdir) {
     $p = UPLOAD_DIR . $_subdir;
     if (!is_dir($p)) @mkdir($p, 0755, true);
 }

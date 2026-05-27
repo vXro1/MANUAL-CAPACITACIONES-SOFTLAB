@@ -154,11 +154,16 @@ export function AboutPage() {
       <AboutSection showDirectors />
       <ParticipantsSection
         skipPonentes
+        skipExternal
+        groupByRole
+        paddingTop="clamp(28px, 4vw, 44px)"
         sectionTitle="Equipo de Investigación"
         sectionSubtitle="Semillero"
       />
       <ParticipantsSection
-        onlyPonentes
+        collaboratorsOnly
+        groupByRole
+        paddingTop="clamp(20px, 3vw, 36px)"
         sectionTitle="Ponentes y Colaboradores Externos"
         sectionSubtitle="Colaboradores"
       />

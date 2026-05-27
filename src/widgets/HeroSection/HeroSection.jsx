@@ -221,20 +221,23 @@ export function HeroSection({ slides: apiSlides = [] }) {
       }} />
 
       {/* ── Layout: 2 columns on desktop, stacked on tablet/mobile ────── */}
-      <div style={{
-        position: 'relative', zIndex: 2,
-        maxWidth: 1240, margin: '0 auto', width: '100%',
-        padding: isMobile
-          ? '44px 20px 80px'
-          : isTablet
-            ? '60px 32px 88px'
-            : 'clamp(68px, 7.5vw, 100px) clamp(32px, 5vw, 56px)',
-        display: 'grid',
-        gridTemplateColumns: isTablet ? '1fr' : '50% 50%',
-        gap: isMobile ? '36px' : isTablet ? '44px' : 'clamp(40px, 4vw, 60px)',
-        alignItems: 'center',
-        boxSizing: 'border-box',
-      }}>
+      <div
+        className="hero-layout"
+        style={{
+          position: 'relative', zIndex: 2,
+          maxWidth: 1200, margin: '0 auto', width: '100%',
+          padding: isMobile
+            ? '44px 20px 80px'
+            : isTablet
+              ? 'clamp(48px, 7vw, 72px) clamp(20px, 4vw, 40px) clamp(56px, 7vw, 80px)'
+              : 'clamp(68px, 7.5vw, 100px) clamp(20px, 5vw, 48px)',
+          display: 'grid',
+          gridTemplateColumns: isTablet ? '1fr' : '50% 50%',
+          gap: isMobile ? '36px' : isTablet ? '44px' : 'clamp(40px, 4vw, 60px)',
+          alignItems: 'center',
+          boxSizing: 'border-box',
+        }}
+      >
 
         {/* ════ LEFT — Text content ════ */}
         <motion.div
@@ -336,6 +339,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.62, duration: 0.50, ease: EASE }}
+              className="hero-ctas"
               style={{
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
@@ -399,6 +403,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.86, duration: 0.50 }}
+              className="hero-stats"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
@@ -460,15 +465,19 @@ export function HeroSection({ slides: apiSlides = [] }) {
           initial={{ opacity: 0, x: isTablet ? 0 : 36, y: isTablet ? 14 : 0, scale: 0.96 }}
           animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
           transition={{ delay: 0.28, duration: 0.88, ease: EASE }}
+          className="hero-visual"
           style={{
             y: imgY,
             order: isTablet ? 0 : 1,
             width: '100%',
-            maxWidth: isTablet ? (isMobile ? '100%' : '600px') : 'none',
-            margin: isTablet ? '0 auto' : '0',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
           }}
         >
-          <FocusCarousel items={carouselItems} autoplay />
+          <div style={{ width: '100%', maxWidth: isMobile ? '100%' : isTablet ? 500 : 'none' }}>
+            <FocusCarousel items={carouselItems} autoplay />
+          </div>
         </motion.div>
 
       </div>

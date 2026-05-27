@@ -202,7 +202,7 @@ export function EventsSection() {
       }}
     >
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }} className="events-section-container">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(20px, 5vw, 48px)', position: 'relative', zIndex: 1 }} className="events-section-container">
 
         {/* Header */}
         <motion.div

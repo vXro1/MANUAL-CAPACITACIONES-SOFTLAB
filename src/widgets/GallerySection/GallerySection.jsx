@@ -242,7 +242,7 @@ export function GallerySection({ photos: propPhotos = null }) {
       >
 
         <div
-          style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
+          style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(20px, 5vw, 48px)', position: 'relative', zIndex: 1 }}
           className="gallery-container"
         >
           {/* ── Section header ── */}

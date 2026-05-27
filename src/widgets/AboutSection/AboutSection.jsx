@@ -242,7 +242,8 @@ export function AboutSection({ showDirectors = false }) {
     <section
       aria-label="Sobre el semillero Softlab"
       style={{
-        padding: 'clamp(64px, 10vw, 104px) 0',
+        paddingTop: 'clamp(48px, 8vw, 80px)',
+        paddingBottom: 'clamp(32px, 5vw, 52px)',
         background: 'linear-gradient(180deg, #F4F7FF 0%, #FAFBFF 50%, #fff 100%)',
         position: 'relative',
         overflow: 'hidden',
@@ -270,12 +271,12 @@ export function AboutSection({ showDirectors = false }) {
       }} />
 
       <div
-        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(16px,4vw,48px)', position: 'relative', zIndex: 1 }}
+        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(20px, 5vw, 48px)', position: 'relative', zIndex: 1 }}
         className="about-container"
       >
         {/* ── Identity grid: text + pillars ── */}
         <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start', marginBottom: 96 }}
+          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'start', marginBottom: 56 }}
           className="about-grid"
         >
           {/* ── Left: description ── */}

@@ -12,19 +12,27 @@ const EASE = [0.22, 1, 0.36, 1];
 
 /* ─── Role config ──────────────────────────────────────────────────────── */
 const ROLE_CONFIG = {
-  Investigador:                { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
-  'Co-Investigador':           { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
-  'Investigador Principal':    { bg: '#E8EDFF', color: '#142F8A', border: '#BCC8F6' },
-  Estudiante:                  { bg: '#F0F5FF', color: '#2D5CC0', border: '#C5D3F6' },
-  Docente:                     { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
-  'Docente Investigador':      { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
-  Ponente:                     { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
-  Conferencista:               { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
-  'Director del Semillero':    { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  // Directivos
+  Coordinador:               { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  Profesor:                  { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  Docente:                   { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
+  'Docente Acompañante':     { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
+  'Docente Investigador':    { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
+  'Director del Semillero':  { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
   'Co-Director del Semillero': { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  // Investigadores (legacy)
+  Investigador:              { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
+  'Co-Investigador':         { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
+  'Investigador Principal':  { bg: '#E8EDFF', color: '#142F8A', border: '#BCC8F6' },
+  // Estudiantes
+  Estudiante:                { bg: '#F0F5FF', color: '#2D5CC0', border: '#C5D3F6' },
+  // Ponentes
+  Ponente:                   { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
+  Conferencista:             { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
+  // Colaboradores
   'Auxiliar de Investigación': { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
-  'Colaborador Externo':       { bg: '#F4F7FF', color: '#4F7BE8', border: '#CCDAF8' },
-  default:                     { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
+  'Colaborador Externo':     { bg: '#F4F7FF', color: '#4F7BE8', border: '#CCDAF8' },
+  default:                   { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
 };
 
 function getRoleStyle(role) {
@@ -45,36 +53,30 @@ function getRoles(participant) {
 /* ─── Grupos de roles con metadatos visuales ─────────────────────────── */
 const ROLE_GROUPS = [
   {
-    key: 'direccion',
-    label: 'Dirección',
-    subtitle: 'Liderazgo del semillero',
+    key: 'directivos',
+    label: 'Equipo Directivo',
+    subtitle: 'Coordinadores, profesores y directores del semillero',
     icon: Star,
     accent: '#0F2F8A',
     accentLight: '#E0E8FF',
-    roles: ['Director del Semillero', 'Co-Director del Semillero'],
+    roles: [
+      'Coordinador', 'Profesor', 'Docente', 'Docente Acompañante',
+      'Docente Investigador', 'Director del Semillero', 'Co-Director del Semillero',
+    ],
   },
   {
     key: 'investigadores',
     label: 'Investigadores',
-    subtitle: 'Equipo de investigación',
+    subtitle: 'Equipo de investigación activo',
     icon: FlaskConical,
     accent: '#1A3FAA',
     accentLight: '#EEF3FF',
     roles: ['Investigador Principal', 'Investigador', 'Co-Investigador'],
   },
   {
-    key: 'docentes',
-    label: 'Docentes',
-    subtitle: 'Cuerpo docente',
-    icon: BookOpen,
-    accent: '#1640AE',
-    accentLight: '#EBF0FF',
-    roles: ['Docente', 'Docente Investigador'],
-  },
-  {
     key: 'estudiantes',
     label: 'Estudiantes',
-    subtitle: 'Semilleros activos',
+    subtitle: 'Semilleros activos del programa',
     icon: GraduationCap,
     accent: '#2D5CC0',
     accentLight: '#F0F5FF',
@@ -100,8 +102,8 @@ const ROLE_GROUPS = [
   },
   {
     key: 'colaboradores',
-    label: 'Colaboradores',
-    subtitle: 'Aliados externos',
+    label: 'Colaboradores Externos',
+    subtitle: 'Aliados y colaboradores del semillero',
     icon: Users,
     accent: '#4F7BE8',
     accentLight: '#F4F7FF',
@@ -140,8 +142,10 @@ function CardAvatar({ name, photo, size = 52 }) {
 
 /* ─── ParticipantCard ────────────────────────────────────────────────── */
 function ParticipantCard({ participant, onClick, index }) {
-  const primaryRole = getRoles(participant)[0];
-  const roleStyle = getRoleStyle(primaryRole);
+  const allRoles    = getRoles(participant);
+  const primaryRole = allRoles[0];
+  const extraRoles  = allRoles.slice(1);
+  const roleStyle   = getRoleStyle(primaryRole);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });
   const isFeatured = Boolean(participant.featured);
@@ -165,6 +169,8 @@ function ParticipantCard({ participant, onClick, index }) {
         padding: '18px 18px 16px',
         textAlign: 'left',
         width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
@@ -220,6 +226,7 @@ function ParticipantCard({ participant, onClick, index }) {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        {/* Rol principal */}
         <span style={{
           padding: '3px 10px', borderRadius: 999,
           fontSize: 10.5, fontWeight: 700,
@@ -230,7 +237,20 @@ function ParticipantCard({ participant, onClick, index }) {
         }}>
           {primaryRole}
         </span>
-        {participant.skills?.slice(0, 2).map((skill) => (
+        {/* Todos los roles adicionales */}
+        {extraRoles.map((role) => (
+          <span key={role} style={{
+            padding: '3px 9px', borderRadius: 999,
+            fontSize: 10, fontWeight: 600,
+            background: '#F1F5F9', color: '#475569',
+            border: '1px solid #E2E8F0',
+            fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
+          }}>
+            {role}
+          </span>
+        ))}
+        {/* Todas las habilidades */}
+        {participant.skills?.map((skill) => (
           <span key={skill} style={{
             padding: '3px 10px', borderRadius: 999,
             fontSize: 10.5, fontWeight: 500,
@@ -241,16 +261,6 @@ function ParticipantCard({ participant, onClick, index }) {
             {skill}
           </span>
         ))}
-        {participant.skills?.length > 2 && (
-          <span style={{
-            padding: '3px 10px', borderRadius: 999,
-            fontSize: 10.5, fontWeight: 500,
-            background: '#F8FAFC', color: '#94A3B8',
-            border: '1px solid #E5E7EB', fontFamily: 'DM Sans, sans-serif',
-          }}>
-            +{participant.skills.length - 2}
-          </span>
-        )}
       </div>
     </motion.button>
   );
@@ -299,7 +309,7 @@ function ParticipantModal({ participant, onClose }) {
           maxWidth: 'min(400px, calc(100vw - 24px))',
           borderRadius: 18, background: '#fff',
           boxShadow: '0 20px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
-          padding: '28px 24px 24px',
+          padding: 'clamp(16px, 5vw, 28px) clamp(14px, 5vw, 24px) clamp(14px, 5vw, 24px)',
         }}
       >
         <button
@@ -383,7 +393,7 @@ function ParticipantModal({ participant, onClose }) {
   );
 }
 
-/* ─── RoleGroupHeader (MEJORADO) ────────────────────────────────────────────────── */
+/* ─── RoleGroupHeader ────────────────────────────────────────────────── */
 function RoleGroupHeader({ group, count, index }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
@@ -396,8 +406,8 @@ function RoleGroupHeader({ group, count, index }) {
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: index * 0.08, ease: EASE }}
       style={{
-        marginBottom: 32,
-        marginTop: index === 0 ? 0 : 72,
+        marginBottom: 16,
+        marginTop: index === 0 ? 0 : 28,
         position: 'relative',
       }}
     >
@@ -419,6 +429,7 @@ function RoleGroupHeader({ group, count, index }) {
         display: 'flex',
         alignItems: 'flex-end',
         gap: 18,
+        flexWrap: 'wrap',
       }}>
         {/* Icono grande y bonito */}
         <motion.div
@@ -436,7 +447,7 @@ function RoleGroupHeader({ group, count, index }) {
           <Icon size={26} color={group.accent} strokeWidth={1.8} />
         </motion.div>
 
-        {/* Textos principales - TÍTULOS BONITOS Y GRANDES */}
+        {/* Textos principales */}
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
           <motion.h2
             initial={{ opacity: 0, x: -10 }}
@@ -444,7 +455,7 @@ function RoleGroupHeader({ group, count, index }) {
             transition={{ duration: 0.5, delay: index * 0.08 + 0.1, ease: EASE }}
             style={{
               fontFamily: 'Syne, sans-serif',
-              fontSize: 'clamp(28px, 3vw, 42px)',
+              fontSize: 'clamp(22px, 3vw, 38px)',
               fontWeight: 800,
               color: '#0A0F1E',
               margin: 0,
@@ -466,7 +477,7 @@ function RoleGroupHeader({ group, count, index }) {
             style={{
               fontSize: 13,
               color: '#64748B',
-              margin: '8px 0 0',
+              margin: '6px 0 0',
               fontFamily: 'DM Sans, sans-serif',
               fontWeight: 500,
               letterSpacing: '0.3px',
@@ -476,7 +487,7 @@ function RoleGroupHeader({ group, count, index }) {
           </motion.p>
         </div>
 
-        {/* Contador con estilo mejorado */}
+        {/* Contador */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={inView ? { opacity: 1, scale: 1 } : {}}
@@ -502,6 +513,7 @@ function RoleGroupHeader({ group, count, index }) {
 }
 
 const PONENTE_ROLES = ['Ponente', 'Conferencista'];
+const EXTERNAL_ROLES = ['Auxiliar de Investigación', 'Colaborador Externo'];
 
 /* ─── ParticipantsSection ────────────────────────────────────────────── */
 export function ParticipantsSection({
@@ -509,9 +521,12 @@ export function ParticipantsSection({
   limit,
   skipPonentes = false,
   onlyPonentes = false,
+  skipExternal = false,
+  collaboratorsOnly = false,
   sectionTitle,
   sectionSubtitle,
-  groupByRole = false,   // ← activa el modo agrupado
+  groupByRole = false,
+  paddingTop,
 }) {
   const [allParticipants, setAllParticipants] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -521,10 +536,9 @@ export function ParticipantsSection({
   useEffect(() => {
     let cancelled = false;
     participantesApi.getAll()
-      .then(data => { 
+      .then(data => {
         if (!cancelled) {
           setAllParticipants(data ?? []);
-          // DEBUG: Ver qué datos llegan
           console.log('Participantes cargados:', data);
           if (data && data.length > 0) {
             console.log('Roles encontrados:', [...new Set(data.flatMap(p => getRoles(p)))]);
@@ -544,9 +558,11 @@ export function ParticipantsSection({
   });
 
   let pool = sorted;
-  if (skipPonentes) pool = pool.filter((p) => !PONENTE_ROLES.includes(p.role));
-  if (onlyPonentes)  pool = pool.filter((p) => PONENTE_ROLES.includes(p.role));
-  if (featuredOnly)  pool = pool.filter((p) => p.featured);
+  if (skipPonentes)      pool = pool.filter((p) => !PONENTE_ROLES.includes(p.role));
+  if (onlyPonentes)      pool = pool.filter((p) => PONENTE_ROLES.includes(p.role));
+  if (skipExternal)      pool = pool.filter((p) => !EXTERNAL_ROLES.includes(p.role));
+  if (collaboratorsOnly) pool = pool.filter((p) => PONENTE_ROLES.includes(p.role) || EXTERNAL_ROLES.includes(p.role));
+  if (featuredOnly)      pool = pool.filter((p) => p.featured);
 
   const participants = limit ? pool.slice(0, limit) : pool;
   const hasMore = limit && pool.length > limit;
@@ -557,17 +573,12 @@ export function ParticipantsSection({
 
   /* ── Modo agrupado por rol ── */
   if (groupByRole && !isCompact) {
-    // Para cada grupo, filtra los participantes cuyo rol principal esté en ese grupo
     const groups = ROLE_GROUPS
       .map((group) => ({
         group,
-        members: participants.filter((p) => {
-          const roles = getRoles(p);
-          // Verifica si alguno de los roles del participante está en el grupo
-          return roles.some(role => group.roles.includes(role));
-        }),
+        members: participants.filter((p) => group.roles.includes(p.role ?? '')),
       }))
-      .filter(({ members }) => members.length > 0); // ← si no hay, no aparece
+      .filter(({ members }) => members.length > 0);
 
     if (groups.length === 0) {
       console.warn('No se encontraron grupos. Participantes totales:', participants.length);
@@ -577,47 +588,61 @@ export function ParticipantsSection({
 
     let globalIndex = 0;
 
+    const sectionPadTop = paddingTop ?? 'clamp(40px, 6vw, 72px)';
+
     return (
       <section
         aria-label="Participantes del semillero"
         style={{
-          padding: 'clamp(56px, 9vw, 96px) 0',
+          paddingTop: sectionPadTop,
+          paddingBottom: 'clamp(40px, 6vw, 72px)',
           background: '#ffffff',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
         <div
-          style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
+          style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+            padding: '0 clamp(20px, 5vw, 48px)',
+            position: 'relative',
+            zIndex: 1,
+            boxSizing: 'border-box',
+            width: '100%',
+          }}
           className="participants-container"
         >
-          {/* Título principal de la sección */}
-          <div ref={titleRef} style={{ marginBottom: 56 }}>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={titleInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5 }}
-              style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: '#1A3FAA',
-                marginBottom: 8, fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              {sectionSubtitle ?? 'Comunidad'}
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, y: 16 }}
-              animate={titleInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-              style={{
-                fontFamily: 'Syne, sans-serif',
-                fontSize: 'clamp(26px, 3.5vw, 42px)',
-                fontWeight: 700, color: '#0A0F1E',
-                letterSpacing: '-1px', margin: 0,
-              }}
-            >
-              {sectionTitle ?? 'Equipo del semillero'}
-            </motion.h2>
+          {/* Título principal */}
+          <div ref={titleRef} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 4, height: 36, borderRadius: 2, background: 'linear-gradient(180deg, #1A3FAA, #3B6FE8)', flexShrink: 0 }} />
+            <div>
+              <motion.p
+                initial={{ opacity: 0, y: 6 }}
+                animate={titleInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.4 }}
+                style={{
+                  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', color: '#1A3FAA',
+                  margin: 0, fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                {sectionSubtitle ?? 'Comunidad'}
+              </motion.p>
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={titleInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.45, delay: 0.06, ease: EASE }}
+                style={{
+                  fontFamily: 'Syne, sans-serif',
+                  fontSize: 'clamp(20px, 2.4vw, 28px)',
+                  fontWeight: 700, color: '#0A0F1E',
+                  letterSpacing: '-0.5px', margin: '2px 0 0',
+                }}
+              >
+                {sectionTitle ?? 'Equipo del semillero'}
+              </motion.h2>
+            </div>
           </div>
 
           {/* Grupos */}
@@ -630,9 +655,9 @@ export function ParticipantsSection({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: 16,
-                    marginBottom: 48,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))',
+                    gap: 14,
+                    marginBottom: 0,
                   }}
                   className="participants-grid"
                 >
@@ -660,21 +685,31 @@ export function ParticipantsSection({
   }
 
   /* ── Modo original (compact / sin groupByRole) ── */
+  const normalPadTop = paddingTop ?? (isCompact ? 'clamp(32px, 5vw, 56px)' : 'clamp(40px, 6vw, 72px)');
   return (
     <section
       aria-label="Investigadores del semillero"
       style={{
-        padding: isCompact ? 'clamp(40px, 6vw, 72px) 0' : 'clamp(56px, 9vw, 96px) 0',
+        paddingTop: normalPadTop,
+        paddingBottom: isCompact ? 'clamp(32px, 5vw, 56px)' : 'clamp(40px, 6vw, 72px)',
         background: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
       <div
-        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
+        style={{
+          maxWidth: 1200,
+          margin: '0 auto',
+          padding: '0 clamp(20px, 5vw, 48px)',
+          position: 'relative',
+          zIndex: 1,
+          boxSizing: 'border-box',
+          width: '100%',
+        }}
         className="participants-container"
       >
-        <div ref={titleRef} style={{ marginBottom: isCompact ? 32 : 48, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div ref={titleRef} style={{ marginBottom: isCompact ? 24 : 36, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -694,7 +729,7 @@ export function ParticipantsSection({
               transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
               style={{
                 fontFamily: 'Syne, sans-serif',
-                fontSize: isCompact ? 'clamp(22px, 2.8vw, 34px)' : 'clamp(26px, 3.5vw, 42px)',
+                fontSize: isCompact ? 'clamp(20px, 2.8vw, 30px)' : 'clamp(22px, 3vw, 38px)',
                 fontWeight: 700, color: '#0A0F1E',
                 letterSpacing: '-1px', margin: 0,
               }}
@@ -719,6 +754,7 @@ export function ParticipantsSection({
                   border: '1.5px solid rgba(26,63,170,0.18)',
                   background: 'rgba(238,243,255,0.5)',
                   transition: 'background 0.18s',
+                  whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#eef3ff'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(238,243,255,0.5)'; }}
@@ -732,7 +768,9 @@ export function ParticipantsSection({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: isCompact ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isCompact
+              ? 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))'
+              : 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))',
             gap: isCompact ? 14 : 16,
           }}
           className={isCompact ? 'participants-grid-compact' : 'participants-grid'}

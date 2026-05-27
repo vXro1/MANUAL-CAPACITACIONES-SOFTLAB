@@ -318,7 +318,7 @@ export function FeaturedSection() {
     >
 
       <div
-        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(16px,4vw,48px)', position: 'relative', zIndex: 1 }}
+        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(20px, 5vw, 48px)', position: 'relative', zIndex: 1 }}
         className="featured-container"
       >
         {/* ── Header ── */}
