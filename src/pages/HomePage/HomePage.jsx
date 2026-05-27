@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { HeroSection }          from '@/widgets/HeroSection/HeroSection';
 import { FeaturedSection }      from '@/widgets/FeaturedSection/FeaturedSection';
@@ -9,14 +8,12 @@ import { ParticipantsSection }  from '@/widgets/ParticipantsSection/Participants
 import { galeriaApi }           from '@/services/apiService';
 
 export function HomePage() {
-  // null = cargando, [] = cargado vacío
   const [heroPhotos, setHeroPhotos] = useState(null);
   const [joinPhotos, setJoinPhotos] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    // Carrusel principal: imágenes configuradas en la sección hero (hasta 5)
     galeriaApi.getSection('hero')
       .then(data => {
         if (!cancelled) {
@@ -29,7 +26,6 @@ export function HomePage() {
       })
       .catch(() => { if (!cancelled) setHeroPhotos([]); });
 
-    // Sección "Por qué unirse": imágenes configuradas en join (hasta 6)
     galeriaApi.getSection('join')
       .then(data => {
         if (!cancelled) {
@@ -49,7 +45,7 @@ export function HomePage() {
     <main id="main-content" style={{ minHeight: '100vh' }}>
       <HeroSection slides={heroPhotos ?? []} />
       <FeaturedSection />
-      <AboutSection />
+      <AboutSection showDirectors={true} />
       <EventsSection />
       <ParticipantsSection
         featuredOnly

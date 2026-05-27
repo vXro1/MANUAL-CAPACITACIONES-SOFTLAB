@@ -112,14 +112,12 @@ function DirectorCard({ person, index }) {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
         borderBottom: `1px solid ${borderColor}`,
       }}>
-        {/* Decorative accent line at top */}
         <div style={{
           position: 'absolute', top: 0, left: '20%', right: '20%', height: 3,
           background: `linear-gradient(90deg, transparent, ${person.accent || '#1A3FAA'}, transparent)`,
           borderRadius: '0 0 4px 4px',
         }} />
 
-        {/* Badge */}
         {person.badge && (
           <div style={{
             position: 'absolute', top: 18, right: 18,
@@ -137,7 +135,6 @@ function DirectorCard({ person, index }) {
           </div>
         )}
 
-        {/* Avatar */}
         <div style={{
           width: 76, height: 76, borderRadius: '50%',
           background: `linear-gradient(135deg, ${person.accent || '#1A3FAA'}, ${person.accent || '#1A3FAA'}bb)`,
@@ -214,17 +211,20 @@ export function AboutSection({ showDirectors = false }) {
   useEffect(() => {
     if (!showDirectors) { setLoadingDirectors(false); return; }
     let cancelled = false;
+
     (async () => {
       try {
-        const data = await directivosApi.getAll();
+        const data = await directivosApi.getFeatured();
         if (!cancelled) {
           setFeaturedDirectors(data.length > 0 ? data : DEFAULT_DIRECTORS);
         }
       } catch {
+        // Fallback: caché local filtrado por featured=true
         try {
           const cached = JSON.parse(localStorage.getItem('softlab_directors') ?? '[]');
+          const onlyFeatured = cached.filter((d) => d.featured);
           if (!cancelled) {
-            setFeaturedDirectors(cached.length > 0 ? cached : DEFAULT_DIRECTORS);
+            setFeaturedDirectors(onlyFeatured.length > 0 ? onlyFeatured : DEFAULT_DIRECTORS);
           }
         } catch {
           if (!cancelled) setFeaturedDirectors(DEFAULT_DIRECTORS);
@@ -233,6 +233,7 @@ export function AboutSection({ showDirectors = false }) {
         if (!cancelled) setLoadingDirectors(false);
       }
     })();
+
     return () => { cancelled = true; };
   }, [showDirectors]);
 
@@ -249,7 +250,6 @@ export function AboutSection({ showDirectors = false }) {
         overflow: 'hidden',
       }}
     >
-      {/* ── Decorative ambient glows ── */}
       <div aria-hidden="true" style={{
         position: 'absolute', top: '-5%', right: '-8%',
         width: 600, height: 600, borderRadius: '50%',
@@ -262,7 +262,6 @@ export function AboutSection({ showDirectors = false }) {
         background: 'radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
-      {/* Subtle grid pattern */}
       <div aria-hidden="true" style={{
         position: 'absolute', inset: 0,
         backgroundImage: 'radial-gradient(circle, rgba(26,63,170,0.045) 1px, transparent 1px)',
@@ -281,8 +280,6 @@ export function AboutSection({ showDirectors = false }) {
         >
           {/* ── Left: description ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-            {/* Label */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -296,7 +293,6 @@ export function AboutSection({ showDirectors = false }) {
               Sobre nosotros
             </motion.p>
 
-            {/* Heading */}
             <motion.h2
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -323,7 +319,6 @@ export function AboutSection({ showDirectors = false }) {
               </span>
             </motion.h2>
 
-            {/* Body text */}
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -346,7 +341,6 @@ export function AboutSection({ showDirectors = false }) {
               Cada sesión se documenta en un manual técnico accesible para toda la comunidad.
             </motion.p>
 
-            {/* Institution badge — replaces broken logo images */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -364,7 +358,6 @@ export function AboutSection({ showDirectors = false }) {
                 marginBottom: 32,
               }}
             >
-              {/* Icon mark */}
               <div style={{
                 width: 46, height: 46, borderRadius: 13, flexShrink: 0,
                 background: 'linear-gradient(135deg, #1A3FAA, #2563EB)',
@@ -387,7 +380,6 @@ export function AboutSection({ showDirectors = false }) {
                   Facultad de Ingeniería · Semillero Softlab
                 </p>
               </div>
-              {/* Active indicator */}
               <div style={{
                 marginLeft: 'auto', flexShrink: 0,
                 display: 'flex', alignItems: 'center', gap: 5,
@@ -407,7 +399,6 @@ export function AboutSection({ showDirectors = false }) {
               </div>
             </motion.div>
 
-            {/* CTA */}
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -484,7 +475,6 @@ export function AboutSection({ showDirectors = false }) {
                     e.currentTarget.style.transform = 'none';
                   }}
                 >
-                  {/* Icon */}
                   <div style={{
                     width: 46, height: 46, borderRadius: 13,
                     background: pillar.iconBg,
@@ -495,7 +485,6 @@ export function AboutSection({ showDirectors = false }) {
                     <Icon size={20} color={pillar.accent} aria-hidden="true" />
                   </div>
 
-                  {/* Text */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
                       <h3 style={{
@@ -574,7 +563,7 @@ export function AboutSection({ showDirectors = false }) {
           </div>
         </div>
 
-        {/* ── Equipo Directivo (solo en páginas internas) ── */}
+        {/* ── Equipo Directivo ── */}
         {showDirectors && (
           <div style={{ position: 'relative' }}>
             <div style={{
@@ -636,8 +625,6 @@ export function AboutSection({ showDirectors = false }) {
                 ))}
               </div>
             )}
-
-            {/* Botón solo visible cuando no estamos en /nosotros (showDirectors=false) */}
           </div>
         )}
       </div>

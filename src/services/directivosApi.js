@@ -41,6 +41,7 @@ async function request(url, options = {}) {
 }
 
 export const directivosApi = {
+  /** Trae TODOS los directivos (usado en el panel de admin) */
   getAll() {
     return request(ENDPOINT);
   },
@@ -53,8 +54,6 @@ export const directivosApi = {
     return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`);
   },
 
-  /** Campos que acepta: name, role, profession, faculty, description,
-   *  highlights, chips[], docs[], photo, accent, bg, border, badge, featured */
   create(data) {
     return request(ENDPOINT, {
       method: 'POST',
@@ -75,6 +74,7 @@ export const directivosApi = {
     });
   },
 
+ 
   toggleFeatured(id, currentFeatured) {
     return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -94,6 +94,7 @@ export function getFromLS() {
   }
 }
 
+/** Sincroniza todos los directivos en caché local (para el admin) */
 export async function syncDirectivos() {
   try {
     const data = await directivosApi.getAll();
@@ -109,6 +110,7 @@ export async function syncDirectivosFeatured() {
   try {
     return await directivosApi.getFeatured();
   } catch {
+    // Fallback: filtra del caché local solo los marcados como featured
     return getFromLS().filter((d) => d.featured);
   }
 }
