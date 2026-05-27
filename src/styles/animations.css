@@ -144,6 +144,58 @@
   box-shadow: var(--shadow-brand-lg);
 }
 
+/* Pulse dot (indicator azul activo) */
+@keyframes sl-pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+/* Pulse ring (expanding ring animation) */
+@keyframes sl-pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Shimmer move (for gradient text) */
+@keyframes sl-shimmer-move {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Gradient border rotation */
+@keyframes sl-rotate {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Reveal beam sweep */
+@keyframes sl-beam {
+  0%   { left: -30%; opacity: 0; }
+  15%  { opacity: 0.6; }
+  85%  { opacity: 0.6; }
+  100% { left: 130%; opacity: 0; }
+}
+
+/* ── Animation utility classes ── */
+
+.sl-animate-pulse-dot {
+  animation: sl-pulse-dot 2s ease-out infinite;
+}
+
+.sl-animate-pulse-ring {
+  animation: sl-pulse-ring 1.8s ease-out infinite;
+}
+
+.sl-animate-shimmer-text {
+  background: linear-gradient(90deg, #1A3FAA 0%, #4F7BE8 25%, #93C5FD 50%, #4F7BE8 75%, #1A3FAA 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sl-shimmer-move 5s linear infinite;
+}
+
 /* Reduce motion — respeta preferencias del usuario */
 @media (prefers-reduced-motion: reduce) {
   *,

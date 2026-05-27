@@ -22,6 +22,20 @@ require_once __DIR__ . '/config.php';
 
 global $ALLOWED_IMG;
 
+// ─────────────────────────────────────────────────────────────
+// MIGRACIÓN — columnas opcionales
+// ─────────────────────────────────────────────────────────────
+
+function ensure_columns() {
+    try {
+        $existing = array_column(db()->query("SHOW COLUMNS FROM participantes")->fetchAll(), 'Field');
+        if (!in_array('featured', $existing)) {
+            db()->exec("ALTER TABLE participantes ADD COLUMN featured TINYINT(1) NOT NULL DEFAULT 0");
+        }
+    } catch (Throwable $e) {}
+}
+ensure_columns();
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 // PHP no parsea $_POST/$_FILES en PUT multipart; soporte _method override
@@ -54,6 +68,7 @@ function parseParticipante($row, $includeActividades = false) {
     $row['role']        = $row['rol'];
     $row['career']      = $row['carrera'];
     $row['skills']      = $row['habilidades'];
+    $row['featured']    = (bool)($row['featured'] ?? false);
 
     // Historial de actividades (solo se carga en peticiones individuales o cuando se solicita)
     if ($includeActividades) {
@@ -136,9 +151,11 @@ if ($method === 'GET') {
     }
 
     // Obtener todos (sin actividades para mejor rendimiento)
-    $rows = db()
-        ->query('SELECT * FROM participantes ORDER BY nombre ASC')
-        ->fetchAll();
+    $soloDestacados = isset($_GET['featured']);
+    $sql = $soloDestacados
+        ? 'SELECT * FROM participantes WHERE featured = 1 ORDER BY nombre ASC'
+        : 'SELECT * FROM participantes ORDER BY nombre ASC';
+    $rows = db()->query($sql)->fetchAll();
 
     ok(array_map(function($r) { return parseParticipante($r, false); }, $rows));
 }
@@ -259,6 +276,13 @@ if ($method === 'PUT') {
     $data = isset($_POST['data'])
         ? (json_decode($_POST['data'], true) ?? [])
         : bodyJson();
+
+    // Toggle destacado (petición JSON simple, sin FormData)
+    if (!empty($data['toggle_featured'])) {
+        db()->prepare('UPDATE participantes SET featured = 1 - featured WHERE id = ?')->execute([$id]);
+        $row = db()->query("SELECT * FROM participantes WHERE id = {$id}")->fetch();
+        ok(parseParticipante($row, false));
+    }
 
     $fotoUrl = uploadFile(
         'foto',

@@ -6,15 +6,15 @@ import { manualesApi } from '@/services/apiService';
 import { formatDate } from '@/shared/lib/formatDate';
 
 const PALETTE = {
-  'Realidad Virtual':        { accent: '#638CFF', glow: 'rgba(99,140,255,0.35)', light: '#93C5FD' },
-  'DevOps':                  { accent: '#FB923C', glow: 'rgba(251,146,60,0.35)',  light: '#FED7AA' },
-  'Control de Versiones':    { accent: '#34D399', glow: 'rgba(52,211,153,0.35)',  light: '#A7F3D0' },
-  'Desarrollo Frontend':     { accent: '#C084FC', glow: 'rgba(192,132,252,0.35)', light: '#E9D5FF' },
-  'Desarrollo Backend':      { accent: '#F87171', glow: 'rgba(248,113,113,0.35)', light: '#FECACA' },
-  'Bases de Datos':          { accent: '#38BDF8', glow: 'rgba(56,189,248,0.35)',  light: '#BAE6FD' },
-  'Gestión de Proyectos':    { accent: '#FBBF24', glow: 'rgba(251,191,36,0.35)',  light: '#FDE68A' },
-  'Seguridad':               { accent: '#94A3B8', glow: 'rgba(148,163,184,0.35)', light: '#CBD5E1' },
-  'Inteligencia Artificial': { accent: '#6EE7B7', glow: 'rgba(110,231,183,0.35)', light: '#A7F3D0' },
+  'Realidad Virtual':        { accent: '#638CFF', glow: 'rgba(99,140,255,0.35)',  light: '#BFDBFE' },
+  'DevOps':                  { accent: '#4F7BE8', glow: 'rgba(79,123,232,0.35)',  light: '#C7D7F8' },
+  'Control de Versiones':    { accent: '#60A5FA', glow: 'rgba(96,165,250,0.35)',  light: '#DBEAFE' },
+  'Desarrollo Frontend':     { accent: '#3B82F6', glow: 'rgba(59,130,246,0.35)',  light: '#BFDBFE' },
+  'Desarrollo Backend':      { accent: '#93C5FD', glow: 'rgba(147,197,253,0.35)', light: '#EFF6FF' },
+  'Bases de Datos':          { accent: '#2563EB', glow: 'rgba(37,99,235,0.35)',   light: '#BFDBFE' },
+  'Gestión de Proyectos':    { accent: '#4F7BE8', glow: 'rgba(79,123,232,0.35)',  light: '#C7D7F8' },
+  'Seguridad':               { accent: '#8BADF4', glow: 'rgba(139,173,244,0.35)', light: '#DBEAFE' },
+  'Inteligencia Artificial': { accent: '#60A5FA', glow: 'rgba(96,165,250,0.35)',  light: '#DBEAFE' },
   default:                   { accent: '#93C5FD', glow: 'rgba(147,197,253,0.35)', light: '#BFDBFE' },
 };
 
@@ -130,11 +130,11 @@ function CarouselSlide({ manual, palette }) {
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 padding: '4px 10px', borderRadius: 999,
                 fontSize: 10, fontWeight: 700,
-                background: 'rgba(251,191,36,0.12)',
-                color: '#FCD34D', border: '1px solid rgba(251,191,36,0.25)',
+                background: 'rgba(99,140,255,0.15)',
+                color: '#93C5FD', border: '1px solid rgba(99,140,255,0.30)',
                 fontFamily: 'DM Sans, sans-serif',
               }}>
-                <Star size={9} fill="#FCD34D" color="#FCD34D" aria-hidden="true" />
+                <Star size={9} fill="#93C5FD" color="#93C5FD" aria-hidden="true" />
                 Destacado
               </span>
             )}
@@ -311,24 +311,11 @@ export function FeaturedSection() {
       aria-label="Manuales recientes"
       style={{
         padding: 'clamp(56px, 8vw, 88px) 0',
-        background: 'linear-gradient(180deg, #0B0F1A 0%, #080D1A 100%)',
+        background: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Atmospheric glow */}
-      <div aria-hidden="true" style={{
-        position: 'absolute', top: '-10%', left: '-5%',
-        width: 600, height: 600, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(26,63,170,0.12) 0%, transparent 65%)',
-        pointerEvents: 'none',
-      }} />
-      <div aria-hidden="true" style={{
-        position: 'absolute', bottom: '-15%', right: '-5%',
-        width: 500, height: 500, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(79,123,232,0.08) 0%, transparent 65%)',
-        pointerEvents: 'none',
-      }} />
 
       <div
         style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(16px,4vw,48px)', position: 'relative', zIndex: 1 }}
@@ -347,7 +334,7 @@ export function FeaturedSection() {
               viewport={{ once: true }}
               style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: '#93C5FD',
+                textTransform: 'uppercase', color: '#1A3FAA',
                 marginBottom: 8, fontFamily: 'DM Sans, sans-serif',
               }}
             >
@@ -362,7 +349,7 @@ export function FeaturedSection() {
                 fontFamily: 'Syne, sans-serif',
                 fontSize: 'clamp(22px, 3vw, 36px)',
                 fontWeight: 800, letterSpacing: '-0.6px', lineHeight: 1.12,
-                color: '#fff', margin: 0,
+                color: '#0A0F1E', margin: 0,
               }}
             >
               Manuales recientes
@@ -380,22 +367,21 @@ export function FeaturedSection() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '10px 20px',
-                background: 'rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                color: '#93C5FD',
-                border: '1px solid rgba(147,197,253,0.2)',
+                background: 'rgba(238,243,255,0.80)',
+                color: '#1A3FAA',
+                border: '1.5px solid rgba(26,63,170,0.15)',
                 borderRadius: 12, fontSize: 13, fontWeight: 600,
                 textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
                 transition: 'background 0.2s, border-color 0.2s',
                 whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(147,197,253,0.1)';
-                e.currentTarget.style.borderColor = 'rgba(147,197,253,0.35)';
+                e.currentTarget.style.background = '#EEF3FF';
+                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.28)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(147,197,253,0.2)';
+                e.currentTarget.style.background = 'rgba(238,243,255,0.80)';
+                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.15)';
               }}
             >
               Ver todos <ArrowRight size={14} aria-hidden="true" />

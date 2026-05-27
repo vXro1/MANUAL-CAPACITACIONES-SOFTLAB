@@ -4,33 +4,23 @@ import {
   motion,
   useScroll,
   useTransform,
-  AnimatePresence,
   useMotionValue,
   useSpring,
 } from 'framer-motion';
-import { ArrowRight, Users, FileText, Star, MapPin } from 'lucide-react';
-import { manualesApi } from '@/services/apiService';
+import { ArrowRight, Users, FileText, Calendar, MapPin } from 'lucide-react';
+import { manualesApi, participantesApi, eventosApi } from '@/services/apiService';
 
-const foto1 = new URL('/src/assets/foto1semillero.png', import.meta.url).href;
-const foto2 = new URL('/src/assets/foto2semillero.png', import.meta.url).href;
-const foto3 = new URL('/src/assets/foto3semillero.png', import.meta.url).href;
-const foto4 = new URL('/src/assets/foto4semillero.JPG', import.meta.url).href;
-const foto5 = new URL('/src/assets/foto5semillero.JPG', import.meta.url).href;
-
-const SLIDES = [foto1, foto2, foto3, foto4, foto5];
 const EASE = [0.22, 1, 0.36, 1];
 
-// Glass orb config — each has gradient colors, border, glow, and parallax speed
 const ORBS = [
-  { id: 1, size: 520, left: '68%', top: '-8%',  c1: 'rgba(139,172,255,0.22)', c2: 'rgba(79,123,232,0.12)', border: 'rgba(147,197,253,0.20)', glow: '0 0 90px rgba(99,140,255,0.10)', mx: 22, my: 18, dur: 9,  delay: 0 },
-  { id: 2, size: 340, left: '91%', top: '52%',  c1: 'rgba(99,140,255,0.18)',  c2: 'rgba(26,63,170,0.09)',  border: 'rgba(99,140,255,0.16)',  glow: '0 0 65px rgba(26,63,170,0.10)',  mx: 28, my: 24, dur: 11, delay: 1.2 },
-  { id: 3, size: 265, left: '7%',  top: '74%',  c1: 'rgba(147,197,253,0.20)', c2: 'rgba(99,140,255,0.10)',  border: 'rgba(147,197,253,0.18)', glow: '0 0 55px rgba(99,140,255,0.08)',  mx: 16, my: 22, dur: 13, delay: 2.4 },
-  { id: 4, size: 190, left: '1%',  top: '12%',  c1: 'rgba(99,140,255,0.16)',  c2: 'rgba(26,63,170,0.08)',  border: 'rgba(99,140,255,0.14)',  glow: '0 0 45px rgba(26,63,170,0.08)',  mx: 12, my: 15, dur: 8,  delay: 0.8 },
-  { id: 5, size: 155, left: '54%', top: '91%',  c1: 'rgba(147,197,253,0.22)', c2: 'rgba(99,140,255,0.12)',  border: 'rgba(147,197,253,0.20)', glow: '0 0 35px rgba(99,140,255,0.09)',  mx: 30, my: 20, dur: 7,  delay: 1.8 },
-  { id: 6, size: 230, left: '42%', top: '-12%', c1: 'rgba(199,215,248,0.32)', c2: 'rgba(147,197,253,0.16)', border: 'rgba(199,215,248,0.28)', glow: '0 0 55px rgba(99,140,255,0.06)',  mx: 20, my: 14, dur: 10, delay: 3.0 },
+  { id: 1, size: 400, left: '74%', top: '-10%', c1: 'rgba(147,197,253,0.22)', c2: 'rgba(99,140,255,0.07)',  border: 'rgba(147,197,253,0.20)', glow: '0 0 80px rgba(99,140,255,0.05)',  mx: 24, my: 20, dur: 10, delay: 0 },
+  { id: 2, size: 220, left: '92%', top: '56%',  c1: 'rgba(199,215,248,0.26)', c2: 'rgba(147,197,253,0.09)', border: 'rgba(199,215,248,0.22)', glow: '0 0 50px rgba(99,140,255,0.04)',  mx: 28, my: 22, dur: 12, delay: 1.4 },
+  { id: 3, size: 200, left: '4%',  top: '72%',  c1: 'rgba(147,197,253,0.20)', c2: 'rgba(99,140,255,0.07)',  border: 'rgba(147,197,253,0.16)', glow: '0 0 40px rgba(99,140,255,0.04)',  mx: 16, my: 20, dur: 14, delay: 2.2 },
+  { id: 4, size: 140, left: '-1%', top: '14%',  c1: 'rgba(199,215,248,0.22)', c2: 'rgba(147,197,253,0.07)', border: 'rgba(199,215,248,0.18)', glow: '0 0 30px rgba(99,140,255,0.03)',  mx: 10, my: 14, dur: 9,  delay: 0.6 },
+  { id: 5, size: 180, left: '44%', top: '-14%', c1: 'rgba(235,243,255,0.32)', c2: 'rgba(199,215,248,0.12)', border: 'rgba(235,243,255,0.28)', glow: '0 0 30px rgba(99,140,255,0.03)',  mx: 18, my: 12, dur: 11, delay: 2.8 },
 ];
 
-// Glass sphere — realistic translucent orb with shine highlight
+/* ─── Glass Orb ─────────────────────────────────────────────────────────── */
 function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx, my, dur, delay }) {
   const x = useTransform(springX, [-0.5, 0.5], [-mx, mx]);
   const y = useTransform(springY, [-0.5, 0.5], [-my, my]);
@@ -38,488 +28,346 @@ function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx,
   return (
     <motion.div
       aria-hidden="true"
-      animate={{ y: [0, -16, 0], scale: [1, 1.032, 1] }}
+      animate={{ y: [0, -14, 0], scale: [1, 1.025, 1] }}
       transition={{
         y:     { duration: dur,       delay, repeat: Infinity, ease: 'easeInOut' },
-        scale: { duration: dur * 1.2, delay: delay + 0.5, repeat: Infinity, ease: 'easeInOut' },
+        scale: { duration: dur * 1.2, delay: delay + 0.4, repeat: Infinity, ease: 'easeInOut' },
       }}
       style={{
-        position: 'absolute',
-        left, top,
-        width: size, height: size,
-        borderRadius: '50%',
+        position: 'absolute', left, top,
+        width: size, height: size, borderRadius: '50%',
         background: `radial-gradient(circle at 35% 30%, ${c1} 0%, ${c2} 50%, transparent 82%)`,
         border: `1px solid ${border}`,
-        boxShadow: `${glow}, inset 0 0 ${Math.round(size * 0.25)}px rgba(255,255,255,0.10)`,
-        backdropFilter: 'blur(1.5px)',
+        boxShadow: `${glow}, inset 0 0 ${Math.round(size * 0.22)}px rgba(255,255,255,0.60)`,
+        backdropFilter: 'blur(1px)',
         pointerEvents: 'none',
-        marginLeft: -size / 2,
-        marginTop: -size / 2,
-        x, y,
-        willChange: 'transform',
+        marginLeft: -size / 2, marginTop: -size / 2,
+        x, y, willChange: 'transform',
       }}
     >
-      {/* Primary shine highlight */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '11%', left: '17%',
-          width: '38%', height: '24%',
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(255,255,255,0.62) 0%, transparent 80%)',
-          transform: 'rotate(-22deg)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Secondary rim light — opposite side */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '14%', right: '12%',
-          width: '22%', height: '14%',
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(255,255,255,0.18) 0%, transparent 80%)',
-          pointerEvents: 'none',
-        }}
-      />
+      <div style={{
+        position: 'absolute', top: '10%', left: '16%',
+        width: '36%', height: '22%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgba(255,255,255,0.72) 0%, transparent 80%)',
+        transform: 'rotate(-22deg)',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '14%', right: '12%',
+        width: '20%', height: '12%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgba(255,255,255,0.28) 0%, transparent 80%)',
+      }} />
     </motion.div>
   );
 }
 
-// ─── Animated counter ─────────────────────────────────────────
+/* ─── Counter ────────────────────────────────────────────────────────────── */
 function Counter({ end, suffix = '+', delay = 0 }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const started = useRef(false);
+  const [count, setCount]  = useState(0);
+  const ref                = useRef(null);
+  const rafRef             = useRef(null);
+  const startedAt          = useRef(null);
+
+  const runAnimation = useCallback((target) => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    startedAt.current = null;
+    const tick = (ts) => {
+      if (!startedAt.current) startedAt.current = ts;
+      const p = Math.min((ts - startedAt.current) / 1300, 1);
+      setCount(Math.round((1 - Math.pow(1 - p, 3)) * target));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          let start = null;
-          const tick = (ts) => {
-            if (!start) start = ts;
-            const p = Math.min((ts - start) / 900, 1);
-            setCount(Math.round((1 - Math.pow(1 - p, 3)) * end));
-            if (p < 1) requestAnimationFrame(tick);
-          };
-          setTimeout(() => requestAnimationFrame(tick), delay);
-        }
-      },
-      { threshold: 0.3 }
-    );
+    if (!end) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setTimeout(() => runAnimation(end), delay);
+    }, { threshold: 0.3 });
     if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end, delay]);
+    return () => { observer.disconnect(); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [end, delay, runAnimation]);
 
-  return (
-    <span ref={ref} style={{ fontVariantNumeric: 'tabular-nums' }}>
-      {count}{suffix}
-    </span>
-  );
+  return <span ref={ref} style={{ fontVariantNumeric: 'tabular-nums' }}>{count}{suffix}</span>;
 }
 
-// ─── Glass-framed image carousel ─────────────────────────────
-function ImageCarousel({ slides }) {
-  const [current, setCurrent] = useState(0);
-  const [direction, setDirection] = useState(1);
-
-  // Reset to first slide when slides change (e.g. after API loads)
-  useEffect(() => { setCurrent(0); }, [slides]);
-
-  const go = useCallback((idx) => {
-    setDirection(idx > current ? 1 : -1);
-    setCurrent(idx);
-  }, [current]);
-
+/* ─── Responsive hook ────────────────────────────────────────────────────── */
+function useBreakpoint(px) {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= px : false
+  );
   useEffect(() => {
-    if (slides.length <= 1) return;
-    const id = setInterval(() => {
-      setCurrent((c) => { setDirection(1); return (c + 1) % slides.length; });
-    }, 4500);
-    return () => clearInterval(id);
-  }, [slides.length]);
-
-  return (
-    <div
-      style={{
-        position: 'relative',
-        background: 'rgba(255,255,255,0.45)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: 28,
-        padding: 10,
-        border: '1px solid rgba(255,255,255,0.72)',
-        boxShadow: '0 24px 80px rgba(26,63,170,0.13), 0 0 0 1px rgba(147,197,253,0.14)',
-      }}
-    >
-      {/* Image viewport */}
-      <div
-        style={{
-          borderRadius: 20,
-          overflow: 'hidden',
-          aspectRatio: '4/3',
-          position: 'relative',
-          background: '#e8edf5',
-        }}
-      >
-        <AnimatePresence initial={false} custom={direction}>
-          <motion.img
-            key={current}
-            src={slides[current]?.src ?? slides[current]}
-            alt={slides[current]?.alt ?? `Semillero Softlab foto ${current + 1}`}
-            custom={direction}
-            variants={{
-              enter: (d) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
-              center: { x: 0, opacity: 1 },
-              exit:  (d) => ({ x: d > 0 ? '-100%' : '100%', opacity: 0 }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.55, ease: EASE }}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-            draggable={false}
-          />
-        </AnimatePresence>
-
-        {/* Bottom fade */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.26), transparent)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Dot indicators */}
-        <div
-          style={{
-            position: 'absolute', bottom: 13, left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex', gap: 6, zIndex: 10,
-          }}
-        >
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => go(i)}
-              aria-label={`Ver foto ${i + 1}`}
-              aria-current={i === current ? 'true' : undefined}
-              style={{
-                height: 4,
-                width: i === current ? 22 : 4,
-                borderRadius: 999,
-                border: 'none',
-                background: i === current ? '#fff' : 'rgba(255,255,255,0.42)',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'all 0.3s',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Outer glow ring */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: -2, left: -2, right: -2, bottom: -2,
-          borderRadius: 30,
-          background: 'linear-gradient(140deg, rgba(147,197,253,0.28) 0%, rgba(99,140,255,0.12) 40%, transparent 60%)',
-          pointerEvents: 'none',
-          zIndex: -1,
-        }}
-      />
-    </div>
-  );
+    const mq      = window.matchMedia(`(max-width: ${px}px)`);
+    const handler = (e) => setMatches(e.matches);
+    setMatches(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [px]);
+  return matches;
 }
 
-// ─── HeroSection ─────────────────────────────────────────────
-export function HeroSection({ slides: apiSlides = [] }) {
-  // Fall back to local assets until API images load
-  const slides = apiSlides.length > 0 ? apiSlides : SLIDES.map(src => ({ src, alt: 'Semillero Softlab' }));
-  const sectionRef = useRef(null);
+/* ─── HeroSection ─────────────────────────────────────────────────────────── */
+export function HeroSection() {
+  const isMobile = useBreakpoint(640);
+  const isTablet = useBreakpoint(960);
 
+  const sectionRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
-  const imgY     = useTransform(scrollYProgress, [0, 1], ['0px', '-55px']);
-  const contentY = useTransform(scrollYProgress, [0, 1], ['0px', '-25px']);
+  const contentY = useTransform(scrollYProgress, [0, 1], ['0px', '-28px']);
 
   const mouseXMv = useMotionValue(0);
   const mouseYMv = useMotionValue(0);
-  const springX = useSpring(mouseXMv, { stiffness: 30, damping: 26, mass: 1 });
-  const springY = useSpring(mouseYMv, { stiffness: 30, damping: 26, mass: 1 });
+  const springX  = useSpring(mouseXMv, { stiffness: 28, damping: 25, mass: 1 });
+  const springY  = useSpring(mouseYMv, { stiffness: 28, damping: 25, mass: 1 });
 
   const handleMouseMove = useCallback((e) => {
     const rect = sectionRef.current?.getBoundingClientRect();
     if (!rect) return;
-    mouseXMv.set((e.clientX - rect.left) / rect.width - 0.5);
-    mouseYMv.set((e.clientY - rect.top) / rect.height - 0.5);
+    mouseXMv.set((e.clientX - rect.left)  / rect.width  - 0.5);
+    mouseYMv.set((e.clientY - rect.top)   / rect.height - 0.5);
   }, [mouseXMv, mouseYMv]);
 
-  const [totalManuals, setTotalManuals] = useState(0);
+  const [totalManuals,       setTotalManuals]       = useState(null);
+  const [totalParticipantes, setTotalParticipantes] = useState(null);
+  const [totalEventos,       setTotalEventos]       = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     manualesApi.getAll()
-      .then(data => { if (!cancelled) setTotalManuals((data ?? []).length); })
-      .catch(() => {});
+      .then(d => { if (!cancelled) setTotalManuals((d ?? []).length); })
+      .catch(() => { if (!cancelled) setTotalManuals(0); });
+    participantesApi.getAll()
+      .then(d => { if (!cancelled) setTotalParticipantes((d ?? []).length); })
+      .catch(() => { if (!cancelled) setTotalParticipantes(0); });
+    eventosApi.getAll()
+      .then(d => { if (!cancelled) setTotalEventos((d ?? []).length); })
+      .catch(() => { if (!cancelled) setTotalEventos(0); });
     return () => { cancelled = true; };
   }, []);
 
   const stats = [
-    { icon: FileText, label: 'Manuales',       value: totalManuals || 2 },
-    { icon: Users,    label: 'Investigadores', value: 6 },
-    { icon: Star,     label: 'Capacitaciones', value: 6 },
+    { icon: FileText, label: 'Manuales',             value: totalManuals       ?? 2, color: '#2563EB', bg: 'rgba(37,99,235,0.08)'  },
+    { icon: Users,    label: 'Participantes activos', value: totalParticipantes ?? 8, color: '#1A3FAA', bg: 'rgba(26,63,170,0.08)'  },
+    { icon: Calendar, label: 'Eventos',               value: totalEventos       ?? 4, color: '#4F7BE8', bg: 'rgba(79,123,232,0.08)' },
   ];
 
   return (
     <section
       ref={sectionRef}
-      id="main-content"
       aria-label="Biblioteca digital de capacitaciones Softlab"
       onMouseMove={handleMouseMove}
       style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        background: 'linear-gradient(155deg, #EBF0FF 0%, #F3F7FF 28%, #F8FAFF 62%, #FFFFFF 100%)',
+        background: '#ffffff',
         paddingTop: 64,
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* ── Atmospheric ambient glows ── */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: '-25%', right: '-15%',
-          width: 'min(80vw, 860px)',
-          height: 'min(80vw, 860px)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,140,255,0.09) 0%, rgba(26,63,170,0.04) 45%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: '-20%', left: '-10%',
-          width: 'min(60vw, 660px)',
-          height: 'min(60vw, 660px)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(147,197,253,0.07) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Grid tecnológico sutil */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: `
+          linear-gradient(rgba(99,140,255,0.022) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(99,140,255,0.022) 1px, transparent 1px)
+        `,
+        backgroundSize: '64px 64px',
+      }} />
 
-      {/* ── Glass orbs ── */}
-      {ORBS.map((orb) => (
+      {/* Glows atmosféricos */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: '-20%', right: '-12%',
+        width: 'min(78vw, 840px)', height: 'min(78vw, 840px)', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(147,197,253,0.20) 0%, rgba(99,140,255,0.05) 42%, transparent 68%)',
+        pointerEvents: 'none',
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'absolute', bottom: '-18%', left: '-8%',
+        width: 'min(58vw, 640px)', height: 'min(58vw, 640px)', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(199,215,248,0.16) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Glass orbs */}
+      {ORBS.map(orb => (
         <GlassOrb key={orb.id} {...orb} springX={springX} springY={springY} />
       ))}
 
-      {/* ── Bottom fade-out ── */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: 0, left: 0, right: 0,
-          height: 190,
-          background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.94))',
-          pointerEvents: 'none',
-          zIndex: 1,
-        }}
-      />
+      {/* Fade inferior */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 180, zIndex: 1,
+        background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.95))',
+        pointerEvents: 'none',
+      }} />
 
-      {/* ── Content grid ── */}
+      {/* ── Layout principal ── */}
       <div
-        className="hero-grid"
         style={{
           position: 'relative',
           zIndex: 2,
-          maxWidth: 1200,
+          maxWidth: 720,
           margin: '0 auto',
-          padding: '64px 48px',
           width: '100%',
+          padding: isMobile
+            ? '44px 20px 80px'
+            : isTablet
+              ? '60px 32px 88px'
+              : 'clamp(68px, 7.5vw, 100px) clamp(32px, 5vw, 56px)',
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 64,
-          alignItems: 'center',
+          gridTemplateColumns: '1fr',
+          boxSizing: 'border-box',
         }}
       >
-        {/* Left column */}
         <motion.div style={{ y: contentY }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.2vw, 26px)' }}>
 
-            {/* Institutional pill */}
+            {/* Pill institucional */}
             <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.94 }}
+              initial={{ opacity: 0, y: 14, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.72, ease: EASE }}
+              transition={{ delay: 0.06, duration: 0.68, ease: EASE }}
             >
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 16px 6px 8px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(26,63,170,0.14)',
-                  background: 'rgba(238,243,255,0.72)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: '#1A3FAA',
-                  fontFamily: 'DM Sans, sans-serif',
-                  boxShadow: '0 2px 12px rgba(26,63,170,0.07)',
-                }}
-              >
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 22,
-                    height: 22,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #1A3FAA, #4F7BE8)',
-                    flexShrink: 0,
-                  }}
-                >
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '7px 16px 7px 8px', borderRadius: 999,
+                border: '1px solid rgba(26,63,170,0.12)',
+                background: 'rgba(239,246,255,0.85)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                textTransform: 'uppercase', color: '#1D4ED8',
+                fontFamily: 'DM Sans, sans-serif',
+                boxShadow: '0 2px 12px rgba(26,63,170,0.07)',
+              }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #1A3FAA, #3B82F6)',
+                }}>
                   <MapPin size={10} color="#fff" aria-hidden="true" />
                 </span>
                 Semillero · Uniautónoma del Cauca
               </span>
             </motion.div>
 
-            {/* Heading */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Titular */}
+            <div>
               <motion.h1
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25, duration: 0.8, ease: EASE }}
+                transition={{ delay: 0.18, duration: 0.80, ease: EASE }}
                 style={{
-                  fontFamily: 'Syne, sans-serif',
-                  fontSize: 'clamp(36px, 4.2vw, 58px)',
-                  fontWeight: 800,
-                  lineHeight: 1.07,
-                  letterSpacing: '-2px',
-                  color: '#0A0F1E',
-                  margin: 0,
+                  fontFamily: 'Syne, sans-serif', margin: 0,
+                  fontSize: isMobile
+                    ? 'clamp(28px, 8vw, 38px)'
+                    : isTablet
+                      ? 'clamp(36px, 5.5vw, 50px)'
+                      : 'clamp(38px, 3.8vw, 52px)',
+                  fontWeight: 800, lineHeight: 1.06, letterSpacing: '-1.8px',
+                  color: '#0F172A',
                 }}
               >
                 Biblioteca{' '}
-                <span
-                  style={{
-                    background: 'linear-gradient(130deg, #1A3FAA 0%, #4F7BE8 55%, #93C5FD 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <span style={{
+                  background: 'linear-gradient(128deg, #1A3FAA 0%, #3B82F6 52%, #60A5FA 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}>
                   Digital
                 </span>
               </motion.h1>
               <motion.span
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.38, duration: 0.8, ease: EASE }}
+                transition={{ delay: 0.32, duration: 0.80, ease: EASE }}
                 style={{
-                  fontFamily: 'Syne, sans-serif',
-                  fontSize: 'clamp(36px, 4.2vw, 58px)',
-                  fontWeight: 800,
-                  lineHeight: 1.07,
-                  letterSpacing: '-2px',
-                  color: '#0A0F1E',
-                  display: 'block',
+                  display: 'block', fontFamily: 'Syne, sans-serif',
+                  fontSize: isMobile
+                    ? 'clamp(28px, 8vw, 38px)'
+                    : isTablet
+                      ? 'clamp(36px, 5.5vw, 50px)'
+                      : 'clamp(38px, 3.8vw, 52px)',
+                  fontWeight: 800, lineHeight: 1.06, letterSpacing: '-1.8px',
+                  color: '#0F172A',
                 }}
               >
                 de Capacitaciones
               </motion.span>
             </div>
 
-            {/* Description */}
+            {/* Descripción */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.65, ease: EASE }}
+              transition={{ delay: 0.48, duration: 0.62, ease: EASE }}
               style={{
-                fontSize: 15.5,
-                lineHeight: 1.78,
-                color: '#64748b',
-                maxWidth: 428,
-                margin: 0,
+                fontSize: 'clamp(14px, 1.2vw, 16px)', lineHeight: 1.78,
+                color: '#475569', maxWidth: 440, margin: 0,
                 fontFamily: 'DM Sans, sans-serif',
               }}
             >
               Manuales técnicos documentados por el semillero{' '}
-              <strong style={{ color: '#1A3FAA', fontWeight: 600 }}>Softlab</strong>{' '}
-              de la Corporación Universitaria Autónoma del Cauca. Conocimiento estructurado y accesible.
+              <strong style={{ color: '#1D4ED8', fontWeight: 600 }}>Softlab</strong>{' '}
+              de la Corporación Universitaria Autónoma del Cauca.
+              Conocimiento estructurado, accesible y de libre uso.
             </motion.p>
 
             {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.70, duration: 0.5, ease: EASE }}
-              style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}
+              transition={{ delay: 0.62, duration: 0.50, ease: EASE }}
+              style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
             >
-              <Link to="/manuales" style={{ textDecoration: 'none' }}>
+              <Link to="/manuales" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
                 <motion.button
-                  whileHover={{ y: -2, boxShadow: '0 18px 44px rgba(26,63,170,0.30)' }}
+                  whileHover={{ y: -2, boxShadow: '0 20px 44px rgba(26,63,170,0.30)' }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ duration: 0.18 }}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '14px 26px',
-                    background: 'linear-gradient(135deg, #1A3FAA 0%, #2553CC 100%)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 14,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '14px 28px', width: isMobile ? '100%' : 'auto',
+                    background: 'linear-gradient(135deg, #1A3FAA 0%, #2563EB 100%)',
+                    color: '#fff', border: 'none', borderRadius: 14,
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
                     fontFamily: 'DM Sans, sans-serif',
                     boxShadow: '0 8px 28px rgba(26,63,170,0.24)',
-                    transition: 'box-shadow 0.2s',
+                    transition: 'box-shadow 0.22s', whiteSpace: 'nowrap',
                   }}
                 >
                   Explorar manuales <ArrowRight size={15} aria-hidden="true" />
                 </motion.button>
               </Link>
 
-              <Link to="/nosotros" style={{ textDecoration: 'none' }}>
+              <Link to="/nosotros" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
                 <motion.button
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ duration: 0.18 }}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '14px 24px',
-                    background: 'rgba(255,255,255,0.62)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    color: '#1A3FAA',
-                    border: '1.5px solid rgba(26,63,170,0.18)',
-                    borderRadius: 14,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background 0.2s',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '14px 24px', width: isMobile ? '100%' : 'auto',
+                    background: 'rgba(255,255,255,0.75)',
+                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    color: '#1E3A8A',
+                    border: '1.5px solid rgba(203,213,225,0.75)',
+                    borderRadius: 14, fontSize: 14, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                    transition: 'background 0.2s, border-color 0.2s',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background  = 'rgba(239,246,255,0.95)';
+                    e.currentTarget.style.borderColor = 'rgba(59,130,246,0.28)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background  = 'rgba(255,255,255,0.75)';
+                    e.currentTarget.style.borderColor = 'rgba(203,213,225,0.75)';
                   }}
                 >
                   <Users size={15} aria-hidden="true" /> Conocer el equipo
@@ -527,115 +375,93 @@ export function HeroSection({ slides: apiSlides = [] }) {
               </Link>
             </motion.div>
 
-            {/* Stats bar */}
+            {/* Stats */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.92, duration: 0.5 }}
-              className="hero-stats"
+              transition={{ delay: 0.86, duration: 0.50 }}
               style={{
-                display: 'flex',
-                gap: 0,
-                paddingTop: 24,
-                borderTop: '1px solid rgba(226,232,240,0.7)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: isMobile ? 8 : 12,
+                paddingTop: isMobile ? 18 : 'clamp(18px, 2vw, 26px)',
+                borderTop: '1px solid rgba(203,213,225,0.55)',
               }}
             >
               {stats.map((s, i) => {
                 const Icon = s.icon;
                 return (
-                  <div
+                  <motion.div
                     key={i}
-                    style={{ display: 'flex', alignItems: 'center', gap: 24, flex: 1 }}
+                    whileHover={{ y: -3, backgroundColor: 'rgba(255,255,255,0.96)' }}
+                    transition={{ duration: 0.18 }}
+                    style={{
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      padding: isMobile ? '11px 10px' : '14px 16px',
+                      borderRadius: 14,
+                      backgroundColor: 'rgba(255,255,255,0.72)',
+                      border: '1px solid rgba(226,232,240,0.75)',
+                      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                      boxShadow: '0 2px 10px rgba(100,120,200,0.05)',
+                      cursor: 'default',
+                    }}
                   >
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, background: s.bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      <Icon size={13} color={s.color} aria-hidden="true" />
+                    </div>
                     <div>
-                      <div
-                        style={{
-                          fontSize: 26,
-                          fontWeight: 800,
-                          fontFamily: 'Syne, sans-serif',
-                          color: '#1A3FAA',
-                          letterSpacing: '-1px',
-                          lineHeight: 1.1,
-                        }}
-                      >
-                        <Counter end={s.value} delay={i * 150} />
+                      <div style={{
+                        fontSize: isMobile ? 'clamp(17px, 5vw, 21px)' : 'clamp(19px, 2vw, 24px)',
+                        fontWeight: 800, fontFamily: 'Syne, sans-serif',
+                        color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1,
+                      }}>
+                        <Counter key={`stat-${i}-${s.value}`} end={s.value} delay={i * 180} />
                       </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: '#94a3b8',
-                          marginTop: 3,
-                          fontFamily: 'DM Sans, sans-serif',
-                          fontWeight: 500,
-                          letterSpacing: '0.02em',
-                        }}
-                      >
+                      <div style={{
+                        fontSize: isMobile ? 9 : 10, color: '#64748B',
+                        fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
+                        marginTop: 4, letterSpacing: '0.01em', lineHeight: 1.3,
+                      }}>
                         {s.label}
                       </div>
                     </div>
-                    {i < stats.length - 1 && (
-                      <div
-                        aria-hidden="true"
-                        style={{ width: 1, height: 36, background: 'rgba(226,232,240,0.8)', flexShrink: 0 }}
-                      />
-                    )}
-                  </div>
+                  </motion.div>
                 );
               })}
             </motion.div>
-          </div>
-        </motion.div>
 
-        {/* Right: glass-framed carousel */}
-        <motion.div
-          className="hero-carousel"
-          initial={{ opacity: 0, x: 40, scale: 0.96 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ delay: 0.45, duration: 0.88, ease: EASE }}
-          style={{ y: imgY }}
-        >
-          <ImageCarousel slides={slides} />
+          </div>
         </motion.div>
       </div>
 
-      {/* ── Scroll mouse indicator ── */}
+      {/* Indicador de scroll */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.7, duration: 0.6 }}
+        transition={{ delay: 1.8, duration: 0.6 }}
         aria-hidden="true"
         style={{
-          position: 'absolute',
-          bottom: 28,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 0,
-          zIndex: 3,
+          position: 'absolute', bottom: 26, left: '50%',
+          transform: 'translateX(-50%)', zIndex: 3,
         }}
       >
-        <motion.div
-          style={{
-            width: 20,
-            height: 32,
-            borderRadius: 10,
-            border: '1.5px solid rgba(26,63,170,0.22)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: '5px 0 0 0',
-            background: 'rgba(255,255,255,0.4)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
+        <div style={{
+          width: 20, height: 32, borderRadius: 10,
+          border: '1.5px solid rgba(26,63,170,0.18)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          padding: '5px 0 0',
+          background: 'rgba(255,255,255,0.52)',
+          backdropFilter: 'blur(8px)',
+        }}>
           <motion.div
             animate={{ opacity: [1, 0, 1], y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ width: 4, height: 7, borderRadius: 2, background: 'rgba(26,63,170,0.38)' }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: 4, height: 7, borderRadius: 2, background: 'rgba(26,63,170,0.36)' }}
           />
-        </motion.div>
+        </div>
       </motion.div>
     </section>
   );

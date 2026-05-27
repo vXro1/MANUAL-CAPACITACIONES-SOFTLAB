@@ -117,4 +117,22 @@
   --z-dropdown:  60;
   --z-modal:     100;
   --z-lightbox:  9999;
+
+  /* ── Extended blue palette ── */
+  --sl-blue-300:   #93C5FD;
+  --sl-blue-500:   #3B82F6;
+  --sl-blue-light: #60A5FA;
+  --sl-blue-mid:   #4F7BE8;
+  --sl-electric:   #2563EB;
+
+  /* ── Neon glow tokens ── */
+  --glow-blue-sm:   0 0 20px rgba(26,63,170,0.38);
+  --glow-blue-md:   0 0 40px rgba(26,63,170,0.30);
+  --glow-blue-lg:   0 0 60px rgba(26,63,170,0.25);
+  --glow-electric:  0 0 28px rgba(37,99,235,0.44);
+  --glow-sky:       0 0 24px rgba(96,165,250,0.35);
+
+  /* ── Futuristic gradient backgrounds ── */
+  --gradient-hero-dark: linear-gradient(145deg, #050913 0%, #080E22 35%, #0F1E55 65%, #1A3FAA 100%);
+  --gradient-section-dark: linear-gradient(180deg, #0B0F1A 0%, #080D1A 100%);
 }

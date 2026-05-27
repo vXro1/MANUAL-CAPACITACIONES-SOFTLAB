@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, X, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Users, Star } from 'lucide-react';
 import { participantsRepository } from '@/storage/localStorageRepository';
 import { participantesApi } from '@/services/apiService';
 import { syncParticipantes } from '@/services/dataSync';
@@ -24,7 +24,7 @@ const ROLE_COLORS = {
   'Colaborador Externo': 'slate',
 };
 
-function ParticipantRow({ participant, index, onEdit, onDelete }) {
+function ParticipantRow({ participant, index, onEdit, onDelete, onToggleFeatured }) {
   return (
     <motion.tr
       initial={{ opacity: 0, y: 6 }}
@@ -82,6 +82,21 @@ function ParticipantRow({ participant, index, onEdit, onDelete }) {
       {/* Actions */}
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onToggleFeatured(participant)}
+            title={participant.featured ? 'Quitar de destacados' : 'Marcar como destacado'}
+            aria-label={participant.featured ? `Quitar destacado: ${participant.name}` : `Destacar: ${participant.name}`}
+            className="p-1.5 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-amber-500"
+            style={{
+              color: participant.featured ? '#F59E0B' : undefined,
+            }}
+          >
+            <Star
+              size={15}
+              fill={participant.featured ? '#F59E0B' : 'none'}
+              className={participant.featured ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}
+            />
+          </button>
           <button
             onClick={() => onEdit(participant)}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors focus-visible:outline-2 focus-visible:outline-brand-600"
@@ -149,6 +164,25 @@ export function AdminParticipantsPage() {
   const handleFormSuccess = () => {
     reload();
     closeForm();
+  };
+
+  const handleToggleFeatured = async (participant) => {
+    // Optimistic update — flip star immediately so UI responds without waiting for network
+    setParticipants(prev =>
+      prev.map(p => p.id === participant.id ? { ...p, featured: !p.featured } : p)
+    );
+    try {
+      await participantesApi.toggleFeatured(participant.id);
+    } catch (err) {
+      console.error('Error al cambiar destacado:', err);
+      // Revert on API failure
+      setParticipants(prev =>
+        prev.map(p => p.id === participant.id ? { ...p, featured: !p.featured } : p)
+      );
+      return;
+    }
+    // Sync localStorage in background; errors are non-fatal (optimistic state is already correct)
+    syncParticipantes().then(reload).catch(() => {});
   };
 
   const handleDelete = async () => {
@@ -257,6 +291,7 @@ export function AdminParticipantsPage() {
                       index={i}
                       onEdit={openEdit}
                       onDelete={setDeleteTarget}
+                      onToggleFeatured={handleToggleFeatured}
                     />
                   ))}
                 </AnimatePresence>

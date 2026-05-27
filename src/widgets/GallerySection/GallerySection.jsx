@@ -18,28 +18,28 @@ const REASONS = [
   },
   {
     icon: BookOpen,
-    glowColor: '#10B981',
-    iconBg: 'rgba(16,185,129,0.12)',
-    iconBorder: 'rgba(16,185,129,0.22)',
-    iconColor: '#6EE7B7',
+    glowColor: '#2563EB',
+    iconBg: 'rgba(37,99,235,0.12)',
+    iconBorder: 'rgba(37,99,235,0.22)',
+    iconColor: '#BFDBFE',
     title: 'Aprende tecnologías emergentes',
     desc: 'Docker, Realidad Virtual, desarrollo de software y más. Siempre a la vanguardia del mercado.',
   },
   {
     icon: Users,
-    glowColor: '#F59E0B',
-    iconBg: 'rgba(245,158,11,0.12)',
-    iconBorder: 'rgba(245,158,11,0.20)',
-    iconColor: '#FCD34D',
+    glowColor: '#4F7BE8',
+    iconBg: 'rgba(79,123,232,0.12)',
+    iconBorder: 'rgba(79,123,232,0.20)',
+    iconColor: '#C7D7F8',
     title: 'Crece con un equipo sólido',
     desc: 'Trabaja con docentes investigadores y compañeros apasionados. El aprendizaje colaborativo transforma carreras.',
   },
   {
     icon: Award,
-    glowColor: '#A855F7',
-    iconBg: 'rgba(168,85,247,0.12)',
-    iconBorder: 'rgba(168,85,247,0.20)',
-    iconColor: '#C4B5FD',
+    glowColor: '#1A3FAA',
+    iconBg: 'rgba(26,63,170,0.12)',
+    iconBorder: 'rgba(26,63,170,0.20)',
+    iconColor: '#93C5FD',
     title: 'Construye tu hoja de vida',
     desc: 'Publica manuales, participa en capacitaciones y obtén experiencia comprobable que te diferencia.',
   },
@@ -235,34 +235,11 @@ export function GallerySection({ photos: propPhotos = null }) {
         aria-label="Galería del semillero"
         style={{
           padding: 'clamp(56px, 9vw, 100px) 0',
-          background: 'linear-gradient(180deg, #050913 0%, #080D1A 55%, #0B1222 100%)',
+          background: '#ffffff',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* ── Atmospheric glows ── */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: '10%', left: '2%',
-            width: 700, height: 700,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(26,63,170,0.16) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            bottom: '5%', right: '-8%',
-            width: 500, height: 500,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(79,123,232,0.10) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
 
         <div
           style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
@@ -279,7 +256,7 @@ export function GallerySection({ photos: propPhotos = null }) {
             <span
               style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: '#93C5FD',
+                textTransform: 'uppercase', color: '#1A3FAA',
                 fontFamily: 'DM Sans, sans-serif',
               }}
             >
@@ -295,10 +272,10 @@ export function GallerySection({ photos: propPhotos = null }) {
                 margin: 0,
               }}
             >
-              <span style={{ color: '#fff' }}>¿Por qué hacer parte de{' '}</span>
+              <span style={{ color: '#0A0F1E' }}>¿Por qué hacer parte de{' '}</span>
               <span
                 style={{
-                  background: 'linear-gradient(90deg, #93C5FD 0%, #60A5FA 100%)',
+                  background: 'linear-gradient(90deg, #1A3FAA 0%, #4F7BE8 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -437,17 +414,17 @@ export function GallerySection({ photos: propPhotos = null }) {
                 transition={{ delay: 0.4 }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}
               >
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                <p style={{ fontSize: 12, color: '#94A3B8', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
                   {photos.length} {photos.length === 1 ? 'momento' : 'momentos'} · Haz clic para ampliar
                   {hiddenCount > 0 && (
-                    <span style={{ color: '#93C5FD', marginLeft: 4 }}>({hiddenCount} más en galería)</span>
+                    <span style={{ color: '#1A3FAA', marginLeft: 4 }}>({hiddenCount} más en galería)</span>
                   )}
                 </p>
                 <Link
                   to="/galeria"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    fontSize: 12, fontWeight: 600, color: '#93C5FD',
+                    fontSize: 12, fontWeight: 600, color: '#1A3FAA',
                     textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
                     transition: 'color 0.15s',
                   }}
@@ -457,7 +434,7 @@ export function GallerySection({ photos: propPhotos = null }) {
               </motion.div>
             </motion.div>
 
-            {/* Reason cards — glass dark style */}
+            {/* Reason cards — light style */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {REASONS.map((reason, i) => {
                 const Icon = reason.icon;
@@ -472,23 +449,23 @@ export function GallerySection({ photos: propPhotos = null }) {
                       display: 'flex',
                       gap: 16,
                       padding: '18px 20px',
-                      background: 'rgba(255,255,255,0.03)',
-                      backdropFilter: 'blur(14px)',
-                      WebkitBackdropFilter: 'blur(14px)',
+                      background: '#F8FAFC',
                       borderRadius: 16,
-                      border: '1px solid rgba(255,255,255,0.07)',
+                      border: '1px solid #E2E8F0',
                       cursor: 'default',
-                      transition: 'background 0.22s, border-color 0.22s, transform 0.22s',
+                      transition: 'background 0.22s, border-color 0.22s, transform 0.22s, box-shadow 0.22s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                      e.currentTarget.style.borderColor = `${reason.glowColor}30`;
+                      e.currentTarget.style.background = '#EEF3FF';
+                      e.currentTarget.style.borderColor = '#C7D7F8';
                       e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(26,63,170,0.08)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                      e.currentTarget.style.background = '#F8FAFC';
+                      e.currentTarget.style.borderColor = '#E2E8F0';
                       e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
                     <div
@@ -500,14 +477,14 @@ export function GallerySection({ photos: propPhotos = null }) {
                         flexShrink: 0,
                       }}
                     >
-                      <Icon size={20} color={reason.iconColor} aria-hidden="true" />
+                      <Icon size={20} color={reason.glowColor} aria-hidden="true" />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <h3
                         style={{
                           fontFamily: 'Syne, sans-serif',
                           fontSize: 14, fontWeight: 700,
-                          color: '#e2e8f0',
+                          color: '#0A0F1E',
                           margin: '0 0 5px',
                           letterSpacing: '-0.2px',
                         }}
@@ -516,7 +493,7 @@ export function GallerySection({ photos: propPhotos = null }) {
                       </h3>
                       <p
                         style={{
-                          fontSize: 13, color: 'rgba(255,255,255,0.35)',
+                          fontSize: 13, color: '#64748B',
                           margin: 0, lineHeight: 1.65,
                           fontFamily: 'DM Sans, sans-serif',
                         }}

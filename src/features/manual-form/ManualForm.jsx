@@ -9,6 +9,7 @@ import { CATEGORIES } from '@/shared/constants';
 import { manualesApi, evidenciasApi } from '@/services/apiService';
 import { syncManuales } from '@/services/dataSync';
 import { participantsRepository } from '@/storage/localStorageRepository';
+import { GalleryImagePicker } from '@/shared/ui/GalleryImagePicker';
 
 const ACCENT = '#7C3AED';
 const BG     = '#F5F3FF';
@@ -118,7 +119,7 @@ function PDFUploadField({ value, onChange }) {
 }
 
 // ─── CoverImageField ──────────────────────────────────────────────────────────
-function CoverImageField({ value, onChange }) {
+function CoverImageField({ value, onChange, onPickFromGallery }) {
   const isBase64 = typeof value === 'string' && value.startsWith('data:');
   const isUrl    = typeof value === 'string' && !isBase64 && value.length > 0;
   const [mode,     setMode]     = useState(isUrl ? 'url' : 'file');
@@ -143,20 +144,28 @@ function CoverImageField({ value, onChange }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Portada del manual</label>
 
-      <div style={{ display: 'flex', borderRadius: 8, border: '1.5px solid #E2E8F0', overflow: 'hidden', width: 'fit-content' }}>
-        {[['file', Upload, 'Subir imagen'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label], i) => (
-          <button key={m} type="button" onClick={() => setMode(m)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-              fontSize: 12, fontWeight: 500,
-              borderLeft: i > 0 ? '1.5px solid #E2E8F0' : 'none',
-              background: mode === m ? ACCENT : '#fff',
-              color: mode === m ? '#fff' : '#475569',
-              border: 'none', cursor: 'pointer', transition: 'all .15s',
-            }}>
-            <Icon size={12} />{label}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', borderRadius: 8, border: '1.5px solid #E2E8F0', overflow: 'hidden' }}>
+          {[['file', Upload, 'Subir imagen'], ['url', LinkIcon, 'URL externa']].map(([m, Icon, label], i) => (
+            <button key={m} type="button" onClick={() => setMode(m)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+                fontSize: 12, fontWeight: 500,
+                borderLeft: i > 0 ? '1.5px solid #E2E8F0' : 'none',
+                background: mode === m ? ACCENT : '#fff',
+                color: mode === m ? '#fff' : '#475569',
+                border: 'none', cursor: 'pointer', transition: 'all .15s',
+              }}>
+              <Icon size={12} />{label}
+            </button>
+          ))}
+        </div>
+        {onPickFromGallery && (
+          <button type="button" onClick={onPickFromGallery}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${BORDER}`, background: BG, color: ACCENT, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+            <ImagePlus size={12} /> De galería
           </button>
-        ))}
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -301,12 +310,22 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
   const [galleryError,     setGalleryError]     = useState('');
   const [draggingOver,     setDraggingOver]     = useState(false);
 
-  const [errors,     setErrors]     = useState({});
-  const [saving,     setSaving]     = useState(false);
-  const [saveError,  setSaveError]  = useState('');
-  const [activeTab,  setActiveTab]  = useState('general');
+  const [errors,       setErrors]       = useState({});
+  const [saving,       setSaving]       = useState(false);
+  const [saveError,    setSaveError]    = useState('');
+  const [activeTab,    setActiveTab]    = useState('general');
+  const [pickerTarget, setPickerTarget] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  const handlePickerSelect = (imgs) => {
+    if (pickerTarget === 'cover') {
+      setForm((f) => ({ ...f, cover: imgs[0].src }));
+    } else if (pickerTarget === 'evidence') {
+      setGalleryItems((p) => [...p, ...imgs.map((i) => i.src)]);
+    }
+    setPickerTarget(null);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -609,7 +628,7 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
                     {/* ── Tab: Archivos ── */}
                     {activeTab === 'archivos' && (
                       <>
-                        <CoverImageField value={form.cover} onChange={set('cover')} />
+                        <CoverImageField value={form.cover} onChange={set('cover')} onPickFromGallery={() => setPickerTarget('cover')} />
                         <PDFUploadField  value={form.pdf}   onChange={set('pdf')}   />
 
                         {/* Galería de evidencias */}
@@ -620,10 +639,14 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
                             </div>
                             <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Galería de evidencias</label>
                             {galleryItems.length > 0 && (
-                              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748B' }}>
+                              <span style={{ fontSize: 11, color: '#64748B' }}>
                                 {galleryItems.length} imagen{galleryItems.length !== 1 ? 'es' : ''}
                               </span>
                             )}
+                            <button type="button" onClick={() => setPickerTarget('evidence')}
+                              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${BORDER}`, background: BG, color: ACCENT, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                              <ImagePlus size={12} /> De galería
+                            </button>
                           </div>
 
                           <div
@@ -733,6 +756,14 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
               </div>
             </div>
           </motion.div>
+
+          <GalleryImagePicker
+            isOpen={pickerTarget !== null}
+            onClose={() => setPickerTarget(null)}
+            onSelect={handlePickerSelect}
+            multiSelect={pickerTarget === 'evidence'}
+            title={pickerTarget === 'cover' ? 'Seleccionar portada de galería' : 'Añadir evidencias desde galería'}
+          />
         </>
       )}
     </AnimatePresence>

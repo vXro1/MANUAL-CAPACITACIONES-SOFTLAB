@@ -269,8 +269,8 @@ export function Footer() {
                   <span
                     style={{
                       width: 6, height: 6, borderRadius: '50%',
-                      background: '#4ADE80',
-                      boxShadow: '0 0 8px rgba(74,222,128,0.6)',
+                      background: '#3B82F6',
+                      boxShadow: '0 0 8px rgba(59,130,246,0.6)',
                       display: 'inline-block', flexShrink: 0,
                     }}
                   />

@@ -42,20 +42,32 @@ function EventCard({ event, index }) {
       style={{
         background: '#fff', borderRadius: 18,
         border: '1px solid #E8EFFE',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        boxShadow: '0 2px 10px rgba(26,63,170,0.05)',
         cursor: 'pointer', overflow: 'hidden',
-        transition: 'box-shadow 0.2s, transform 0.2s',
+        transition: 'box-shadow 0.25s, transform 0.25s, border-color 0.25s',
         display: 'flex', flexDirection: 'column',
+        position: 'relative',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = '0 8px 32px rgba(26,63,170,0.12)';
-        e.currentTarget.style.transform = 'translateY(-3px)';
+        e.currentTarget.style.boxShadow = `0 16px 44px rgba(26,63,170,0.14), 0 0 0 1.5px ${catStyle.color}44`;
+        e.currentTarget.style.transform = 'translateY(-5px)';
+        e.currentTarget.style.borderColor = `${catStyle.color}33`;
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+        e.currentTarget.style.boxShadow = '0 2px 10px rgba(26,63,170,0.05)';
         e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.borderColor = '#E8EFFE';
       }}
     >
+      {/* Category accent top bar */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+          background: `linear-gradient(90deg, ${catStyle.color}, ${catStyle.color}88)`,
+          zIndex: 2,
+        }}
+      />
       {/* Cover image */}
       {coverImage && (
         <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#F1F5F9' }}>
@@ -173,37 +185,113 @@ export function EventsPage() {
 
   return (
     <main id="main-content" style={{ minHeight: '100vh', background: '#F8FAFF', paddingBottom: 80 }}>
-      {/* Hero */}
-      <section style={{
-        background: 'linear-gradient(135deg, #0A1628 0%, #1A3FAA 100%)',
-        padding: 'clamp(64px, 10vw, 96px) clamp(20px, 5vw, 48px) clamp(48px, 8vw, 72px)',
-        textAlign: 'center',
-      }}>
+      {/* ── Hero ── */}
+      <section
+        style={{
+          background: 'linear-gradient(145deg, #050913 0%, #0F1E55 55%, #1A3FAA 100%)',
+          paddingTop: 'clamp(80px, 10vw, 116px)',
+          paddingBottom: 'clamp(56px, 8vw, 80px)',
+          paddingLeft: 'clamp(20px, 5vw, 48px)',
+          paddingRight: 'clamp(20px, 5vw, 48px)',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Grid lines */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Glow orb — right */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', top: '-25%', right: '-10%',
+            width: 580, height: 580, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(79,123,232,0.28) 0%, rgba(26,63,170,0.12) 45%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Glow orb — left */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', bottom: '-25%', left: '-6%',
+            width: 420, height: 420, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(147,197,253,0.14) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Bottom fade to body bg */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 70,
+            background: 'linear-gradient(to bottom, transparent, rgba(26,63,170,0.07))',
+            pointerEvents: 'none',
+          }}
+        />
+
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: E }}
+          transition={{ duration: 0.55, ease: E }}
+          style={{ position: 'relative', zIndex: 1 }}
         >
-          <p style={{
-            fontSize: 11, fontWeight: 700, color: 'rgba(167,210,255,0.8)',
-            textTransform: 'uppercase', letterSpacing: '0.1em',
-            marginBottom: 12, fontFamily: 'DM Sans, sans-serif',
-          }}>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: E }}
+            style={{
+              fontSize: 11, fontWeight: 700, color: '#93C5FD',
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              marginBottom: 14, fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
             Semillero Softlab
-          </p>
-          <h1 style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 5vw, 46px)',
-            fontWeight: 800, color: '#fff', margin: '0 0 16px',
-            letterSpacing: '-1px', lineHeight: 1.1,
-          }}>
-            Eventos del semillero
-          </h1>
-          <p style={{
-            fontSize: 15, color: 'rgba(255,255,255,0.6)', maxWidth: 520,
-            margin: '0 auto', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.7,
-          }}>
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: E }}
+            style={{
+              fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 5vw, 50px)',
+              fontWeight: 800, color: '#fff', margin: '0 0 16px',
+              letterSpacing: '-1.5px', lineHeight: 1.1,
+            }}
+          >
+            Eventos del{' '}
+            <span
+              style={{
+                background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              semillero
+            </span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            style={{
+              fontSize: 15, color: 'rgba(147,197,253,0.80)', maxWidth: 520,
+              margin: '0 auto', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.7,
+            }}
+          >
             Divulgación científica, movilidades, salidas técnicas y más actividades de nuestro equipo.
-          </p>
+          </motion.p>
         </motion.div>
       </section>
 

@@ -7,6 +7,7 @@ import {
 import { eventsRepository, eventCategoriesRepository, participantsRepository } from '@/storage/localStorageRepository';
 import { eventosApi, eventosGaleriaApi, categoriasEventosApi, getToken } from '@/services/apiService';
 import { syncEventos } from '@/services/dataSync';
+import { GalleryImagePicker } from '@/shared/ui/GalleryImagePicker';
 
 const ACCENT = '#059669';
 const BG     = '#ECFDF5';
@@ -241,7 +242,7 @@ function ParticipantsField({ value, onChange }) {
 }
 
 // ─── GalleryField ─────────────────────────────────────────────────────────────
-function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSetCover }) {
+function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSetCover, onPickFromGallery }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver,  setDragOver]  = useState(false);
   const [error,     setError]     = useState('');
@@ -317,6 +318,13 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
         </div>
       </div>
 
+      {onPickFromGallery && (
+        <button type="button" onClick={onPickFromGallery}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${BORDER}`, background: BG, color: ACCENT, fontSize: 13, fontWeight: 500, cursor: 'pointer', width: '100%' }}>
+          <ImageIcon size={14} /> Elegir de galería principal
+        </button>
+      )}
+
       {error && (
         <p style={{ fontSize: 12, color: '#EF4444', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '6px 12px' }}>{error}</p>
       )}
@@ -388,6 +396,18 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
   const [saving,            setSaving]            = useState(false);
   const [saveError,         setSaveError]         = useState('');
   const [activeTab,         setActiveTab]         = useState('general');
+  const [pickerOpen,        setPickerOpen]        = useState(false);
+
+  const handlePickerSelect = (imgs) => {
+    const newItems = imgs.map((img) => ({
+      id: `gallery-${img.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      src: img.src,
+      title: img.title,
+      _fromGallery: true,
+    }));
+    setForm((f) => ({ ...f, gallery: [...f.gallery, ...newItems] }));
+    setPickerOpen(false);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -438,6 +458,16 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
         await Promise.all(deletedGalleryIds.map((id) => eventosGaleriaApi.delete(id).catch(() => {})));
         const newImages = form.gallery.filter((g) => g._file);
         await Promise.all(newImages.map((g) => eventosGaleriaApi.upload(eventId, g._file, g.title).catch(() => {})));
+        const galleryRefs = form.gallery.filter((g) => g._fromGallery);
+        await Promise.all(galleryRefs.map(async (g) => {
+          try {
+            const res  = await fetch(g.src);
+            const blob = await res.blob();
+            const ext  = blob.type.split('/')[1] || 'jpg';
+            const file = new File([blob], `${g.title || 'imagen'}.${ext}`, { type: blob.type });
+            await eventosGaleriaApi.upload(eventId, file, g.title);
+          } catch {}
+        }));
         await syncEventos().catch(() => {});
       } else {
         eventsRepository.save({
@@ -619,6 +649,7 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
                         onRemoveServerImage={handleRemoveServerImage}
                         coverImageId={form.coverImageId}
                         onSetCover={(id) => setForm((f) => ({ ...f, coverImageId: id }))}
+                        onPickFromGallery={() => setPickerOpen(true)}
                       />
                     )}
                   </motion.div>
@@ -669,6 +700,14 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
               </div>
             </div>
           </motion.div>
+
+          <GalleryImagePicker
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onSelect={handlePickerSelect}
+            multiSelect
+            title="Añadir imágenes desde galería"
+          />
         </>
       )}
     </AnimatePresence>

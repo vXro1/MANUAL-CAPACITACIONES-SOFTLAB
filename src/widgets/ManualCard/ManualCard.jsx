@@ -6,14 +6,14 @@ import { formatDate } from '@/shared/lib/formatDate';
 
 const CATEGORY_PALETTE = {
   'Realidad Virtual':       { bg: '#EEF3FF', accent: '#1A3FAA', border: '#C7D7F8' },
-  'DevOps':                 { bg: '#FFF7ED', accent: '#C2410C', border: '#FED7AA' },
-  'Control de Versiones':   { bg: '#F0FDF4', accent: '#15803D', border: '#BBF7D0' },
-  'Desarrollo Frontend':    { bg: '#FDF4FF', accent: '#9333EA', border: '#E9D5FF' },
-  'Desarrollo Backend':     { bg: '#FFF1F2', accent: '#E11D48', border: '#FECDD3' },
-  'Bases de Datos':         { bg: '#F0F9FF', accent: '#0369A1', border: '#BAE6FD' },
-  'Gestión de Proyectos':   { bg: '#FEFCE8', accent: '#CA8A04', border: '#FDE68A' },
-  'Seguridad':              { bg: '#F8FAFC', accent: '#475569', border: '#CBD5E1' },
-  'Inteligencia Artificial':{ bg: '#ECFDF5', accent: '#059669', border: '#A7F3D0' },
+  'DevOps':                 { bg: '#EBF0FF', accent: '#1D52CC', border: '#BCC9F8' },
+  'Control de Versiones':   { bg: '#EDF2FF', accent: '#2563EB', border: '#BFCEF8' },
+  'Desarrollo Frontend':    { bg: '#EAF1FF', accent: '#1840B0', border: '#BAC9F6' },
+  'Desarrollo Backend':     { bg: '#E8EFFF', accent: '#153D9A', border: '#B8C6F5' },
+  'Bases de Datos':         { bg: '#EBF2FF', accent: '#1E55D6', border: '#BCD0FA' },
+  'Gestión de Proyectos':   { bg: '#EEF3FF', accent: '#2B5CE8', border: '#CADAFF' },
+  'Seguridad':              { bg: '#F0F5FF', accent: '#4F7BE8', border: '#C5D3F8' },
+  'Inteligencia Artificial':{ bg: '#EBF2FF', accent: '#1A47B8', border: '#C0CFFA' },
   default:                  { bg: '#F8FAFF', accent: '#1A3FAA', border: '#C7D7F8' },
 };
 
@@ -55,7 +55,7 @@ export function ManualCard({ manual, index = 0, speaker = null }) {
             },
             hover: {
               y: -8,
-              boxShadow: `0 24px 56px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05), 0 0 0 1.5px ${palette.border}`,
+              boxShadow: `0 24px 56px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05), 0 0 0 2px ${palette.border}, 0 0 28px ${palette.accent}1A`,
             },
           }}
           style={{
@@ -66,8 +66,21 @@ export function ManualCard({ manual, index = 0, speaker = null }) {
             borderRadius: 18,
             overflow: 'hidden',
             willChange: 'transform',
+            position: 'relative',
           }}
         >
+          {/* Category accent top bar */}
+          <motion.div
+            aria-hidden="true"
+            variants={{ rest: { opacity: 0.55 }, hover: { opacity: 1 } }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+              background: `linear-gradient(90deg, ${palette.accent}, ${palette.accent}88)`,
+              zIndex: 2,
+              borderRadius: '18px 18px 0 0',
+            }}
+          />
           {/* ── Cover image ── */}
           <div
             style={{
@@ -136,7 +149,7 @@ export function ManualCard({ manual, index = 0, speaker = null }) {
                   style={{
                     display: 'inline-block', padding: '3px 9px', borderRadius: 999,
                     fontSize: 10, fontWeight: 700,
-                    background: 'rgba(21,128,61,0.9)', backdropFilter: 'blur(6px)',
+                    background: 'rgba(26,63,170,0.88)', backdropFilter: 'blur(6px)',
                     color: '#fff', fontFamily: 'DM Sans, sans-serif',
                     letterSpacing: '0.04em', textTransform: 'uppercase',
                   }}
@@ -248,7 +261,7 @@ export function ManualCardFeatured({ manual, speaker = null }) {
           },
           hover: {
             y: -8,
-            boxShadow: `0 28px 64px rgba(0,0,0,0.11), 0 4px 20px rgba(0,0,0,0.06), 0 0 0 1.5px ${palette.border}`,
+            boxShadow: `0 28px 64px rgba(0,0,0,0.11), 0 4px 20px rgba(0,0,0,0.06), 0 0 0 2px ${palette.border}, 0 0 30px ${palette.accent}1A`,
           },
         }}
         style={{
@@ -256,8 +269,21 @@ export function ManualCardFeatured({ manual, speaker = null }) {
           height: '100%', background: '#fff',
           borderRadius: 18, overflow: 'hidden',
           willChange: 'transform',
+          position: 'relative',
         }}
       >
+        {/* Category accent top bar */}
+        <motion.div
+          aria-hidden="true"
+          variants={{ rest: { opacity: 0.55 }, hover: { opacity: 1 } }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+            background: `linear-gradient(90deg, ${palette.accent}, ${palette.accent}88)`,
+            zIndex: 2,
+            borderRadius: '18px 18px 0 0',
+          }}
+        />
         {/* Image */}
         <div
           style={{
@@ -315,8 +341,8 @@ export function ManualCardFeatured({ manual, speaker = null }) {
                   fontSize: 12, fontWeight: 700,
                   background: 'rgba(255,255,255,0.92)',
                   backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-                  color: '#92400e', fontFamily: 'DM Sans, sans-serif',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  color: '#1A3FAA', fontFamily: 'DM Sans, sans-serif',
+                  boxShadow: '0 2px 8px rgba(26,63,170,0.12)',
                 }}
               >
                 ★ Destacado

@@ -27,34 +27,98 @@
    HERO
 ═══════════════════════════════════════════════════ */
 
-@media (max-width: 900px) {
-  .hero-grid {
+/* Tablet: reorganización inteligente */
+@media (max-width: 960px) {
+  .hero-layout {
     grid-template-columns: 1fr !important;
-    padding: 48px 24px !important;
-    gap: 36px !important;
+    padding: clamp(48px, 7vw, 72px) clamp(20px, 5vw, 40px) clamp(56px, 7vw, 80px) !important;
+    gap: clamp(40px, 6vw, 56px) !important;
   }
-  .hero-carousel { display: none !important; }
+
+  /* Carousel en tablet: landscape ratio, más ancho */
+  .hero-visual {
+    order: -1 !important;
+    max-width: 520px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+
+  .cinematic-frame {
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  /* Badges flotantes: ajuste posición */
+  .cinematic-badge-top  { top: -10px !important; right: -8px !important; }
+  .cinematic-badge-bottom { bottom: 36px !important; left: -10px !important; }
 }
 
-@media (max-width: 480px) {
-  .hero-grid { padding: 40px 20px !important; }
+/* Mobile grande */
+@media (max-width: 640px) {
+  .hero-layout {
+    padding: 40px 18px 56px !important;
+    gap: 32px !important;
+  }
+
+  .hero-visual {
+    max-width: 100% !important;
+  }
+
+  /* Botones CTA — full width en móvil */
+  .hero-ctas {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .hero-ctas > a {
+    display: block !important;
+    width: 100% !important;
+  }
+  .hero-ctas > a > button {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
 }
 
-@media (max-width: 380px) {
-  .hero-grid { padding: 32px 16px !important; }
-}
-
-/* Stats bar en hero — evita desbordamiento en pantallas muy pequeñas */
+/* Mobile pequeño */
 @media (max-width: 420px) {
+  .hero-layout {
+    padding: 32px 16px 48px !important;
+    gap: 28px !important;
+  }
+
+  /* Stats — wrap a 2 columnas */
   .hero-stats {
     flex-wrap: wrap !important;
-    gap: 16px !important;
+    gap: 14px !important;
     padding-top: 16px !important;
   }
   .hero-stats > div {
-    flex: 0 0 auto !important;
-    min-width: auto !important;
+    flex: 0 0 calc(50% - 7px) !important;
+    min-width: 0 !important;
   }
+  /* Ocultar divisores verticales en wrap */
+  .hero-stats > div > [aria-hidden="true"] {
+    display: none !important;
+  }
+
+  /* Badges flotantes — reposicionar para no salir del viewport */
+  .cinematic-badge-bottom { display: none !important; }
+  .cinematic-badge-top    { top: 8px !important; right: 8px !important; }
+
+  /* Stats label: quitar padding-left grande y truncar elegantemente */
+  .hero-stat-label {
+    padding-left: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 70px !important;
+  }
+}
+
+/* Extra pequeño */
+@media (max-width: 360px) {
+  .hero-layout { padding: 28px 14px 44px !important; }
+  .cinematic-badge-top { display: none !important; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -228,6 +292,10 @@
    PARTICIPANTS SECTION
 ═══════════════════════════════════════════════════ */
 
+@media (max-width: 1100px) {
+  .participants-grid-compact { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
 @media (max-width: 900px) {
   .participants-container    { padding: 0 24px !important; }
   .participants-grid         { grid-template-columns: repeat(2, 1fr) !important; }
@@ -237,6 +305,10 @@
 @media (max-width: 560px) {
   .participants-container    { padding: 0 20px !important; }
   .participants-grid         { grid-template-columns: 1fr !important; }
+  .participants-grid-compact { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 400px) {
   .participants-grid-compact { grid-template-columns: 1fr !important; }
 }
 

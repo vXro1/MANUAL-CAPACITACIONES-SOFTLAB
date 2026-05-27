@@ -14,23 +14,23 @@ const EASE = [0.22, 1, 0.36, 1];
 const ROLE_CONFIG = {
   Investigador:                { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
   'Co-Investigador':           { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
-  'Investigador Principal':    { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
-  Estudiante:                  { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
-  Docente:                     { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' },
-  'Docente Investigador':      { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' },
-  Ponente:                     { bg: '#FEFCE8', color: '#92400E', border: '#FDE68A' },
-  'Director del Semillero':    { bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
-  'Co-Director del Semillero': { bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
-  'Auxiliar de Investigación': { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
-  'Colaborador Externo':       { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
-  default:                     { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
+  'Investigador Principal':    { bg: '#E8EDFF', color: '#142F8A', border: '#BCC8F6' },
+  Estudiante:                  { bg: '#F0F5FF', color: '#2D5CC0', border: '#C5D3F6' },
+  Docente:                     { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
+  'Docente Investigador':      { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
+  Ponente:                     { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
+  'Director del Semillero':    { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  'Co-Director del Semillero': { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
+  'Auxiliar de Investigación': { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
+  'Colaborador Externo':       { bg: '#F4F7FF', color: '#4F7BE8', border: '#CCDAF8' },
+  default:                     { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
 };
 
 const EVENT_CATEGORY_STYLES = {
   'Divulgación Científica':  { bg: '#EEF3FF', color: '#1A3FAA' },
-  'Salida Técnica':          { bg: '#ECFDF5', color: '#065F46' },
-  'Movilidad Internacional': { bg: '#F3E8FF', color: '#6D28D9' },
-  'Movilidad Nacional':      { bg: '#FFFBEB', color: '#92400E' },
+  'Salida Técnica':          { bg: '#EBF0FF', color: '#1D52CC' },
+  'Movilidad Internacional': { bg: '#E8EDFF', color: '#142F8A' },
+  'Movilidad Nacional':      { bg: '#EDF2FF', color: '#2151C2' },
 };
 
 function getRoleStyle(role) {
@@ -135,7 +135,7 @@ function CardAvatar({ name, photo, size = 52 }) {
       <div style={{
         width: size, height: size, borderRadius: 12,
         overflow: 'hidden', flexShrink: 0,
-        boxShadow: '0 0 0 2px #fff, 0 0 0 3.5px #C7D7F8',
+        boxShadow: '0 0 0 2.5px #fff, 0 0 0 4.5px #93C5FD, 0 4px 14px rgba(26,63,170,0.16)',
       }}>
         <img src={photo} alt={name} onError={() => setErr(true)}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -146,11 +146,11 @@ function CardAvatar({ name, photo, size = 52 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: 12, flexShrink: 0,
-      background: 'linear-gradient(135deg, #1A3FAA, #2553CC)',
+      background: 'linear-gradient(135deg, #1A3FAA, #3B6FE8)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.3, fontWeight: 800, color: '#fff',
       fontFamily: 'Syne, sans-serif', letterSpacing: '-0.5px',
-      boxShadow: '0 0 0 2px #fff, 0 0 0 3.5px #C7D7F8',
+      boxShadow: '0 0 0 2.5px #fff, 0 0 0 4.5px #93C5FD, 0 6px 18px rgba(26,63,170,0.22)',
     }}>
       {getInitials(name)}
     </div>
@@ -171,12 +171,15 @@ function ParticipantCard({ participant, onClick, index }) {
       initial={{ opacity: 0, y: 24 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.48, delay: (index % 4) * 0.07, ease: EASE }}
-      whileHover={{ y: -5, boxShadow: '0 20px 44px rgba(26,63,170,0.12), 0 0 0 1.5px #C7D7F8' }}
+      whileHover={{
+        y: -6,
+        boxShadow: '0 22px 52px rgba(26,63,170,0.16), 0 0 0 2px #93C5FD, 0 0 26px rgba(99,140,255,0.12)',
+      }}
       onClick={() => onClick(participant)}
       aria-label={`Ver perfil de ${participant.name}`}
       style={{
-        background: isFeatured ? '#FAFBFF' : '#fff',
-        border: isFeatured ? '1px solid #C7D7F8' : '1px solid #E5E7EB',
+        background: isFeatured ? '#F7FBFF' : '#fff',
+        border: isFeatured ? '1px solid #C7D7F8' : '1px solid #E8EFFE',
         borderRadius: 18,
         padding: '18px 18px 16px',
         textAlign: 'left',
@@ -187,11 +190,11 @@ function ParticipantCard({ participant, onClick, index }) {
         gap: 12,
         outline: 'none',
         boxShadow: isFeatured
-          ? '0 4px 16px rgba(26,63,170,0.08), 0 0 0 1px #E8EFFE'
-          : '0 2px 8px rgba(0,0,0,0.04)',
+          ? '0 6px 22px rgba(26,63,170,0.10), 0 0 0 1px #E0EAFF'
+          : '0 2px 10px rgba(26,63,170,0.05)',
         willChange: 'transform',
         position: 'relative',
-        transition: 'border-color 0.22s',
+        transition: 'border-color 0.22s, box-shadow 0.22s',
       }}
       onFocus={e => { e.currentTarget.style.borderColor = '#1A3FAA50'; }}
       onBlur={e => { e.currentTarget.style.borderColor = isFeatured ? '#C7D7F8' : '#E5E7EB'; }}
@@ -202,11 +205,11 @@ function ParticipantCard({ participant, onClick, index }) {
           position: 'absolute', top: 12, right: 12,
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '3px 8px', borderRadius: 99,
-          background: '#FFFBEB', border: '1px solid #FDE68A',
-          fontSize: 10, fontWeight: 700, color: '#92400E',
+          background: '#EEF3FF', border: '1px solid #C7D7F8',
+          fontSize: 10, fontWeight: 700, color: '#1A3FAA',
           fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.05em',
         }}>
-          <Star size={9} fill="#F59E0B" color="#F59E0B" />
+          <Star size={9} fill="#1A3FAA" color="#1A3FAA" />
           Destacado
         </div>
       )}
@@ -411,8 +414,17 @@ function ParticipantModal({ participant, onClose }) {
   );
 }
 
+const PONENTE_ROLES = ['Ponente', 'Conferencista'];
+
 /* ─── ParticipantsSection ────────────────────────────────────────────────── */
-export function ParticipantsSection({ featuredOnly = false, limit }) {
+export function ParticipantsSection({
+  featuredOnly = false,
+  limit,
+  skipPonentes = false,
+  onlyPonentes = false,
+  sectionTitle,
+  sectionSubtitle,
+}) {
   const [allParticipants, setAllParticipants] = useState([]);
   const [selected, setSelected] = useState(null);
   const titleRef = useRef(null);
@@ -432,9 +444,13 @@ export function ParticipantsSection({ featuredOnly = false, limit }) {
     return (a.name ?? '').localeCompare(b.name ?? '');
   });
 
-  const all = featuredOnly ? sorted.filter((p) => p.featured) : sorted;
-  const participants = limit ? all.slice(0, limit) : all;
-  const hasMore = limit && all.length > limit;
+  let pool = sorted;
+  if (skipPonentes) pool = pool.filter((p) => !PONENTE_ROLES.includes(p.role));
+  if (onlyPonentes) pool = pool.filter((p) => PONENTE_ROLES.includes(p.role));
+  if (featuredOnly)  pool = pool.filter((p) => p.featured);
+
+  const participants = limit ? pool.slice(0, limit) : pool;
+  const hasMore = limit && pool.length > limit;
 
   if (participants.length === 0) return null;
 
@@ -446,11 +462,14 @@ export function ParticipantsSection({ featuredOnly = false, limit }) {
       aria-label="Investigadores del semillero"
       style={{
         padding: isCompact ? 'clamp(40px, 6vw, 72px) 0' : 'clamp(56px, 9vw, 96px) 0',
-        background: 'linear-gradient(180deg, #F1F5FF 0%, #F8FAFC 80px, #F8FAFC 100%)',
+        background: '#ffffff',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
+
       <div
-        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px' }}
+        style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}
         className="participants-container"
       >
         {/* Title */}
@@ -466,7 +485,7 @@ export function ParticipantsSection({ featuredOnly = false, limit }) {
                 marginBottom: 8, fontFamily: 'DM Sans, sans-serif',
               }}
             >
-              Comunidad
+              {sectionSubtitle ?? 'Comunidad'}
             </motion.p>
             <motion.h2
               initial={{ opacity: 0, y: 16 }}
@@ -479,7 +498,7 @@ export function ParticipantsSection({ featuredOnly = false, limit }) {
                 letterSpacing: '-1px', margin: 0,
               }}
             >
-              Investigadores del semillero
+              {sectionTitle ?? 'Investigadores del semillero'}
             </motion.h2>
           </div>
 

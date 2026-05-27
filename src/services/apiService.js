@@ -151,6 +151,14 @@ export const participantesApi = {
     return requestForm(`/participantes.php?id=${id}&_method=PUT`, fd, 'POST');
   },
 
+  toggleFeatured(id) {
+    return request(`/participantes.php?id=${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toggle_featured: true }),
+    });
+  },
+
   delete(id) {
     return request(`/participantes.php?id=${id}`, { method: 'DELETE' });
   },
@@ -178,6 +186,11 @@ export const galeriaApi = {
   getAll()        { return request('/galeria.php').then(data => (data ?? []).map(normalizeGalleryImage)); },
   getFeatured()   { return request('/galeria.php?featured').then(data => (data ?? []).map(normalizeGalleryImage)); },
 
+  /** Obtiene las imágenes asignadas a una sección ('hero' o 'join'), en orden */
+  getSection(section) {
+    return request(`/galeria.php?section=${section}`).then(data => (data ?? []).map(normalizeGalleryImage));
+  },
+
   upload(imagenFile, titulo = '') {
     const fd = new FormData();
     fd.append('imagen', imagenFile);
@@ -190,6 +203,21 @@ export const galeriaApi = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ toggle_featured: true }),
+    });
+  },
+
+  /**
+   * Asigna (o quita) una imagen de una sección.
+   * @param {string} id        - ID de la imagen
+   * @param {'hero'|'join'} section - Sección objetivo
+   * @param {number|null} order - Posición (1-5 hero / 1-6 join) o null para quitar
+   */
+  setSectionSlot(id, section, order) {
+    const field = section === 'hero' ? 'hero_order' : 'join_order';
+    return request(`/galeria.php?id=${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: order }),
     });
   },
 

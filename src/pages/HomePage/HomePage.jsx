@@ -9,36 +9,55 @@ import { ParticipantsSection }  from '@/widgets/ParticipantsSection/Participants
 import { galeriaApi }           from '@/services/apiService';
 
 export function HomePage() {
-  // null = loading (parent-controlled), [] = loaded empty
-  const [featuredPhotos, setFeaturedPhotos] = useState(null);
+  // null = cargando, [] = cargado vacío
+  const [heroPhotos, setHeroPhotos] = useState(null);
+  const [joinPhotos, setJoinPhotos] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    galeriaApi.getFeatured()
+
+    // Carrusel principal: imágenes configuradas en la sección hero (hasta 5)
+    galeriaApi.getSection('hero')
       .then(data => {
         if (!cancelled) {
-          setFeaturedPhotos(
+          setHeroPhotos(
             (data ?? [])
-              .slice(0, 15)
               .filter(img => img.src)
               .map(img => ({ src: img.src, alt: img.title || 'Foto del semillero' }))
           );
         }
       })
-      .catch(() => { if (!cancelled) setFeaturedPhotos([]); });
+      .catch(() => { if (!cancelled) setHeroPhotos([]); });
+
+    // Sección "Por qué unirse": imágenes configuradas en join (hasta 6)
+    galeriaApi.getSection('join')
+      .then(data => {
+        if (!cancelled) {
+          setJoinPhotos(
+            (data ?? [])
+              .filter(img => img.src)
+              .map(img => ({ src: img.src, alt: img.title || 'Foto del semillero' }))
+          );
+        }
+      })
+      .catch(() => { if (!cancelled) setJoinPhotos([]); });
+
     return () => { cancelled = true; };
   }, []);
 
-  const heroSlides = featuredPhotos ? featuredPhotos.slice(0, 5) : [];
-
   return (
     <main id="main-content" style={{ minHeight: '100vh' }}>
-      <HeroSection slides={heroSlides} />
+      <HeroSection slides={heroPhotos ?? []} />
       <FeaturedSection />
       <AboutSection />
       <EventsSection />
-      <ParticipantsSection featuredOnly limit={4} />
-      <GallerySection photos={featuredPhotos} />
+      <ParticipantsSection
+        featuredOnly
+        skipPonentes
+        sectionTitle="Estudiantes Destacados"
+        sectionSubtitle="Reconocimiento"
+      />
+      <GallerySection photos={joinPhotos} />
     </main>
   );
 }

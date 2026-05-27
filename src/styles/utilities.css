@@ -282,7 +282,7 @@
 /* ── Gradient text ── */
 
 .sl-gradient-text {
-  background: linear-gradient(90deg, #60A5FA, #A78BFA);
+  background: linear-gradient(90deg, #1A3FAA, #60A5FA);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -299,4 +299,123 @@
 
 .sl-hero-dark {
   background: linear-gradient(145deg, #050913 0%, #0F1E55 55%, #1A3FAA 100%);
+}
+
+/* ── Grid line patterns (absolute position overlays) ── */
+
+.sl-grid-lines-dark {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.034) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.034) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.sl-grid-lines-light {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(26,63,170,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,63,170,0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+/* ── Glow divider line ── */
+
+.sl-glow-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(79,123,232,0.55) 30%, rgba(34,211,238,0.40) 65%, transparent 100%);
+  border: none;
+  margin: 0;
+}
+
+/* ── Shimmer gradient text ── */
+
+.sl-shimmer-text {
+  background: linear-gradient(90deg, #1A3FAA 0%, #4F7BE8 30%, #93C5FD 60%, #1A3FAA 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sl-shimmer 4s linear infinite;
+}
+
+/* ── Neon glass pill ── */
+
+.sl-neon-pill {
+  background: rgba(26,63,170,0.10);
+  border: 1px solid rgba(99,140,255,0.35);
+  color: #93C5FD;
+  box-shadow: 0 0 14px rgba(99,140,255,0.18), inset 0 0 6px rgba(99,140,255,0.06);
+}
+
+/* ── Enhanced card hover glow ── */
+
+.sl-card-hover-glow {
+  transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s cubic-bezier(0.22,1,0.36,1);
+}
+
+.sl-card-hover-glow:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(26,63,170,0.14), 0 4px 16px rgba(0,0,0,0.06), 0 0 0 1.5px rgba(99,140,255,0.28);
+}
+
+/* ── Scan lines subtle overlay ── */
+
+.sl-scanlines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.011) 2px,
+    rgba(255,255,255,0.011) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Live pulse dot ── */
+
+.sl-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3B82F6;
+  box-shadow: 0 0 0 0 rgba(59,130,246,0.5);
+  animation: sl-pulse-dot 2s ease-out infinite;
+}
+
+/* ── Atmospheric blur orb ── */
+
+.sl-atm-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ── Gradient hero v2 (brighter dark) ── */
+
+.sl-hero-futuristic {
+  background: linear-gradient(145deg, #050913 0%, #080E22 35%, #0F1E55 65%, #1A3FAA 100%);
+}
+
+/* ── Category accent top bar on cards ── */
+
+.sl-category-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: inherit;
+}
+
+/* ── Futuristic section light BG ── */
+
+.sl-section-tinted {
+  background:
+    linear-gradient(180deg, #F0F4FF 0%, #F6F8FF 60%, #F8FAFC 100%);
 }

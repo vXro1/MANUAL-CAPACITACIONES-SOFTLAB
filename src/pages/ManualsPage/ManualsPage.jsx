@@ -75,13 +75,14 @@ export function ManualsPage() {
           overflow: 'hidden',
         }}
       >
-        {/* Dot pattern */}
+        {/* Grid lines */}
         <div
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0,
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.032) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.032) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+            pointerEvents: 'none',
           }}
         />
 

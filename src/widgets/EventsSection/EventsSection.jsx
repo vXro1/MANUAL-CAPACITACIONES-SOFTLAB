@@ -9,9 +9,9 @@ const EASE = [0.22, 1, 0.36, 1];
 
 const CATEGORY_STYLES = {
   'Divulgación Científica':  { bg: '#EEF3FF', color: '#1A3FAA' },
-  'Salida Técnica':          { bg: '#ECFDF5', color: '#065F46' },
-  'Movilidad Internacional': { bg: '#F3E8FF', color: '#6D28D9' },
-  'Movilidad Nacional':      { bg: '#FFFBEB', color: '#92400E' },
+  'Salida Técnica':          { bg: '#EBF0FF', color: '#1D52CC' },
+  'Movilidad Internacional': { bg: '#E8EDFF', color: '#142F8A' },
+  'Movilidad Nacional':      { bg: '#EDF2FF', color: '#2151C2' },
 };
 
 function getCatStyle(cat) {
@@ -36,23 +36,35 @@ function EventCard({ event, index }) {
       style={{
         background: '#fff',
         borderRadius: 20,
-        border: '1px solid #EEF2F8',
+        border: '1px solid #E8EFFE',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 2px 12px rgba(26,63,170,0.05)',
-        transition: 'transform 0.22s, box-shadow 0.22s',
+        transition: 'transform 0.25s, box-shadow 0.25s, border-color 0.25s',
         cursor: 'pointer',
+        position: 'relative',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 12px 32px rgba(26,63,170,0.12)';
+        e.currentTarget.style.transform = 'translateY(-6px)';
+        e.currentTarget.style.boxShadow = `0 16px 44px rgba(26,63,170,0.14), 0 0 0 1.5px ${cat.color}44`;
+        e.currentTarget.style.borderColor = `${cat.color}33`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'none';
         e.currentTarget.style.boxShadow = '0 2px 12px rgba(26,63,170,0.05)';
+        e.currentTarget.style.borderColor = '#E8EFFE';
       }}
     >
+      {/* Category accent top bar */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+          background: `linear-gradient(90deg, ${cat.color}, ${cat.color}88)`,
+          zIndex: 2,
+        }}
+      />
       {/* Cover image o placeholder */}
       <div
         style={{
@@ -184,10 +196,13 @@ export function EventsSection() {
       aria-label="Eventos del semillero"
       style={{
         padding: 'clamp(56px, 9vw, 96px) 0',
-        background: 'linear-gradient(180deg, #F8FAFF 0%, #FFFFFF 100%)',
+        background: '#ffffff',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px' }} className="events-section-container">
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }} className="events-section-container">
 
         {/* Header */}
         <motion.div
@@ -220,7 +235,17 @@ export function EventsSection() {
                 color: '#0A0F1E', margin: 0, lineHeight: 1.15,
               }}
             >
-              Eventos recientes
+              Eventos{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(120deg, #1A3FAA 0%, #4F7BE8 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                recientes
+              </span>
             </h2>
           </div>
 

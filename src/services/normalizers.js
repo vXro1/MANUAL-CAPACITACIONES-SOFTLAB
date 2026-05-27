@@ -39,6 +39,7 @@ export function normalizeParticipant(p) {
     github:     p.github   ?? '',
     email:      p.email    ?? '',
     photo:      p.foto_path ?? p.photo   ?? null,
+    featured:   !!(p.featured ?? false),
     actividades: (p.actividades ?? []).map((a) => ({
       tipo:      a.tipo,
       id:        String(a.id),
@@ -57,6 +58,8 @@ export function normalizeGalleryImage(img) {
     title:      img.titulo      ?? img.title   ?? '',
     featured:   !!(img.destacada ?? img.featured),
     uploadedAt: img.subido_en   ?? img.uploadedAt ?? new Date().toISOString(),
+    heroOrder:  img.heroOrder   ?? img.hero_order ?? null,
+    joinOrder:  img.joinOrder   ?? img.join_order ?? null,
   };
 }
 

@@ -100,15 +100,19 @@ export function Navbar() {
                 end={link.href === '/'}
                 style={({ isActive }) => ({
                   padding: '8px 16px', borderRadius: 9,
-                  fontSize: 14, fontWeight: 500,
+                  fontSize: 14, fontWeight: isActive ? 600 : 500,
                   fontFamily: 'DM Sans, sans-serif',
                   textDecoration: 'none',
                   transition: 'all 0.2s',
                   color: isActive ? '#1A3FAA' : '#4B5563',
                   background: isActive
-                    ? 'rgba(238,243,255,0.85)'
+                    ? 'rgba(238,243,255,0.90)'
                     : 'transparent',
                   backdropFilter: isActive ? 'blur(8px)' : 'none',
+                  WebkitBackdropFilter: isActive ? 'blur(8px)' : 'none',
+                  boxShadow: isActive
+                    ? '0 0 0 1px rgba(26,63,170,0.12), 0 2px 8px rgba(26,63,170,0.08)'
+                    : 'none',
                 })}
               >
                 {link.label}
