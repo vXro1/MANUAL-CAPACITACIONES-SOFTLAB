@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Upload, Trash2, Tag, Users, CalendarDays, AlignLeft, Check, Star,
-  Image as ImageIcon,
+  Image as ImageIcon, ExternalLink,
 } from 'lucide-react';
-import { eventsRepository, eventCategoriesRepository, participantsRepository } from '@/storage/localStorageRepository';
+import { eventsRepository, eventCategoriesRepository, participantsRepository, directorsRepository } from '@/storage/localStorageRepository';
 import { eventosApi, eventosGaleriaApi, categoriasEventosApi, rolesApi, getToken } from '@/services/apiService';
 import { syncEventos } from '@/services/dataSync';
+import { syncDirectivos } from '@/services/directivosApi';
 import { GalleryImagePicker } from '@/shared/ui/GalleryImagePicker';
 
 const ACCENT = '#059669';
@@ -29,6 +31,7 @@ const buildForm = (event) => ({
   participantRoles: event?.participantRoles?.length
     ? event.participantRoles
     : (event?.participantIds ?? []).map((id) => ({ participante_id: id, rol: 'Ponente' })),
+  directivoRoles: event?.directivoRoles ?? [],
   coverImageId: event?.coverImageId ?? null,
   gallery:      (event?.gallery ?? []).map((g) => ({ ...g, _serverImage: true })),
 });
@@ -177,48 +180,88 @@ function RoleSelector({ participanteId, rol, onChangeRol, name, globalRoles, onA
 }
 
 // ─── ParticipantsField ────────────────────────────────────────────────────────
-function ParticipantsField({ value, onChange }) {
-  const [search, setSearch] = useState('');
+function ParticipantsField({ participantRoles, onChangeParticipants, directivoRoles, onChangeDirectivos }) {
+  const [search,      setSearch]      = useState('');
   const [globalRoles, setGlobalRoles] = useState(BASE_EVENT_ROLES);
-  const all      = participantsRepository.getAll();
-  const filtered = all.filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()));
-  const selectedIds = value.map((pr) => pr.participante_id);
+  const [directors,   setDirectors]   = useState(() => directorsRepository.getAll());
+
+  const allParticipants = participantsRepository.getAll();
+
+  useEffect(() => {
+    syncDirectivos()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setDirectors(data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     rolesApi.getAll()
       .then((remote) => {
-        if (Array.isArray(remote) && remote.length > 0) {
-          setGlobalRoles((prev) => [...new Set([...prev, ...remote])].sort());
-        }
+        if (!Array.isArray(remote) || remote.length === 0) return;
+        const roleNames = remote.filter((r) => typeof r === 'string' && r.trim());
+        if (roleNames.length > 0)
+          setGlobalRoles((prev) => [...new Set([...prev, ...roleNames])].sort());
       })
       .catch(() => {});
   }, []);
 
-  const toggle = (id) => {
-    if (selectedIds.includes(id)) onChange(value.filter((pr) => pr.participante_id !== id));
-    else onChange([...value, { participante_id: id, rol: BASE_EVENT_ROLES[0] }]);
+  const filteredParticipants = allParticipants.filter(
+    (p) => !search || p.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const filteredDirectors = directors.filter(
+    (d) => !search || d.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const selectedParticipantIds = participantRoles.map((pr) => pr.participante_id);
+  const selectedDirectorIds    = directivoRoles.map((dr) => dr.directivo_id);
+
+  const toggleParticipant = (id) => {
+    if (selectedParticipantIds.includes(id))
+      onChangeParticipants(participantRoles.filter((pr) => pr.participante_id !== id));
+    else
+      onChangeParticipants([...participantRoles, { participante_id: id, rol: BASE_EVENT_ROLES[0] }]);
   };
 
-  const setRol = (id, rol) =>
-    onChange(value.map((pr) => pr.participante_id === id ? { ...pr, rol } : pr));
+  const toggleDirectivo = (id) => {
+    if (selectedDirectorIds.includes(id))
+      onChangeDirectivos(directivoRoles.filter((dr) => dr.directivo_id !== id));
+    else
+      onChangeDirectivos([...directivoRoles, { directivo_id: id, rol: BASE_EVENT_ROLES[0] }]);
+  };
+
+  const setParticipantRol = (id, rol) =>
+    onChangeParticipants(participantRoles.map((pr) => pr.participante_id === id ? { ...pr, rol } : pr));
+
+  const setDirectivoRol = (id, rol) =>
+    onChangeDirectivos(directivoRoles.map((dr) => dr.directivo_id === id ? { ...dr, rol } : dr));
 
   const addRole = (rol) =>
     setGlobalRoles((prev) => [...new Set([...prev, rol])].sort());
+
+  const totalSelected = participantRoles.length + directivoRoles.length;
+  const hasBothSections = filteredDirectors.length > 0 && filteredParticipants.length > 0;
+  const noResults = filteredDirectors.length === 0 && filteredParticipants.length === 0;
+
+  const SECTION_HEADER = {
+    padding: '5px 12px 4px', fontSize: 10, fontWeight: 700,
+    color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em',
+    borderBottom: '1px solid #F1F5F9', background: '#FAFAFA',
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Participantes</label>
-        {value.length > 0 && (
+        {totalSelected > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, background: BG, padding: '2px 8px', borderRadius: 20 }}>
-            {value.length} seleccionado{value.length !== 1 ? 's' : ''}
+            {totalSelected} seleccionado{totalSelected !== 1 ? 's' : ''}
           </span>
         )}
       </div>
+
       <div style={{ position: 'relative' }}>
         <input
           type="search" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar participante…"
+          placeholder="Buscar participante o directivo…"
           style={{
             width: '100%', padding: '8px 12px 8px 34px', borderRadius: 10,
             border: '1.5px solid #E2E8F0', fontSize: 13, outline: 'none',
@@ -227,17 +270,98 @@ function ParticipantsField({ value, onChange }) {
         />
         <Users size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
       </div>
-      {all.length === 0 ? (
+
+      {allParticipants.length === 0 && directors.length === 0 ? (
         <p style={{ fontSize: 12, color: '#94A3B8', padding: '8px 0' }}>
-          No hay participantes registrados. Agrega participantes primero desde el panel.
+          No hay participantes ni directivos registrados.
         </p>
       ) : (
-        <div style={{ maxHeight: 280, overflowY: 'auto', borderRadius: 12, border: '1.5px solid #E2E8F0', background: '#fff' }}>
-          {filtered.length === 0
-            ? <p style={{ fontSize: 12, color: '#94A3B8', padding: 12 }}>Sin resultados.</p>
-            : filtered.map((p) => {
-                const selected = selectedIds.includes(p.id);
-                const pr       = value.find((r) => r.participante_id === p.id);
+        <div style={{ maxHeight: 320, overflowY: 'auto', borderRadius: 12, border: '1.5px solid #E2E8F0', background: '#fff' }}>
+          {noResults && <p style={{ fontSize: 12, color: '#94A3B8', padding: 12 }}>Sin resultados.</p>}
+
+          {/* ── Directivos ── */}
+          {filteredDirectors.length > 0 && (
+            <>
+              {hasBothSections && <div style={SECTION_HEADER}>Directivos</div>}
+              {filteredDirectors.map((d) => {
+                const selected     = selectedDirectorIds.includes(d.id);
+                const dr           = directivoRoles.find((r) => r.directivo_id === d.id);
+                const initials     = d.name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+                const accentColor  = d.accent ?? '#1A3FAA';
+                const bgColor      = d.bg ?? '#EEF3FF';
+                const borderColor  = d.border ?? d.borderColor ?? '#C7D5F8';
+                return (
+                  <div key={`dir-${d.id}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                    background: selected ? bgColor : 'transparent',
+                    borderBottom: '1px solid #F1F5F9', transition: 'background .15s',
+                  }}>
+                    <input type="checkbox" checked={selected} onChange={() => toggleDirectivo(d.id)}
+                      style={{ width: 16, height: 16, accentColor, flexShrink: 0, cursor: 'pointer' }}
+                      aria-label={`Seleccionar ${d.name}`} />
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                      background: bgColor, color: accentColor,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700,
+                      border: `1.5px solid ${borderColor}`,
+                    }}>
+                      {d.photo
+                        ? <img src={d.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : initials}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap' }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                          {d.name}
+                        </p>
+                        {d.badge && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            color: accentColor, background: bgColor,
+                            border: `1px solid ${borderColor}`,
+                            padding: '1px 6px', borderRadius: 99, flexShrink: 0,
+                          }}>{d.badge}</span>
+                        )}
+                        <Link
+                          to={`/directivos/${d.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ver perfil completo"
+                          style={{ color: '#CBD5E1', display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none', transition: 'color .15s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = accentColor; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#CBD5E1'; }}
+                        >
+                          <ExternalLink size={11} />
+                        </Link>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                        {d.role}
+                      </p>
+                    </div>
+                    {selected && (
+                      <RoleSelector
+                        participanteId={d.id}
+                        rol={dr?.rol ?? BASE_EVENT_ROLES[0]}
+                        onChangeRol={setDirectivoRol}
+                        name={d.name}
+                        globalRoles={globalRoles}
+                        onAddRole={addRole}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* ── Participantes ── */}
+          {filteredParticipants.length > 0 && (
+            <>
+              {hasBothSections && <div style={SECTION_HEADER}>Participantes</div>}
+              {filteredParticipants.map((p) => {
+                const selected = selectedParticipantIds.includes(p.id);
+                const pr       = participantRoles.find((r) => r.participante_id === p.id);
                 const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
                 return (
                   <div key={p.id} style={{
@@ -245,7 +369,7 @@ function ParticipantsField({ value, onChange }) {
                     background: selected ? BG : 'transparent',
                     borderBottom: '1px solid #F1F5F9', transition: 'background .15s',
                   }}>
-                    <input type="checkbox" checked={selected} onChange={() => toggle(p.id)}
+                    <input type="checkbox" checked={selected} onChange={() => toggleParticipant(p.id)}
                       style={{ width: 16, height: 16, accentColor: ACCENT, flexShrink: 0, cursor: 'pointer' }}
                       aria-label={`Seleccionar ${p.name}`} />
                     <div style={{
@@ -262,12 +386,20 @@ function ParticipantsField({ value, onChange }) {
                       <p style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.career || p.role || ''}</p>
                     </div>
                     {selected && (
-                      <RoleSelector participanteId={p.id} rol={pr?.rol ?? BASE_EVENT_ROLES[0]} onChangeRol={setRol} name={p.name} globalRoles={globalRoles} onAddRole={addRole} />
+                      <RoleSelector
+                        participanteId={p.id}
+                        rol={pr?.rol ?? BASE_EVENT_ROLES[0]}
+                        onChangeRol={setParticipantRol}
+                        name={p.name}
+                        globalRoles={globalRoles}
+                        onAddRole={addRole}
+                      />
                     )}
                   </div>
                 );
-              })
-          }
+              })}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -482,6 +614,8 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
           categoria:        form.category,
           participantRoles: form.participantRoles,
           participantIds:   form.participantRoles.map((pr) => pr.participante_id),
+          directivoRoles:   form.directivoRoles,
+          directivoIds:     form.directivoRoles.map((dr) => dr.directivo_id),
           coverImageId:     form.coverImageId,
         };
         const savedEvent = isEdit
@@ -511,6 +645,8 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
           category:         form.category,
           participantRoles: form.participantRoles,
           participantIds:   form.participantRoles.map((pr) => pr.participante_id),
+          directivoRoles:   form.directivoRoles,
+          directivoIds:     form.directivoRoles.map((dr) => dr.directivo_id),
           coverImageId:     form.coverImageId,
           gallery:          form.gallery.map((g) => ({ id: g.id, src: g.src, title: g.title })),
         });
@@ -669,8 +805,10 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
                     {/* ── Tab: Participantes ── */}
                     {activeTab === 'participantes' && (
                       <ParticipantsField
-                        value={form.participantRoles}
-                        onChange={(roles) => setForm((f) => ({ ...f, participantRoles: roles }))}
+                        participantRoles={form.participantRoles}
+                        onChangeParticipants={(roles) => setForm((f) => ({ ...f, participantRoles: roles }))}
+                        directivoRoles={form.directivoRoles}
+                        onChangeDirectivos={(roles) => setForm((f) => ({ ...f, directivoRoles: roles }))}
                       />
                     )}
 

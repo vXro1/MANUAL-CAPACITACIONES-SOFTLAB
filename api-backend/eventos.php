@@ -28,6 +28,17 @@ if ($method === 'POST' && isset($_GET['_method'])) {
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
+// Crear tabla de relación evento-directivo si no existe aún
+db()->exec('
+    CREATE TABLE IF NOT EXISTS eventos_directivos (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        evento_id    INT NOT NULL,
+        directivo_id INT NOT NULL,
+        rol          VARCHAR(120) DEFAULT NULL,
+        UNIQUE KEY uq_ev_dir (evento_id, directivo_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+');
+
 // ─────────────────────────────────────────────────────────────
 // NORMALIZAR EVENTO
 // ─────────────────────────────────────────────────────────────
@@ -52,6 +63,25 @@ function parseEvento($row) {
     $row['participantIds'] = array_map(
         function ($r) { return (string)$r['participante_id']; },
         $rawParticipants
+    );
+
+    // Directivos del evento con sus roles
+    $stmtDir = db()->prepare(
+        'SELECT directivo_id, rol FROM eventos_directivos WHERE evento_id = ?'
+    );
+    $stmtDir->execute([(int)$row['id']]);
+    $rawDirectivos = $stmtDir->fetchAll();
+
+    $row['directivoRoles'] = array_map(function ($r) {
+        return [
+            'directivo_id' => (string)$r['directivo_id'],
+            'rol'          => $r['rol'],
+        ];
+    }, $rawDirectivos);
+
+    $row['directivoIds'] = array_map(
+        function ($r) { return (string)$r['directivo_id']; },
+        $rawDirectivos
     );
 
     // Galería del evento
@@ -148,6 +178,18 @@ if ($method === 'POST') {
         }
     }
 
+    // Asociar directivos con roles
+    if (!empty($data['directivoRoles']) && is_array($data['directivoRoles'])) {
+        $insD = db()->prepare(
+            'INSERT IGNORE INTO eventos_directivos (evento_id, directivo_id, rol) VALUES (?, ?, ?)'
+        );
+        foreach ($data['directivoRoles'] as $dr) {
+            if (!empty($dr['directivo_id'])) {
+                $insD->execute([$newId, (int)$dr['directivo_id'], $dr['rol'] ?? null]);
+            }
+        }
+    }
+
     $row = db()->query("SELECT * FROM eventos WHERE id = {$newId}")->fetch();
     ok(parseEvento($row), 201);
 }
@@ -209,6 +251,22 @@ if ($method === 'PUT') {
         }
     }
 
+    // Reemplazar directivos si se envían
+    if (isset($data['directivoRoles']) && is_array($data['directivoRoles'])) {
+        db()->prepare(
+            'DELETE FROM eventos_directivos WHERE evento_id = ?'
+        )->execute([$id]);
+
+        $insD = db()->prepare(
+            'INSERT IGNORE INTO eventos_directivos (evento_id, directivo_id, rol) VALUES (?, ?, ?)'
+        );
+        foreach ($data['directivoRoles'] as $dr) {
+            if (!empty($dr['directivo_id'])) {
+                $insD->execute([$id, (int)$dr['directivo_id'], $dr['rol'] ?? null]);
+            }
+        }
+    }
+
     $row = db()->query("SELECT * FROM eventos WHERE id = {$id}")->fetch();
     ok(parseEvento($row));
 }
@@ -231,6 +289,9 @@ if ($method === 'DELETE') {
     foreach ($imgs->fetchAll() as $img) {
         removeFile($img['imagen_path']);
     }
+
+    // Eliminar directivos del evento (sin FK cascade)
+    db()->prepare('DELETE FROM eventos_directivos WHERE evento_id = ?')->execute([$id]);
 
     // La FK CASCADE elimina eventos_participantes y eventos_galeria automáticamente
     db()->prepare('DELETE FROM eventos WHERE id = ?')->execute([$id]);

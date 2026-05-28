@@ -88,6 +88,11 @@ export function normalizeEvento(ev) {
       participante_id: String(pr.participante_id),
       rol:             pr.rol ?? null,
     })),
+    directivoRoles:   (ev.directivoRoles ?? []).map((dr) => ({
+      directivo_id: String(dr.directivo_id),
+      rol:          dr.rol ?? null,
+    })),
+    directivoIds:     (ev.directivoIds ?? []).map(String),
     gallery:          (ev.gallery ?? []).map((img) => ({
       id:    String(img.id),
       src:   img.src        ?? img.imagen_path ?? '',

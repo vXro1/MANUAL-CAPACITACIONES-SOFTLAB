@@ -18,6 +18,7 @@ import { AdminGalleryPage }       from '@/pages/AdminPage/AdminGalleryPage';
 import { AdminEventsPage }        from '@/pages/AdminPage/AdminEventsPage';
 import { AdminNewEventPage }      from '@/pages/AdminPage/AdminNewEventPage';
 import { AdminDirectors }         from '@/pages/AdminPage/AdminDirectors';
+import { DirectorDetailPage }     from '@/pages/DirectorDetailPage/DirectorDetailPage';
 
 // ─── Página de error genérica ─────────────────────────────────────────────────
 function ErrorPage() {
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
       { path: 'eventos',              element: <EventsPage /> },
       { path: 'eventos/:id',         element: <EventDetailPage /> },
       { path: 'participantes/:slug', element: <ParticipantDetailPage /> },
+      { path: 'directivos/:id',     element: <DirectorDetailPage /> },
     ],
   },
   {

@@ -2,7 +2,7 @@ import { motion, useInView } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import { directivosApi } from '@/services/directivosApi';
-import { ArrowRight, FlaskConical, BookOpen, Users, Zap, Shield, GraduationCap } from 'lucide-react';
+import { ArrowRight, FlaskConical, BookOpen, Users, Zap, Shield, GraduationCap, ArrowUpRight } from 'lucide-react';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -83,120 +83,147 @@ function DirectorCard({ person, index }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
   const borderColor = person.borderColor ?? person.border ?? '#c7d7f8';
+  const accentColor = person.accent || '#1A3FAA';
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 40 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.62, delay: index * 0.14, ease: EASE }}
-      whileHover={{
-        y: -7,
-        boxShadow: `0 28px 64px rgba(0,0,0,0.13), 0 0 0 1.5px ${borderColor}`,
-      }}
-      style={{
-        flex: 1, minWidth: 0,
-        borderRadius: 22, overflow: 'hidden',
-        background: '#fff',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 0 0 1px rgba(241,245,249,1)',
-        display: 'flex', flexDirection: 'column',
-        transition: 'box-shadow 0.3s',
-        willChange: 'transform',
-      }}
+    <Link
+      to={`/directivos/${person.id}`}
+      style={{ textDecoration: 'none', display: 'flex', flex: 1, minWidth: 0 }}
     >
-      {/* Colored header */}
-      <div style={{
-        background: `linear-gradient(140deg, ${person.bg || '#EEF3FF'} 0%, #fff 100%)`,
-        padding: '36px 28px 24px',
-        position: 'relative',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-        borderBottom: `1px solid ${borderColor}`,
-      }}>
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 40 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.62, delay: index * 0.14, ease: EASE }}
+        whileHover={{
+          y: -7,
+          boxShadow: `0 28px 64px rgba(0,0,0,0.13), 0 0 0 1.5px ${borderColor}`,
+        }}
+        style={{
+          width: '100%',
+          borderRadius: 22, overflow: 'hidden',
+          background: '#fff',
+          boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 0 0 1px rgba(241,245,249,1)',
+          display: 'flex', flexDirection: 'column',
+          transition: 'box-shadow 0.3s',
+          willChange: 'transform',
+          cursor: 'pointer',
+        }}
+      >
+        {/* Colored header */}
         <div style={{
-          position: 'absolute', top: 0, left: '20%', right: '20%', height: 3,
-          background: `linear-gradient(90deg, transparent, ${person.accent || '#1A3FAA'}, transparent)`,
-          borderRadius: '0 0 4px 4px',
-        }} />
-
-        {person.badge && (
-          <div style={{
-            position: 'absolute', top: 18, right: 18,
-            padding: '4px 12px', borderRadius: 999,
-            fontSize: 10, fontWeight: 700,
-            background: '#fff',
-            color: person.accent,
-            border: `1px solid ${borderColor}`,
-            fontFamily: 'DM Sans, sans-serif',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          }}>
-            {person.badge}
-          </div>
-        )}
-
-        <div style={{
-          width: 76, height: 76, borderRadius: '50%',
-          background: `linear-gradient(135deg, ${person.accent || '#1A3FAA'}, ${person.accent || '#1A3FAA'}bb)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
-          fontSize: 24, fontWeight: 800, color: '#fff',
-          fontFamily: 'Syne, sans-serif',
-          border: '4px solid #fff',
-          boxShadow: `0 8px 28px ${person.accent || '#1A3FAA'}35`,
+          background: `linear-gradient(140deg, ${person.bg || '#EEF3FF'} 0%, #fff 100%)`,
+          padding: '36px 28px 24px',
+          position: 'relative',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+          borderBottom: `1px solid ${borderColor}`,
         }}>
-          {person.photo
-            ? <img src={person.photo} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : (person.initials || (person.name ?? '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase())
-          }
-        </div>
+          <div style={{
+            position: 'absolute', top: 0, left: '20%', right: '20%', height: 3,
+            background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)`,
+            borderRadius: '0 0 4px 4px',
+          }} />
 
-        <div style={{ textAlign: 'center' }}>
-          <p style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 700,
-            color: '#0A0F1E', margin: 0, letterSpacing: '-0.3px',
-          }}>
-            {person.name}
-          </p>
-          <p style={{
-            fontSize: 12, color: person.accent,
-            margin: '5px 0 0', fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-            lineHeight: 1.45,
-          }}>
-            {person.role}
-          </p>
-          {person.profession && (
-            <p style={{ fontSize: 11, color: '#94A3B8', margin: '3px 0 0', fontFamily: 'DM Sans, sans-serif' }}>
-              {person.profession}
-            </p>
+          {person.badge && (
+            <div style={{
+              position: 'absolute', top: 18, right: 18,
+              padding: '4px 12px', borderRadius: 999,
+              fontSize: 10, fontWeight: 700,
+              background: '#fff',
+              color: accentColor,
+              border: `1px solid ${borderColor}`,
+              fontFamily: 'DM Sans, sans-serif',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            }}>
+              {person.badge}
+            </div>
           )}
-        </div>
-      </div>
 
-      {/* Body */}
-      <div style={{ padding: '22px 24px 22px', display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
-        <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.78, margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
-          {person.description || person.desc || ''}
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'auto' }}>
-          {(person.chips ?? []).map((chip) => (
-            <span
-              key={chip}
-              style={{
-                padding: '4px 10px', borderRadius: 999,
-                fontSize: 11, fontWeight: 500,
-                background: person.bg || '#EEF3FF',
-                color: person.accent || '#1A3FAA',
-                border: `1px solid ${borderColor}`,
-                fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              {chip}
-            </span>
-          ))}
+          <div style={{
+            width: 76, height: 76, borderRadius: '50%',
+            background: `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+            fontSize: 24, fontWeight: 800, color: '#fff',
+            fontFamily: 'Syne, sans-serif',
+            border: '4px solid #fff',
+            boxShadow: `0 8px 28px ${accentColor}35`,
+          }}>
+            {person.photo
+              ? <img src={person.photo} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (person.initials || (person.name ?? '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase())
+            }
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <p style={{
+              fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 700,
+              color: '#0A0F1E', margin: 0, letterSpacing: '-0.3px',
+            }}>
+              {person.name}
+            </p>
+            <p style={{
+              fontSize: 12, color: accentColor,
+              margin: '5px 0 0', fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+              lineHeight: 1.45,
+            }}>
+              {person.role}
+            </p>
+            {person.profession && (
+              <p style={{ fontSize: 11, color: '#94A3B8', margin: '3px 0 0', fontFamily: 'DM Sans, sans-serif' }}>
+                {person.profession}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
+
+        {/* Body */}
+        <div style={{ padding: '22px 24px 18px', display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
+          <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.78, margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+            {person.description || person.desc || ''}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'auto' }}>
+            {(person.chips ?? []).map((chip) => (
+              <span
+                key={chip}
+                style={{
+                  padding: '4px 10px', borderRadius: 999,
+                  fontSize: 11, fontWeight: 500,
+                  background: person.bg || '#EEF3FF',
+                  color: accentColor,
+                  border: `1px solid ${borderColor}`,
+                  fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer: Ver perfil */}
+        <div style={{
+          padding: '12px 24px',
+          borderTop: `1px solid ${borderColor}44`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: `${person.bg || '#EEF3FF'}55`,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: accentColor, fontFamily: 'DM Sans, sans-serif' }}>
+            Ver perfil completo
+          </span>
+          <span style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: accentColor, color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <ArrowUpRight size={13} />
+          </span>
+        </div>
+      </motion.div>
+    </Link>
   );
 }
 
