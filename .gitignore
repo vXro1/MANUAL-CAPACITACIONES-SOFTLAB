@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Archivos subidos por usuarios — viven SOLO en el servidor, nunca en el repo
+uploads/*
+!uploads/.htaccess
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -16,8 +16,15 @@ define('DB_USER', 'u122834460_admin2026');
 define('DB_PASS', 'Bdsoftlab2026');
 
 // ─── Rutas de archivos ────────────────────────────────────────────────────────
-// Los PHP viven en public_html/api/ → uploads está un nivel arriba
-define('UPLOAD_DIR', __DIR__ . '/../uploads/');
+// NO usamos realpath() porque en Hostinger public_html es un symlink y realpath
+// lo resuelve a un directorio diferente del que sirve el web server.
+// Usamos DOCUMENT_ROOT tal como lo reporta el servidor (sin resolver symlinks).
+if (!empty($_SERVER['DOCUMENT_ROOT']) && is_dir($_SERVER['DOCUMENT_ROOT'])) {
+    define('UPLOAD_DIR', rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/uploads/');
+} else {
+    // Fallback: carpeta uploads/ al mismo nivel que api-backend/
+    define('UPLOAD_DIR', dirname(__DIR__) . '/uploads/');
+}
 define('UPLOAD_URL', 'https://semillerosoftlab.com/uploads/');
 
 // Crear subcarpetas de uploads si no existen
@@ -146,8 +153,16 @@ function uploadFile($field, $subdir, $allowed, $maxSize) {
     $name = bin2hex(random_bytes(16)) . '.' . $ext;
     $dir  = UPLOAD_DIR . $subdir . '/';
 
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
-    if (!move_uploaded_file($f['tmp_name'], $dir . $name)) err('No se pudo guardar el archivo en el servidor');
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    if (!is_dir($dir)) err('No se pudo crear el directorio: ' . $dir);
+
+    $dest = $dir . $name;
+    if (!move_uploaded_file($f['tmp_name'], $dest)) {
+        err('No se pudo guardar el archivo. Ruta de destino: ' . $dest . ' | UPLOAD_DIR: ' . UPLOAD_DIR);
+    }
+    if (!file_exists($dest)) {
+        err('Archivo movido pero no encontrado en disco: ' . $dest);
+    }
 
     return UPLOAD_URL . $subdir . '/' . $name;
 }

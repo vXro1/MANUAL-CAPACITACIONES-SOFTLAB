@@ -65,8 +65,10 @@ if ($method === 'POST') {
         $name    = bin2hex(random_bytes(16)) . '.' . $ext;
         $destDir = UPLOAD_DIR . 'eventos_galeria/';
 
-        if (!is_dir($destDir)) mkdir($destDir, 0755, true);
-        if (!copy($srcPath, $destDir . $name)) err('No se pudo copiar la imagen en el servidor');
+        if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
+        if (!is_dir($destDir)) err('No se pudo crear directorio: ' . $destDir);
+        if (!copy($srcPath, $destDir . $name)) err('No se pudo copiar. src=' . $srcPath . ' dest=' . $destDir . $name);
+        if (!file_exists($destDir . $name)) err('Copia exitosa pero archivo no encontrado: ' . $destDir . $name);
 
         $imgUrl = UPLOAD_URL . 'eventos_galeria/' . $name;
 
