@@ -39,6 +39,11 @@ db()->exec('
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ');
 
+// Agregar columna cover_image_id a eventos si aún no existe
+try {
+    db()->exec('ALTER TABLE eventos ADD COLUMN cover_image_id INT DEFAULT NULL');
+} catch (PDOException $e) { /* ya existe, ignorar */ }
+
 // ─────────────────────────────────────────────────────────────
 // NORMALIZAR EVENTO
 // ─────────────────────────────────────────────────────────────

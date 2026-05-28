@@ -662,13 +662,46 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
           : await eventosApi.create(payload);
         const eventId = savedEvent.id;
         await Promise.all(deletedGalleryIds.map((id) => eventosGaleriaApi.delete(id).catch(() => {})));
-        const newImages = form.gallery.filter((g) => g._file);
-        await Promise.all(newImages.map((g) => eventosGaleriaApi.upload(eventId, g._file, g.title).catch(() => {})));
+
+        // Upload new files and gallery copies; track temp-ID → real-ID mappings
+        const idMap = new Map();
+        const uploadErrors = [];
+        const newImages   = form.gallery.filter((g) => g._file);
         const galleryRefs = form.gallery.filter((g) => g._fromGallery);
-        await Promise.all(galleryRefs.map((g) =>
-          eventosGaleriaApi.copyFromUrl(eventId, g.src, g.title).catch(() => {})
-        ));
+        await Promise.all([
+          ...newImages.map(async (g) => {
+            try {
+              const res = await eventosGaleriaApi.upload(eventId, g._file, g.title);
+              if (res?.id) idMap.set(g.id, String(res.id));
+            } catch (e) {
+              uploadErrors.push(e?.message ?? 'Error al subir imagen');
+            }
+          }),
+          ...galleryRefs.map(async (g) => {
+            try {
+              const res = await eventosGaleriaApi.copyFromUrl(eventId, g.src, g.title);
+              if (res?.id) idMap.set(g.id, String(res.id));
+            } catch (e) {
+              uploadErrors.push(e?.message ?? 'Error al copiar imagen de galería');
+            }
+          }),
+        ]);
+
+        // If coverImageId was a temp ID, update the event with the real ID
+        const realCoverId = idMap.get(form.coverImageId) ?? form.coverImageId;
+        if (realCoverId !== form.coverImageId && realCoverId) {
+          await eventosApi.update(eventId, { ...payload, coverImageId: realCoverId }).catch(() => {});
+        }
+
         await syncEventos().catch(() => {});
+
+        // Throw after sync so the user sees why images failed (event itself was saved)
+        if (uploadErrors.length > 0) {
+          throw new Error(
+            `Evento guardado, pero ${uploadErrors.length === 1 ? 'una imagen no pudo subirse' : `${uploadErrors.length} imágenes no pudieron subirse`}. ` +
+            `Detalle: ${uploadErrors[0]}`
+          );
+        }
       } else {
         eventsRepository.save({
           ...(isEdit ? { id: event.id, createdAt: event.createdAt } : {}),

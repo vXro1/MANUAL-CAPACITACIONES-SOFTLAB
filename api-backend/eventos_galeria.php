@@ -21,6 +21,18 @@ require_once __DIR__ . '/config.php';
 
 global $ALLOWED_IMG;
 
+// Auto-crear tabla si aún no existe
+db()->exec('
+    CREATE TABLE IF NOT EXISTS eventos_galeria (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        evento_id    INT NOT NULL,
+        imagen_path  VARCHAR(500) NOT NULL,
+        titulo       VARCHAR(200) DEFAULT \'\',
+        subido_en    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_evento (evento_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+');
+
 $method = $_SERVER['REQUEST_METHOD'];
 $id     = isset($_GET['id']) ? (int)$_GET['id'] : null;
 

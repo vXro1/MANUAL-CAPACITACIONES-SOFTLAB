@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, X, ZoomIn, Briefcase,
 } from 'lucide-react';
 import { eventosApi, participantesApi } from '@/services/apiService';
+import { directivosApi } from '@/services/directivosApi';
 import { formatDate } from '@/shared/lib/formatDate';
 import { toSlug } from '@/shared/lib/toSlug';
 
@@ -188,17 +189,23 @@ export function EventDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [event, setEvent] = useState(null);
   const [allParticipants, setAllParticipants] = useState([]);
+  const [allDirectors,   setAllDirectors]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setEvent(null);
-    Promise.all([eventosApi.getById(id), participantesApi.getAll()])
-      .then(([ev, participants]) => {
+    Promise.all([
+      eventosApi.getById(id),
+      participantesApi.getAll(),
+      directivosApi.getAll().catch(() => []),
+    ])
+      .then(([ev, participants, directors]) => {
         if (!cancelled) {
           setEvent(ev ?? null);
           setAllParticipants(participants ?? []);
+          setAllDirectors(Array.isArray(directors) ? directors : []);
         }
       })
       .catch(() => {})
@@ -240,6 +247,17 @@ export function EventDetailPage() {
   const coverImage = event.coverImageId
     ? (gallery.find((g) => String(g.id) === String(event.coverImageId)) ?? gallery[0])
     : gallery[0];
+
+  // Directivos con su rol en el evento
+  const eventDirectivos = (() => {
+    const roles = event.directivoRoles ?? [];
+    return roles
+      .map((dr) => {
+        const d = allDirectors.find((x) => String(x.id) === String(dr.directivo_id));
+        return d ? { ...d, eventRole: dr.rol } : null;
+      })
+      .filter(Boolean);
+  })();
 
   // Combinar datos del participante con su rol específico en este evento
   const eventParticipants = (() => {
@@ -351,6 +369,68 @@ export function EventDetailPage() {
           }}>
             {event.description}
           </p>
+        )}
+
+        {/* Directivos */}
+        {eventDirectivos.length > 0 && (
+          <section aria-label="Equipo directivo del evento" style={{ marginBottom: 44 }}>
+            <h2 style={{
+              fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700,
+              color: '#0A0F1E', margin: '0 0 16px',
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}>
+              <Briefcase size={15} color="#1A3FAA" aria-hidden="true" />
+              Equipo directivo ({eventDirectivos.length})
+            </h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {eventDirectivos.map((d) => {
+                const accentColor = d.accent ?? '#1A3FAA';
+                const bgColor     = d.bg     ?? '#EEF3FF';
+                const borderColor = d.border ?? '#C7D5F8';
+                const initials    = d.initials ?? d.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+                return (
+                  <Link
+                    key={d.id}
+                    to={`/directivos/${d.id}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 16px 8px 8px', borderRadius: 99,
+                      background: bgColor,
+                      border: `1px solid ${borderColor}`,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                      textDecoration: 'none', transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 2px 10px ${accentColor}22`; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; }}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: `${accentColor}18`, border: `1.5px solid ${accentColor}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden', flexShrink: 0,
+                    }}>
+                      {d.photo ? (
+                        <img src={d.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: accentColor, fontFamily: 'Syne, sans-serif' }}>
+                          {initials}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#0A0F1E', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>
+                        {d.name}
+                      </p>
+                      <p style={{ fontSize: 11, color: accentColor, margin: 0, fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Briefcase size={9} aria-hidden="true" />
+                        {d.eventRole ?? d.role}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* Participants */}
