@@ -19,12 +19,13 @@ function getCatStyle(cat) {
 }
 
 function EventCard({ event, index }) {
+  const [imgErr, setImgErr] = useState(false);
   const cat = getCatStyle(event.category);
   const gallery = event.gallery ?? [];
   const coverImg = event.coverImageId
-    ? (gallery.find((g) => g.id === event.coverImageId) ?? gallery[0])
+    ? (gallery.find((g) => String(g.id) === String(event.coverImageId)) ?? gallery[0])
     : gallery[0];
-  const cover = coverImg?.src ?? null;
+  const cover = (!imgErr && coverImg?.src) ? coverImg.src : null;
 
   return (
     <Link to={`/eventos/${event.id}`} style={{ textDecoration: 'none' }}>
@@ -80,6 +81,7 @@ function EventCard({ event, index }) {
             src={cover}
             alt={event.title}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={() => setImgErr(true)}
           />
         ) : (
           <div

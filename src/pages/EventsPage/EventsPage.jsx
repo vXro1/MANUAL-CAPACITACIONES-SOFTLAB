@@ -20,14 +20,15 @@ function getCategoryStyle(cat) {
 
 // ─── EventCard ────────────────────────────────────────────────────────────────
 function EventCard({ event, index }) {
+  const [imgErr, setImgErr] = useState(false);
   const navigate = useNavigate();
   const catStyle = getCategoryStyle(event.category);
   const participantCount = (event.participantIds ?? []).length;
   const galleryCount = (event.gallery ?? []).length;
   const gallery = event.gallery ?? [];
-  const coverImage = event.coverImageId
-    ? (gallery.find((g) => g.id === event.coverImageId) ?? gallery[0])
-    : gallery[0];
+  const coverImage = !imgErr && (event.coverImageId
+    ? (gallery.find((g) => String(g.id) === String(event.coverImageId)) ?? gallery[0])
+    : gallery[0]);
 
   return (
     <motion.article
@@ -75,6 +76,7 @@ function EventCard({ event, index }) {
             src={coverImage.src}
             alt=""
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={() => setImgErr(true)}
           />
         </div>
       )}

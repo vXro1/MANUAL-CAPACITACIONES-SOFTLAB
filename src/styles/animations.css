@@ -135,13 +135,13 @@
 .sl-delay-700  { animation-delay: 700ms; }
 .sl-delay-1000 { animation-delay: 1000ms; }
 
-/* ── Hover lift — clase reutilizable ── */
+/* ── Hover lift — filter:drop-shadow es GPU-compositable, box-shadow no ── */
 .sl-hover-lift {
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition: transform var(--transition-base), filter var(--transition-base);
 }
 .sl-hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-brand-lg);
+  filter: drop-shadow(0 8px 24px rgba(26,63,170,0.20));
 }
 
 /* Pulse dot (indicator azul activo) */

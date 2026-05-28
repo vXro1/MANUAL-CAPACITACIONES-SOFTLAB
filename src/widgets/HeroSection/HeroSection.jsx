@@ -6,12 +6,12 @@ import {
   useTransform,
   useMotionValue,
   useSpring,
+  animate,
 } from 'framer-motion';
 import { ArrowRight, Users, FileText, Calendar, MapPin } from 'lucide-react';
-import { manualesApi, participantesApi, eventosApi } from '@/services/apiService';
 import { FocusCarousel } from '@/shared/ui/FocusCarousel';
 
-/* ─── Fallback images (shown when API returns nothing) ───────────────────── */
+/* ─── Fallback images ────────────────────────────────────────────────────────── */
 const foto1 = new URL('/src/assets/foto1semillero.png', import.meta.url).href;
 const foto2 = new URL('/src/assets/foto2semillero.png', import.meta.url).href;
 const foto3 = new URL('/src/assets/foto3semillero.png', import.meta.url).href;
@@ -22,16 +22,15 @@ const FALLBACK_SLIDES = [foto1, foto2, foto3, foto4, foto5].map(src => ({ image:
 
 const EASE = [0.22, 1, 0.36, 1];
 
+/* ─── Orbs reducidos a 3 y sin backdropFilter ───────────────────────────────── */
 const ORBS = [
-  { id: 1, size: 400, left: '74%', top: '-10%', c1: 'rgba(147,197,253,0.22)', c2: 'rgba(99,140,255,0.07)',  border: 'rgba(147,197,253,0.20)', glow: '0 0 80px rgba(99,140,255,0.05)',  mx: 24, my: 20, dur: 10, delay: 0 },
-  { id: 2, size: 220, left: '92%', top: '56%',  c1: 'rgba(199,215,248,0.26)', c2: 'rgba(147,197,253,0.09)', border: 'rgba(199,215,248,0.22)', glow: '0 0 50px rgba(99,140,255,0.04)',  mx: 28, my: 22, dur: 12, delay: 1.4 },
-  { id: 3, size: 200, left: '4%',  top: '72%',  c1: 'rgba(147,197,253,0.20)', c2: 'rgba(99,140,255,0.07)',  border: 'rgba(147,197,253,0.16)', glow: '0 0 40px rgba(99,140,255,0.04)',  mx: 16, my: 20, dur: 14, delay: 2.2 },
-  { id: 4, size: 140, left: '-1%', top: '14%',  c1: 'rgba(199,215,248,0.22)', c2: 'rgba(147,197,253,0.07)', border: 'rgba(199,215,248,0.18)', glow: '0 0 30px rgba(99,140,255,0.03)',  mx: 10, my: 14, dur: 9,  delay: 0.6 },
-  { id: 5, size: 180, left: '44%', top: '-14%', c1: 'rgba(235,243,255,0.32)', c2: 'rgba(199,215,248,0.12)', border: 'rgba(235,243,255,0.28)', glow: '0 0 30px rgba(99,140,255,0.03)',  mx: 18, my: 12, dur: 11, delay: 2.8 },
+  { id: 1, size: 400, left: '74%', top: '-10%', c1: 'rgba(147,197,253,0.22)', c2: 'rgba(99,140,255,0.07)',  border: 'rgba(147,197,253,0.20)', mx: 24, my: 20, dur: 10, delay: 0 },
+  { id: 2, size: 220, left: '92%', top: '56%',  c1: 'rgba(199,215,248,0.26)', c2: 'rgba(147,197,253,0.09)', border: 'rgba(199,215,248,0.22)', mx: 28, my: 22, dur: 12, delay: 1.4 },
+  { id: 3, size: 180, left: '44%', top: '-14%', c1: 'rgba(235,243,255,0.32)', c2: 'rgba(199,215,248,0.12)', border: 'rgba(235,243,255,0.28)', mx: 18, my: 12, dur: 11, delay: 2.8 },
 ];
 
-/* ─── Glass Orb ─────────────────────────────────────────────────────────── */
-function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx, my, dur, delay }) {
+/* ─── Glass Orb — sin backdropFilter, CSS float animation ───────────────────── */
+function GlassOrb({ springX, springY, size, left, top, c1, c2, border, mx, my, dur, delay }) {
   const x = useTransform(springX, [-0.5, 0.5], [-mx, mx]);
   const y = useTransform(springY, [-0.5, 0.5], [-my, my]);
   return (
@@ -47,60 +46,45 @@ function GlassOrb({ springX, springY, size, left, top, c1, c2, border, glow, mx,
         width: size, height: size, borderRadius: '50%',
         background: `radial-gradient(circle at 35% 30%, ${c1} 0%, ${c2} 50%, transparent 82%)`,
         border: `1px solid ${border}`,
-        boxShadow: `${glow}, inset 0 0 ${Math.round(size * 0.22)}px rgba(255,255,255,0.60)`,
-        backdropFilter: 'blur(1px)',
         pointerEvents: 'none',
         marginLeft: -size / 2, marginTop: -size / 2,
         x, y, willChange: 'transform',
       }}
-    >
-      <div style={{
-        position: 'absolute', top: '10%', left: '16%',
-        width: '36%', height: '22%', borderRadius: '50%',
-        background: 'radial-gradient(ellipse, rgba(255,255,255,0.72) 0%, transparent 80%)',
-        transform: 'rotate(-22deg)',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '14%', right: '12%',
-        width: '20%', height: '12%', borderRadius: '50%',
-        background: 'radial-gradient(ellipse, rgba(255,255,255,0.28) 0%, transparent 80%)',
-      }} />
-    </motion.div>
+    />
   );
 }
 
-/* ─── Counter ────────────────────────────────────────────────────────────── */
+/* ─── Counter — usa useMotionValue de Framer Motion (sin setState por frame) ── */
 function Counter({ end, suffix = '+', delay = 0 }) {
-  const [count, setCount] = useState(0);
   const ref        = useRef(null);
-  const rafRef     = useRef(null);
-  const startedAt  = useRef(null);
-
-  const runAnimation = useCallback((target) => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    startedAt.current = null;
-    const tick = (ts) => {
-      if (!startedAt.current) startedAt.current = ts;
-      const p = Math.min((ts - startedAt.current) / 1300, 1);
-      setCount(Math.round((1 - Math.pow(1 - p, 3)) * target));
-      if (p < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-  }, []);
+  const motionVal  = useMotionValue(0);
+  const [display, setDisplay] = useState(0);
 
   useEffect(() => {
     if (!end) return;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setTimeout(() => runAnimation(end), delay);
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      const controls = animate(motionVal, end, {
+        duration: 1.3,
+        delay: delay / 1000,
+        ease: [0, 0.4, 0.8, 1],
+        onUpdate: (v) => setDisplay(Math.round(v)),
+      });
+      return controls.stop;
     }, { threshold: 0.3 });
     if (ref.current) observer.observe(ref.current);
-    return () => { observer.disconnect(); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [end, delay, runAnimation]);
+    return () => observer.disconnect();
+  }, [end, delay, motionVal]);
 
-  return <span ref={ref} style={{ fontVariantNumeric: 'tabular-nums' }}>{count}{suffix}</span>;
+  return (
+    <span ref={ref} style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {display}{suffix}
+    </span>
+  );
 }
 
-/* ─── Responsive hook ────────────────────────────────────────────────────── */
+/* ─── Responsive hook — una única implementación compartible ─────────────────── */
 function useBreakpoint(px) {
   const [matches, setMatches] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= px : false
@@ -115,12 +99,8 @@ function useBreakpoint(px) {
   return matches;
 }
 
-/* ─── HeroSection ─────────────────────────────────────────────────────────── */
+/* ─── HeroSection ─────────────────────────────────────────────────────────────── */
 export function HeroSection({ slides: apiSlides = [] }) {
-  /*
-    slides shape from API: [{ src, alt }]
-    FocusCarousel expects:  [{ image, alt?, title?, subtitle?, badge? }]
-  */
   const carouselItems = (apiSlides.length > 0 ? apiSlides : FALLBACK_SLIDES).map(s =>
     s.image ? s : { image: s.src, alt: s.alt }
   );
@@ -129,6 +109,8 @@ export function HeroSection({ slides: apiSlides = [] }) {
   const isTablet = useBreakpoint(960);
 
   const sectionRef = useRef(null);
+  const rectRef    = useRef(null);
+
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
   const imgY     = useTransform(scrollYProgress, [0, 1], ['0px', '-48px']);
   const contentY = useTransform(scrollYProgress, [0, 1], ['0px', '-24px']);
@@ -138,36 +120,33 @@ export function HeroSection({ slides: apiSlides = [] }) {
   const springX  = useSpring(mouseXMv, { stiffness: 28, damping: 25, mass: 1 });
   const springY  = useSpring(mouseYMv, { stiffness: 28, damping: 25, mass: 1 });
 
-  const handleMouseMove = useCallback((e) => {
-    const rect = sectionRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mouseXMv.set((e.clientX - rect.left)  / rect.width  - 0.5);
-    mouseYMv.set((e.clientY - rect.top)   / rect.height - 0.5);
-  }, [mouseXMv, mouseYMv]);
-
-  const [totalManuals,       setTotalManuals]       = useState(null);
-  const [totalParticipantes, setTotalParticipantes] = useState(null);
-  const [totalEventos,       setTotalEventos]       = useState(null);
-
+  /* Cachear rect con ResizeObserver — evita getBoundingClientRect en cada mousemove */
   useEffect(() => {
-    let cancelled = false;
-    manualesApi.getAll()
-      .then(d => { if (!cancelled) setTotalManuals((d ?? []).length); })
-      .catch(() => { if (!cancelled) setTotalManuals(0); });
-    participantesApi.getAll()
-      .then(d => { if (!cancelled) setTotalParticipantes((d ?? []).length); })
-      .catch(() => { if (!cancelled) setTotalParticipantes(0); });
-    eventosApi.getAll()
-      .then(d => { if (!cancelled) setTotalEventos((d ?? []).length); })
-      .catch(() => { if (!cancelled) setTotalEventos(0); });
-    return () => { cancelled = true; };
+    const update = () => { rectRef.current = sectionRef.current?.getBoundingClientRect() ?? null; };
+    update();
+    const ro = new ResizeObserver(update);
+    if (sectionRef.current) ro.observe(sectionRef.current);
+    return () => ro.disconnect();
   }, []);
 
-  const stats = [
-    { icon: FileText, label: 'Manuales',             value: totalManuals       ?? 2, color: '#2563EB', bg: 'rgba(37,99,235,0.08)'  },
-    { icon: Users,    label: 'Participantes activos', value: totalParticipantes ?? 8, color: '#1A3FAA', bg: 'rgba(26,63,170,0.08)'  },
-    { icon: Calendar, label: 'Eventos',               value: totalEventos       ?? 4, color: '#4F7BE8', bg: 'rgba(79,123,232,0.08)' },
-  ];
+  const handleMouseMove = useCallback((e) => {
+    const rect = rectRef.current;
+    if (!rect) return;
+    mouseXMv.set((e.clientX - rect.left) / rect.width  - 0.5);
+    mouseYMv.set((e.clientY - rect.top)  / rect.height - 0.5);
+  }, [mouseXMv, mouseYMv]);
+
+  /* Stats leídas desde localStorage (ya sincronizadas por syncAll) — sin peticiones extra */
+  const [stats] = useState(() => {
+    const read = (key) => {
+      try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
+    };
+    return [
+      { icon: FileText, label: 'Manuales',             value: read('softlab_manuals')?.length       ?? 2, color: '#2563EB', bg: 'rgba(37,99,235,0.08)'  },
+      { icon: Users,    label: 'Participantes activos', value: read('softlab_participants')?.length   ?? 8, color: '#1A3FAA', bg: 'rgba(26,63,170,0.08)'  },
+      { icon: Calendar, label: 'Eventos',               value: read('softlab_events')?.length         ?? 4, color: '#4F7BE8', bg: 'rgba(79,123,232,0.08)' },
+    ];
+  });
 
   return (
     <section
@@ -208,8 +187,8 @@ export function HeroSection({ slides: apiSlides = [] }) {
         pointerEvents: 'none',
       }} />
 
-      {/* Glass orbs */}
-      {ORBS.map(orb => (
+      {/* Glass orbs — solo desktop, solo 3, sin backdropFilter */}
+      {!isMobile && ORBS.map(orb => (
         <GlassOrb key={orb.id} {...orb} springX={springX} springY={springY} />
       ))}
 
@@ -220,7 +199,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
         pointerEvents: 'none',
       }} />
 
-      {/* ── Layout: 2 columns on desktop, stacked on tablet/mobile ────── */}
+      {/* ── Layout ──────────────────────────────────────────────────────── */}
       <div
         className="hero-layout"
         style={{
@@ -240,9 +219,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
       >
 
         {/* ════ LEFT — Text content ════ */}
-        <motion.div
-          style={{ y: contentY, order: isTablet ? 1 : 0 }}
-        >
+        <motion.div style={{ y: contentY, order: isTablet ? 1 : 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.2vw, 26px)' }}>
 
             {/* Pill */}
@@ -255,8 +232,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '7px 16px 7px 8px', borderRadius: 999,
                 border: '1px solid rgba(26,63,170,0.12)',
-                background: 'rgba(239,246,255,0.85)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                background: 'rgba(239,246,255,0.92)',
                 fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
                 textTransform: 'uppercase', color: '#1D4ED8',
                 fontFamily: 'DM Sans, sans-serif',
@@ -369,28 +345,18 @@ export function HeroSection({ slides: apiSlides = [] }) {
 
               <Link to="/nosotros" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
                 <motion.button
-                  whileHover={{ y: -2 }}
+                  whileHover={{ y: -2, background: 'rgba(239,246,255,0.96)', borderColor: 'rgba(59,130,246,0.28)' }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ duration: 0.18 }}
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '14px 24px', width: isMobile ? '100%' : 'auto',
-                    background: 'rgba(255,255,255,0.75)',
-                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    background: 'rgba(248,250,255,0.94)',
                     color: '#1E3A8A',
                     border: '1.5px solid rgba(203,213,225,0.75)',
                     borderRadius: 14, fontSize: 14, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background 0.2s, border-color 0.2s',
                     whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background  = 'rgba(239,246,255,0.95)';
-                    e.currentTarget.style.borderColor = 'rgba(59,130,246,0.28)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background  = 'rgba(255,255,255,0.75)';
-                    e.currentTarget.style.borderColor = 'rgba(203,213,225,0.75)';
                   }}
                 >
                   <Users size={15} aria-hidden="true" /> Conocer el equipo
@@ -417,15 +383,14 @@ export function HeroSection({ slides: apiSlides = [] }) {
                 return (
                   <motion.div
                     key={i}
-                    whileHover={{ y: -3, backgroundColor: 'rgba(255,255,255,0.96)' }}
+                    whileHover={{ y: -3 }}
                     transition={{ duration: 0.18 }}
                     style={{
                       display: 'flex', flexDirection: 'column', gap: 8,
                       padding: isMobile ? '11px 10px' : '14px 16px',
                       borderRadius: 14,
-                      backgroundColor: 'rgba(255,255,255,0.72)',
+                      backgroundColor: 'rgba(245,248,255,0.94)',
                       border: '1px solid rgba(226,232,240,0.75)',
-                      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
                       boxShadow: '0 2px 10px rgba(100,120,200,0.05)',
                       cursor: 'default',
                     }}
@@ -442,7 +407,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
                         fontWeight: 800, fontFamily: 'Syne, sans-serif',
                         color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1,
                       }}>
-                        <Counter key={`stat-${i}-${s.value}`} end={s.value} delay={i * 180} />
+                        <Counter end={s.value} delay={i * 180} />
                       </div>
                       <div style={{
                         fontSize: isMobile ? 9 : 10, color: '#64748B',
@@ -498,8 +463,7 @@ export function HeroSection({ slides: apiSlides = [] }) {
           border: '1.5px solid rgba(26,63,170,0.18)',
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           padding: '5px 0 0',
-          background: 'rgba(255,255,255,0.52)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(248,250,255,0.92)',
         }}>
           <motion.div
             animate={{ opacity: [1, 0, 1], y: [0, 10, 0] }}

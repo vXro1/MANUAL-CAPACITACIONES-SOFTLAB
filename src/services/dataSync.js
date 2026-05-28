@@ -53,9 +53,13 @@ function normalizeDirectivo(d) {
   };
 }
 
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 // ─── Sincronización completa ──────────────────────────────────────────────────
 
-export async function syncAll() {
+export async function syncAll(force = false) {
+  const lastSync = parseInt(localStorage.getItem(KEYS.SYNCED) || '0', 10);
+  if (!force && Date.now() - lastSync < CACHE_TTL) return false;
   try {
     const [manuals, participants, gallery, directors, events, eventCats] = await Promise.allSettled([
       manualesApi.getAll(),
@@ -90,8 +94,7 @@ export async function syncManuales() {
 
 export async function syncParticipantes() {
   const raw = await participantesApi.getAll();
-  const normalized = (raw ?? []).map(normalizeParticipant);
-  participantsRepository.saveAll(normalized); 
+  save(KEYS.PARTICIPANTS, (raw ?? []).map(normalizeParticipant));
 }
 export async function syncGaleria() {
   const data = await galeriaApi.getAll();

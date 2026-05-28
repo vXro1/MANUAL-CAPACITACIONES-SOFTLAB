@@ -7,9 +7,10 @@ import { NAV_LINKS } from '@/shared/constants';
 const logoSoftlab = new URL('/src/assets/logosoftlab2.jpg', import.meta.url).href;
 
 export function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
+  const [logoError,  setLogoError]  = useState(false);
+  const location    = useLocation();
   const mobileNavRef = useRef(null);
 
   useEffect(() => {
@@ -35,14 +36,13 @@ export function Navbar() {
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         transition: 'background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease',
-        background: scrolled
-          ? 'rgba(252,253,255,0.88)'
-          : 'rgba(255,255,255,0.60)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        /* backdropFilter solo cuando hay contenido debajo (scrolled) — ahorra GPU en top */
+        background: scrolled ? 'rgba(252,253,255,0.90)' : 'rgba(255,255,255,0.98)',
+        backdropFilter: scrolled ? 'blur(20px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
         borderBottom: scrolled
           ? '1px solid rgba(26,63,170,0.09)'
-          : '1px solid rgba(255,255,255,0.50)',
+          : '1px solid rgba(230,235,245,0.80)',
         boxShadow: scrolled
           ? '0 1px 0 rgba(147,197,253,0.18), 0 4px 28px rgba(26,63,170,0.07)'
           : 'none',
@@ -66,32 +66,31 @@ export function Navbar() {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 48px' }} className="nav-inner">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
 
-          {/* Logo */}
+          {/* Logo — estado React, sin DOM directo */}
           <Link to="/" aria-label="Softlab — Inicio" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <motion.div whileHover={{ scale: 1.03 }} transition={{ duration: 0.2 }}>
-              <img
-                src={logoSoftlab}
-                alt="SoftLab"
-                style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }}
-                onError={e => {
-                  e.currentTarget.style.display = 'none';
-                  const fallback = document.getElementById('nav-logo-fallback');
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <div id="nav-logo-fallback" style={{ display: 'none', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1A3FAA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <BookOpen size={16} color="#fff" />
+              {!logoError ? (
+                <img
+                  src={logoSoftlab}
+                  alt="SoftLab"
+                  style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }}
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1A3FAA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BookOpen size={16} color="#fff" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0A0F1E', fontFamily: 'Syne, sans-serif' }}>Softlab</div>
+                    <div style={{ fontSize: 10, color: '#8A94A6' }}>Manuales de Usuario</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0A0F1E', fontFamily: 'Syne, sans-serif' }}>Softlab</div>
-                  <div style={{ fontSize: 10, color: '#8A94A6' }}>Manuales de Usuario</div>
-                </div>
-              </div>
+              )}
             </motion.div>
           </Link>
 
-          {/* Nav Desktop */}
+          {/* Nav Desktop — sin backdropFilter en links activos */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="nav-desktop" aria-label="Navegación principal">
             {NAV_LINKS.map((link) => (
               <NavLink
@@ -105,11 +104,7 @@ export function Navbar() {
                   textDecoration: 'none',
                   transition: 'all 0.2s',
                   color: isActive ? '#1A3FAA' : '#4B5563',
-                  background: isActive
-                    ? 'rgba(238,243,255,0.90)'
-                    : 'transparent',
-                  backdropFilter: isActive ? 'blur(8px)' : 'none',
-                  WebkitBackdropFilter: isActive ? 'blur(8px)' : 'none',
+                  background: isActive ? 'rgba(238,243,255,0.92)' : 'transparent',
                   boxShadow: isActive
                     ? '0 0 0 1px rgba(26,63,170,0.12), 0 2px 8px rgba(26,63,170,0.08)'
                     : 'none',
@@ -148,7 +143,7 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Menú móvil */}
+      {/* Menú móvil — sin backdropFilter (es sólido) */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -159,9 +154,7 @@ export function Navbar() {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{
               overflow: 'hidden',
-              background: 'rgba(252,253,255,0.95)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
+              background: 'rgba(252,253,255,0.98)',
               borderTop: '1px solid rgba(226,232,240,0.7)',
             }}
           >

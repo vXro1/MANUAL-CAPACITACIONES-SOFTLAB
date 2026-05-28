@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, ZoomIn, Images, Search } from 'lucide-react';
 import { galeriaApi } from '@/services/apiService';
@@ -15,18 +15,28 @@ function downloadImage(url, title) {
   document.body.removeChild(a);
 }
 
-// ─── Hook: invisible hasta que el navegador confirma la carga completa ────────
-function useImageLoaded(src) {
+// ─── Hook: carga la imagen solo cuando el elemento entra al viewport ──────────
+function useImageLoaded(src, containerRef) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src || !containerRef?.current) return;
     setLoaded(false);
-    const img = new Image();
-    img.onload = () => setLoaded(true);
-    img.onerror = () => setLoaded(false); // permanece invisible si falla
-    img.src = src;
-  }, [src]);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        const img = new Image();
+        img.onload  = () => setLoaded(true);
+        img.onerror = () => setLoaded(false);
+        img.src = src;
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [src, containerRef]);
 
   return loaded;
 }
@@ -47,8 +57,6 @@ function MobileActionSheet({ photo, onZoom, onDownload, onClose }) {
       style={{
         position: 'fixed', inset: 0, zIndex: 9998,
         background: 'rgba(3,7,18,0.82)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
       }}
       onClick={onClose}
     >
@@ -113,8 +121,8 @@ function Lightbox({ photos, startIndex, onClose }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') go(current - 1);
+      if (e.key === 'Escape')     onClose();
+      if (e.key === 'ArrowLeft')  go(current - 1);
       if (e.key === 'ArrowRight') go(current + 1);
     };
     window.addEventListener('keydown', handler);
@@ -148,13 +156,13 @@ function Lightbox({ photos, startIndex, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(3,7,18,0.98)', display: 'flex', flexDirection: 'column', backdropFilter: 'blur(4px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(3,7,18,0.98)', display: 'flex', flexDirection: 'column' }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Visor de imagen"
     >
-      {/* Header — sin cambios */}
+      {/* Header */}
       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', flexShrink: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -168,20 +176,36 @@ function Lightbox({ photos, startIndex, onClose }) {
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => downloadImage(photo.src, photo.title)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 9, background: '#1A3FAA', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'opacity 0.15s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+          <button
+            onClick={() => downloadImage(photo.src, photo.title)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 9, background: '#1A3FAA', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'opacity 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+          >
             <Download size={14} /> Descargar
           </button>
-          <button onClick={onClose} aria-label="Cerrar" style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.16)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          >
             <X size={15} />
           </button>
         </div>
       </div>
 
       {/* Main image */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(52px, 8vw, 72px)' }} onClick={e => e.stopPropagation()} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div
+        style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(52px, 8vw, 72px)' }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {!imgLoaded && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 32, height: 32, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#fff', borderRadius: '50%', animation: 'lb-spin 0.7s linear infinite' }} />
+            <div style={{ width: 32, height: 32, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#fff', borderRadius: '50%', animation: 'sl-spin 0.7s linear infinite' }} />
           </div>
         )}
         <AnimatePresence mode="wait">
@@ -201,8 +225,18 @@ function Lightbox({ photos, startIndex, onClose }) {
 
         {count > 1 && (
           <>
-            {[{ side: 'left', delta: -1, icon: ChevronLeft, label: 'Imagen anterior' }, { side: 'right', delta: +1, icon: ChevronRight, label: 'Imagen siguiente' }].map(({ side, delta, icon: Icon, label }) => (
-              <button key={side} onClick={() => go(current + delta)} aria-label={label} style={{ position: 'absolute', [side]: 12, top: '50%', transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, transform 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; e.currentTarget.style.transform = `translateY(-50%) scale(1.08)`; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}>
+            {[
+              { side: 'left',  delta: -1, icon: ChevronLeft,  label: 'Imagen anterior' },
+              { side: 'right', delta: +1, icon: ChevronRight, label: 'Imagen siguiente' },
+            ].map(({ side, delta, icon: Icon, label }) => (
+              <button
+                key={side}
+                onClick={() => go(current + delta)}
+                aria-label={label}
+                style={{ position: 'absolute', [side]: 12, top: '50%', transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, transform 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; e.currentTarget.style.transform = `translateY(-50%) scale(1.08)`; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+              >
                 <Icon size={22} />
               </button>
             ))}
@@ -210,11 +244,21 @@ function Lightbox({ photos, startIndex, onClose }) {
         )}
       </div>
 
+      {/* Thumbnails — lazy loading, evita descargar todas al abrir el lightbox */}
       {count > 1 && (
-        <div ref={thumbsRef} onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 6, padding: '10px 20px 14px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0, justifyContent: count <= 8 ? 'center' : 'flex-start', background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }}>
+        <div
+          ref={thumbsRef}
+          onClick={e => e.stopPropagation()}
+          style={{ display: 'flex', gap: 6, padding: '10px 20px 14px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0, justifyContent: count <= 8 ? 'center' : 'flex-start', background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+        >
           {photos.map((p, i) => (
-            <button key={i} onClick={() => go(i)} aria-label={`Ver imagen ${i + 1}`} style={{ flexShrink: 0, width: 56, height: 40, borderRadius: 6, overflow: 'hidden', padding: 0, cursor: 'pointer', border: i === current ? '2px solid #fff' : '2px solid transparent', opacity: i === current ? 1 : 0.35, transition: 'all 0.2s', transform: i === current ? 'scale(1.05)' : 'scale(1)' }}>
-              <img src={p.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <button
+              key={p.src || i}
+              onClick={() => go(i)}
+              aria-label={`Ver imagen ${i + 1}`}
+              style={{ flexShrink: 0, width: 56, height: 40, borderRadius: 6, overflow: 'hidden', padding: 0, cursor: 'pointer', border: i === current ? '2px solid #fff' : '2px solid transparent', opacity: i === current ? 1 : 0.35, transition: 'all 0.2s', transform: i === current ? 'scale(1.05)' : 'scale(1)' }}
+            >
+              <img src={p.src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </button>
           ))}
         </div>
@@ -223,15 +267,16 @@ function Lightbox({ photos, startIndex, onClose }) {
   );
 }
 
-// ─── Card con imagen invisible hasta que carga ────────────────────────────────
+// ─── Card — imagen invisible hasta que entra al viewport y carga ──────────────
 function GalleryCard({ photo, index, onOpen, onBroken }) {
-  const ref = useRef(null);
+  const ref     = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '0px 0px -60px 0px' });
   const [showSheet, setShowSheet] = useState(false);
-  const loaded = useImageLoaded(photo.src);
+  // Pasa ref al hook — la imagen solo se descarga cuando el card entra al viewport
+  const loaded = useImageLoaded(photo.src, ref);
 
   const handleClick = () => {
-    if (!loaded) return; // no interactuar si aún no cargó
+    if (!loaded) return;
     if (window.matchMedia('(hover: none)').matches) {
       setShowSheet(true);
     } else {
@@ -252,14 +297,13 @@ function GalleryCard({ photo, index, onOpen, onBroken }) {
         aria-label={loaded ? `Ver imagen ${index + 1}` : undefined}
         onKeyDown={e => e.key === 'Enter' && handleClick()}
         className="gp-card"
-        // Cuando no ha cargado: la celda no ocupa espacio visible en el grid
         style={!loaded ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
       >
-        {/* La img real: oculta hasta que loaded=true, luego fade-in */}
         <motion.img
           src={photo.src}
           alt={`Fotografía del semillero Softlab ${index + 1}`}
           loading="lazy"
+          decoding="async"
           initial={{ opacity: 0 }}
           animate={{ opacity: loaded ? 1 : 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -272,7 +316,6 @@ function GalleryCard({ photo, index, onOpen, onBroken }) {
           onError={() => onBroken(photo.src)}
         />
 
-        {/* Hover overlay — solo cuando está cargada */}
         {loaded && (
           <div className="gp-overlay">
             <div className="gp-actions">
@@ -322,7 +365,7 @@ export function GalleryPage() {
       .then(data => {
         if (!cancelled) {
           setPhotos((data ?? []).map(img => ({
-            src: img.src,
+            src:   img.src,
             title: img.title || img.titulo || '',
           })).filter(p => p.src));
         }
@@ -331,19 +374,30 @@ export function GalleryPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = (search.trim()
-    ? photos.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
-    : photos
-  ).filter(p => !brokenSrcs.has(p.src));
+  /* Memoizar búsqueda y filtrado — no re-computar en cada render */
+  const searchLower = useMemo(() => search.trim().toLowerCase(), [search]);
+
+  const filtered = useMemo(() => {
+    const base = searchLower
+      ? photos.filter(p => p.title.toLowerCase().includes(searchLower))
+      : photos;
+    return base.filter(p => !brokenSrcs.has(p.src));
+  }, [photos, searchLower, brokenSrcs]);
 
   const count = filtered.length;
   const colLabel = count === 0 ? '' : count === 1 ? '1 imagen' : `${count} imágenes`;
-  const gridClass = count <= 2 ? 'few' : count <= 5 ? 'small' : count <= 12 ? 'medium' : 'large';
+
+  const gridClass = useMemo(() => {
+    if (count <= 2)  return 'few';
+    if (count <= 5)  return 'small';
+    if (count <= 12) return 'medium';
+    return 'large';
+  }, [count]);
 
   return (
     <main id="main-content" style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
-      {/* ── Hero — sin cambios ── */}
+      {/* ── Hero ── */}
       <section style={{
         position: 'relative', overflow: 'hidden',
         padding: 'clamp(80px,12vw,130px) clamp(20px,6vw,64px) clamp(56px,8vw,88px)',
@@ -352,7 +406,6 @@ export function GalleryPage() {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.032) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,140,255,0.16) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-30%', left: '8%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,63,170,0.2) 0%, transparent 68%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '30%', left: '50%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,197,253,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
           <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#93C5FD', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}>
@@ -375,14 +428,19 @@ export function GalleryPage() {
             {count > 6 && (
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar imagen…" style={{ paddingLeft: 34, paddingRight: 14, height: 38, borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.07)', color: '#fff', fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none', backdropFilter: 'blur(8px)', minWidth: 200 }} />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar imagen…"
+                  style={{ paddingLeft: 34, paddingRight: 14, height: 38, borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.07)', color: '#fff', fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none', minWidth: 200 }}
+                />
               </div>
             )}
           </motion.div>
         </div>
       </section>
 
-      {/* ── Galería — fondo limpio ── */}
+      {/* ── Galería ── */}
       <section style={{
         padding: 'clamp(32px,5vw,64px) clamp(16px,4vw,48px) clamp(64px,8vw,100px)',
         maxWidth: 1440,
@@ -411,7 +469,13 @@ export function GalleryPage() {
         {count > 0 && (
           <div className={`gp-grid gp-grid-${gridClass}`}>
             {filtered.map((photo, i) => (
-              <GalleryCard key={photo.src + i} photo={photo} index={i} onOpen={setLightboxIndex} onBroken={handleBroken} />
+              <GalleryCard
+                key={photo.src}
+                photo={photo}
+                index={i}
+                onOpen={setLightboxIndex}
+                onBroken={handleBroken}
+              />
             ))}
           </div>
         )}
@@ -419,7 +483,11 @@ export function GalleryPage() {
 
       <AnimatePresence>
         {lightboxIndex !== null && filtered.length > 0 && (
-          <Lightbox photos={filtered} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+          <Lightbox
+            photos={filtered}
+            startIndex={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+          />
         )}
       </AnimatePresence>
 

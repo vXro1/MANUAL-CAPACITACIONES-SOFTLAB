@@ -1,26 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { ArrowRight, ArrowLeft, BookOpen, Calendar, Clock, Star, FileText, ExternalLink } from 'lucide-react';
 import { manualesApi } from '@/services/apiService';
 import { formatDate } from '@/shared/lib/formatDate';
-
-const PALETTE = {
-  'Realidad Virtual':        { accent: '#638CFF', glow: 'rgba(99,140,255,0.35)',  light: '#BFDBFE' },
-  'DevOps':                  { accent: '#4F7BE8', glow: 'rgba(79,123,232,0.35)',  light: '#C7D7F8' },
-  'Control de Versiones':    { accent: '#60A5FA', glow: 'rgba(96,165,250,0.35)',  light: '#DBEAFE' },
-  'Desarrollo Frontend':     { accent: '#3B82F6', glow: 'rgba(59,130,246,0.35)',  light: '#BFDBFE' },
-  'Desarrollo Backend':      { accent: '#93C5FD', glow: 'rgba(147,197,253,0.35)', light: '#EFF6FF' },
-  'Bases de Datos':          { accent: '#2563EB', glow: 'rgba(37,99,235,0.35)',   light: '#BFDBFE' },
-  'Gestión de Proyectos':    { accent: '#4F7BE8', glow: 'rgba(79,123,232,0.35)',  light: '#C7D7F8' },
-  'Seguridad':               { accent: '#8BADF4', glow: 'rgba(139,173,244,0.35)', light: '#DBEAFE' },
-  'Inteligencia Artificial': { accent: '#60A5FA', glow: 'rgba(96,165,250,0.35)',  light: '#DBEAFE' },
-  default:                   { accent: '#93C5FD', glow: 'rgba(147,197,253,0.35)', light: '#BFDBFE' },
-};
-
-function getPalette(cat) {
-  return PALETTE[cat] || PALETTE.default;
-}
+import { getCategoryPalette } from '@/shared/constants';
 
 const EASE = [0.32, 0.72, 0, 1];
 
@@ -188,23 +172,27 @@ function CarouselSlide({ manual, palette }) {
 
           {/* CTA */}
           <div>
-            <Link
-              to={`/manuales/${manual.id}`}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '11px 22px', borderRadius: 12,
-                background: palette.accent,
-                color: '#05091A', textDecoration: 'none',
-                fontSize: 13, fontWeight: 700,
-                fontFamily: 'DM Sans, sans-serif',
-                boxShadow: `0 8px 28px ${palette.glow}`,
-                transition: 'opacity 0.2s, transform 0.2s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
+            <motion.div
+              whileHover={{ y: -1, opacity: 0.88 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.18 }}
+              style={{ display: 'inline-block' }}
             >
-              Ver manual <ArrowRight size={14} aria-hidden="true" />
-            </Link>
+              <Link
+                to={`/manuales/${manual.id}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '11px 22px', borderRadius: 12,
+                  background: palette.accent,
+                  color: '#05091A', textDecoration: 'none',
+                  fontSize: 13, fontWeight: 700,
+                  fontFamily: 'DM Sans, sans-serif',
+                  boxShadow: `0 8px 28px ${palette.glow}`,
+                }}
+              >
+                Ver manual <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </motion.div>
           </div>
         </div>
 
@@ -295,16 +283,16 @@ export function FeaturedSection() {
 
   useEffect(() => {
     if (paused || manuals.length <= 1) return;
-    timerRef.current = setInterval(() => {
+    const id = setTimeout(() => {
       setDirection(1);
       setIndex((i) => (i === manuals.length - 1 ? 0 : i + 1));
     }, 5500);
-    return () => clearInterval(timerRef.current);
+    return () => clearTimeout(id);
   }, [paused, manuals.length, index]);
 
   if (!manuals.length) return null;
 
-  const palette = getPalette(current?.category);
+  const palette = getCategoryPalette(current?.category);
 
   return (
     <section
@@ -362,30 +350,28 @@ export function FeaturedSection() {
             viewport={{ once: true }}
             transition={{ delay: 0.15 }}
           >
-            <Link
-              to="/manuales"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '10px 20px',
-                background: 'rgba(238,243,255,0.80)',
-                color: '#1A3FAA',
-                border: '1.5px solid rgba(26,63,170,0.15)',
-                borderRadius: 12, fontSize: 13, fontWeight: 600,
-                textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
-                transition: 'background 0.2s, border-color 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#EEF3FF';
-                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.28)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(238,243,255,0.80)';
-                e.currentTarget.style.borderColor = 'rgba(26,63,170,0.15)';
-              }}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.18 }}
+              style={{ display: 'inline-block' }}
             >
-              Ver todos <ArrowRight size={14} aria-hidden="true" />
-            </Link>
+              <Link
+                to="/manuales"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '10px 20px',
+                  background: 'rgba(238,243,255,0.92)',
+                  color: '#1A3FAA',
+                  border: '1.5px solid rgba(26,63,170,0.15)',
+                  borderRadius: 12, fontSize: 13, fontWeight: 600,
+                  textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
+                  transition: 'background 0.2s, border-color 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Ver todos <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -434,33 +420,26 @@ export function FeaturedSection() {
                   { side: 'left',  action: prev, icon: ArrowLeft,  label: 'Manual anterior' },
                   { side: 'right', action: next, icon: ArrowRight, label: 'Manual siguiente' },
                 ].map(({ side, action, icon: Icon, label }) => (
-                  <button
+                  <motion.button
                     key={side}
                     onClick={action}
                     aria-label={label}
+                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.16)' }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ duration: 0.15 }}
                     style={{
                       position: 'absolute', [side]: 16, top: '50%',
                       transform: 'translateY(-50%)',
                       width: 40, height: 40, borderRadius: '50%',
                       background: 'rgba(255,255,255,0.08)',
-                      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
                       border: '1px solid rgba(255,255,255,0.12)',
                       color: 'rgba(255,255,255,0.65)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       zIndex: 10,
-                      transition: 'background 0.18s, transform 0.18s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.16)';
-                      e.currentTarget.style.transform = `translateY(-50%) scale(1.1)`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
                     }}
                   >
                     <Icon size={16} aria-hidden="true" />
-                  </button>
+                  </motion.button>
                 ))}
               </>
             )}

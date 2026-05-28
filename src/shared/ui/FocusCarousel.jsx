@@ -11,10 +11,6 @@
  *   pos ±1  → side    : scale 0.80, opacity 0.62,  z 10, rotateY ±10°
  *   pos ±2  → far     : scale 0.62, opacity 0.22,  z  0, rotateY ±20°
  *   |pos|>2 → hidden  : opacity 0
- *
- * Image containment
- *   Every card is position:absolute inset:0 (fills stage).
- *   Images use object-cover — carousel size is FIXED, images adapt.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -22,49 +18,30 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /* ─── Spring preset ──────────────────────────────────────────────────────── */
-const SPRING = { type: 'spring', stiffness: 290, damping: 32, mass: 0.88 };
+const SPRING      = { type: 'spring', stiffness: 290, damping: 32, mass: 0.88 };
 const SPRING_FAST = { type: 'spring', stiffness: 340, damping: 36, mass: 0.72 };
 
 /* ─── Layer resolver ─────────────────────────────────────────────────────── */
-/*
-  Cards share the same bounding box (inset:0 inside the stage).
-  x is expressed as a percentage of the card/stage width so that the
-  layout stays proportional on every screen size.
-
-  Positive x  → slides right   (pos +1, +2)
-  Negative x  → slides left    (pos -1, -2)
-*/
 function resolveLayer(relPos, isMobile) {
   const abs  = Math.abs(relPos);
-  const sign = relPos < 0 ? -1 : 1;   // -1 left, +1 right
+  const sign = relPos < 0 ? -1 : 1;
 
   if (abs === 0) return {
-    x: '0%',
-    y: '0%',
-    scale: 1,
-    opacity: 1,
-    zIndex: 30,
-    rotateY: 0,
-    brightness: 1,
-    blur: 0,
+    x: '0%', y: '0%', scale: 1, opacity: 1, zIndex: 30, rotateY: 0,
+    brightness: 1, blur: 0,
     boxShadow: '0 20px 56px -6px rgba(59,130,246,0.22), 0 6px 18px rgba(15,23,42,0.07)',
     border: '1px solid rgba(59,130,246,0.16)',
     clickable: false,
   };
 
   if (abs === 1) {
-    // Side cards: peek behind center card. On mobile use larger x-offset so
-    // the card sticks out visibly despite the narrower viewport.
     const xPct = isMobile ? sign * 64 : sign * 52;
     return {
-      x: `${xPct}%`,
-      y: '1.5%',
+      x: `${xPct}%`, y: '1.5%',
       scale: isMobile ? 0.74 : 0.80,
       opacity: isMobile ? 0.48 : 0.62,
-      zIndex: 10,
-      rotateY: sign * -10,
-      brightness: 0.80,
-      blur: 0.6,
+      zIndex: 10, rotateY: sign * -10,
+      brightness: 0.80, blur: 0.6,
       boxShadow: '0 6px 22px rgba(15,23,42,0.06)',
       border: '1px solid rgba(203,213,225,0.38)',
       clickable: true,
@@ -74,37 +51,26 @@ function resolveLayer(relPos, isMobile) {
   if (abs === 2) {
     const xPct = isMobile ? sign * 110 : sign * 92;
     return {
-      x: `${xPct}%`,
-      y: '3%',
-      scale: 0.62,
-      opacity: 0.20,
-      zIndex: 0,
-      rotateY: sign * -20,
-      brightness: 0.64,
-      blur: 1.8,
-      boxShadow: 'none',
-      border: '1px solid transparent',
+      x: `${xPct}%`, y: '3%',
+      scale: 0.62, opacity: 0.20,
+      zIndex: 0, rotateY: sign * -20,
+      brightness: 0.64, blur: 1.8,
+      boxShadow: 'none', border: '1px solid transparent',
       clickable: false,
     };
   }
 
-  // |pos| > 2 — hidden
   return {
-    x: `${sign * 132}%`,
-    y: '0%',
-    scale: 0.5,
-    opacity: 0,
-    zIndex: -1,
-    rotateY: 0,
-    brightness: 0.5,
-    blur: 4,
-    boxShadow: 'none',
-    border: '1px solid transparent',
+    x: `${sign * 132}%`, y: '0%',
+    scale: 0.5, opacity: 0,
+    zIndex: -1, rotateY: 0,
+    brightness: 0.5, blur: 4,
+    boxShadow: 'none', border: '1px solid transparent',
     clickable: false,
   };
 }
 
-/* ─── Nav button ─────────────────────────────────────────────────────────── */
+/* ─── Nav button — sin backdropFilter ───────────────────────────────────── */
 function NavBtn({ onClick, label, children }) {
   return (
     <motion.button
@@ -116,9 +82,7 @@ function NavBtn({ onClick, label, children }) {
         width: 34, height: 34, padding: 0,
         borderRadius: 10,
         border: '1px solid rgba(203,213,225,0.68)',
-        background: 'rgba(255,255,255,0.82)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        background: 'rgba(248,250,255,0.96)',
         color: '#334155',
         cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -139,15 +103,18 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
     () => typeof window !== 'undefined' ? window.innerWidth < 640 : false
   );
   const [paused, setPaused] = useState(false);
-  const touchX  = useRef(null);
-  const pointerX = useRef(null);
-  const count   = items.length;
+  const touchX    = useRef(null);
+  const pointerX  = useRef(null);
+  const stageRef  = useRef(null);
+  const count     = items.length;
 
-  /* responsive breakpoint watcher */
+  /* responsive breakpoint watcher — usa matchMedia igual que useBreakpoint */
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
   /* navigation helpers */
@@ -155,21 +122,23 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
   const goPrev = useCallback(() => go(active - 1), [active, go]);
   const goNext = useCallback(() => go(active + 1), [active, go]);
 
-  /* autoplay */
+  /* autoplay — usa setTimeout para resetear naturalmente al navegar */
   useEffect(() => {
     if (!autoplay || paused || count <= 1) return;
     const id = setTimeout(goNext, interval);
     return () => clearTimeout(id);
   }, [active, autoplay, paused, count, interval, goNext]);
 
-  /* keyboard */
+  /* keyboard — listener en el contenedor del stage, no en window */
   useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
     const onKey = (e) => {
-      if (e.key === 'ArrowLeft')  goPrev();
-      if (e.key === 'ArrowRight') goNext();
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    stage.addEventListener('keydown', onKey);
+    return () => stage.removeEventListener('keydown', onKey);
   }, [goPrev, goNext]);
 
   if (!count) return null;
@@ -182,22 +151,19 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
     >
       {/* ── 3D perspective wrapper ─────────────────────────────────────── */}
       <div style={{ perspective: '1400px', perspectiveOrigin: '50% 38%' }}>
-
-        {/*
-          Stage — overflow:hidden clips the far-left/right cards.
-          Height uses clamp so the stage stays proportional on any viewport.
-          Cards are position:absolute inset:0, so they fill this box exactly.
-        */}
         <div
+          ref={stageRef}
           role="region"
           aria-roledescription="carrusel"
           aria-label="Galería de fotos"
+          tabIndex={0}
           style={{
             position: 'relative',
             width: '100%',
             height: 'clamp(220px, 42vw, 340px)',
             overflow: 'hidden',
             borderRadius: 20,
+            outline: 'none',
           }}
           /* touch swipe */
           onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
@@ -217,7 +183,6 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
           }}
         >
           {items.map((item, i) => {
-            /* wrap-around relative position */
             let pos = i - active;
             const half = Math.floor(count / 2);
             if (pos >  half) pos -= count;
@@ -254,17 +219,19 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                   border:     layer.border,
                   boxShadow:  layer.boxShadow,
                   background: 'rgba(238,242,255,0.80)',
-                  willChange: 'transform, opacity',
-                  // hide completely when outside visible range for perf
+                  willChange: isVisible ? 'transform, opacity' : 'auto',
                   pointerEvents: isVisible ? 'auto' : 'none',
                 }}
                 whileHover={isCenter ? { scale: 1.015 } : undefined}
               >
-                {/* ── Image — NEVER resizes the carousel ──────────────── */}
+                {/* Imagen — LCP hint en slide 0, lazy en el resto */}
                 {item.image && (
                   <img
                     src={item.image}
                     alt={item.alt ?? item.title ?? ''}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchpriority={i === 0 ? 'high' : 'low'}
+                    decoding={i === 0 ? 'sync' : 'async'}
                     style={{
                       position: 'absolute', inset: 0,
                       width: '100%', height: '100%',
@@ -278,7 +245,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                   />
                 )}
 
-                {/* ── Depth overlay for non-active cards ──────────────── */}
+                {/* Overlay profundidad en slides laterales */}
                 {!isCenter && (
                   <div style={{
                     position: 'absolute', inset: 0,
@@ -288,7 +255,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                   }} />
                 )}
 
-                {/* ── Active card: shimmer inner border ───────────────── */}
+                {/* Shimmer borde en slide activo */}
                 {isCenter && (
                   <div aria-hidden="true" style={{
                     position: 'absolute', inset: 0,
@@ -300,13 +267,11 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                   }} />
                 )}
 
-                {/* ── Active card: badge ───────────────────────────────── */}
+                {/* Badge en slide activo */}
                 {isCenter && item.badge && (
                   <div style={{
                     position: 'absolute', top: 14, left: 14, zIndex: 8,
-                    background: 'rgba(255,255,255,0.90)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
+                    background: 'rgba(248,250,255,0.96)',
                     border: '1px solid rgba(255,255,255,0.95)',
                     borderRadius: 999,
                     padding: '3px 12px',
@@ -321,7 +286,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                   </div>
                 )}
 
-                {/* ── Active card: caption ─────────────────────────────── */}
+                {/* Caption en slide activo */}
                 {isCenter && item.title && (
                   <motion.div
                     key={`cap-${i}`}
@@ -332,8 +297,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                       position: 'absolute',
                       bottom: 0, left: 0, right: 0,
                       padding: '32px 18px 14px',
-                      background:
-                        'linear-gradient(to top, rgba(10,17,40,0.80) 0%, transparent 100%)',
+                      background: 'linear-gradient(to top, rgba(10,17,40,0.80) 0%, transparent 100%)',
                       zIndex: 6,
                       pointerEvents: 'none',
                     }}
@@ -379,9 +343,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
         </NavBtn>
 
         {/* Progress dots */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           {items.map((_, i) => (
             <motion.button
               key={i}
@@ -389,9 +351,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
               aria-label={`Ir a foto ${i + 1}`}
               animate={{
                 width: i === active ? 20 : 6,
-                backgroundColor: i === active
-                  ? '#1D4ED8'
-                  : 'rgba(100,116,139,0.26)',
+                backgroundColor: i === active ? '#1D4ED8' : 'rgba(100,116,139,0.26)',
               }}
               transition={SPRING_FAST}
               style={{
