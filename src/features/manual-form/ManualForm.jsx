@@ -23,6 +23,15 @@ const TABS = [
   { id: 'archivos',  label: 'Archivos',  icon: Upload },
 ];
 
+// ─── helper ──────────────────────────────────────────────────────────────────
+/** Garantiza que cualquier valor devuelto por la API se convierta en string. */
+function toRoleString(r) {
+  if (!r) return '';
+  if (typeof r === 'string') return r.trim();
+  // Si el backend devuelve un objeto participante o un objeto { nombre, name, label… }
+  return (r.nombre ?? r.name ?? r.label ?? r.rol ?? '').toString().trim();
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const buildForm = (manual) => ({
   title:        manual?.title        ?? '',
@@ -229,7 +238,12 @@ function ParticipantRolePicker({ participants, value, onChange, globalRoles, onA
   const [customId,  setCustomId]  = useState(null);
   const [customVal, setCustomVal] = useState('');
 
-  const allRoles    = [...new Set([...BASE_MANUAL_ROLES, ...(globalRoles ?? [])])];
+  // ✅ CORRECCIÓN: garantiza que allRoles sea siempre string[]
+  const allRoles = [...new Set([
+    ...BASE_MANUAL_ROLES,
+    ...(globalRoles ?? []).map(toRoleString).filter(Boolean),
+  ])].sort();
+
   const selectedIds = value.map((r) => r.participante_id);
   const filtered    = participants.filter((p) =>
     !search ||
@@ -316,6 +330,7 @@ function ParticipantRolePicker({ participants, value, onChange, globalRoles, onA
                           }}
                           style={{ width: 130, padding: '3px 7px', borderRadius: 7, border: `1.5px solid ${BORDER}`, fontSize: 12, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}
                         >
+                          {/* ✅ allRoles son siempre strings, key y value seguros */}
                           {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
                           <option value="__nuevo__">+ Nuevo rol…</option>
                         </select>
@@ -347,6 +362,8 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
     const seen = new Set();
     return [...sp, ...au, ...aux].filter((r) => { if (seen.has(r.participante_id)) return false; seen.add(r.participante_id); return true; });
   });
+
+  // ✅ CORRECCIÓN: globalRoles siempre string[]
   const [globalRoles, setGlobalRoles] = useState(BASE_MANUAL_ROLES);
 
   const [galleryItems,   setGalleryItems]   = useState(() =>
@@ -389,11 +406,16 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
       setErrors({});
       setSaveError('');
       setActiveTab('general');
-      // Cargar roles globales
+
+      // ✅ CORRECCIÓN: normalizar a string[] lo que devuelva el servidor
       rolesApi.getAll()
         .then((remote) => {
-          if (Array.isArray(remote) && remote.length > 0)
-            setGlobalRoles((prev) => [...new Set([...prev, ...remote])].sort());
+          if (Array.isArray(remote) && remote.length > 0) {
+            const normalized = remote
+              .map(toRoleString)
+              .filter(Boolean);
+            setGlobalRoles((prev) => [...new Set([...prev, ...normalized])].sort());
+          }
         })
         .catch(() => {});
     }
@@ -460,9 +482,7 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
       descripcion:  form.description,
       fecha:        form.date,
       destacado:    manual?.featured ?? false,
-      // Nuevo formato unificado (tiene prioridad en el backend)
       participantes: participantRoles,
-      // Formato legacy para compatibilidad
       autor_ids:    participantRoles.filter((r) => r.rol === 'Autor').map((r) => r.participante_id),
       speakerId:    participantRoles.find((r) => r.rol === 'Ponente')?.participante_id ?? null,
       speakerIds:   participantRoles.filter((r) => r.rol === 'Ponente').map((r) => r.participante_id),

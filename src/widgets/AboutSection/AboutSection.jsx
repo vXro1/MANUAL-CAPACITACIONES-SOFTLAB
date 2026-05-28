@@ -2,8 +2,7 @@ import { motion, useInView } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import { directivosApi } from '@/services/directivosApi';
-import { ArrowRight, FlaskConical, BookOpen, Users, Zap, Shield, GraduationCap, ArrowUpRight } from 'lucide-react';
-
+import { ArrowRight, BookOpen, Zap, Shield, GraduationCap, ArrowUpRight } from 'lucide-react';
 const EASE = [0.22, 1, 0.36, 1];
 
 const DEFAULT_DIRECTORS = [
@@ -228,7 +227,9 @@ function DirectorCard({ person, index }) {
 }
 
 // ─── AboutSection ─────────────────────────────────────────────────────────────
-export function AboutSection({ showDirectors = false }) {
+// showDirectors  → muestra la sección de directivos
+// featuredOnly   → true = solo destacados (Home), false/omitido = todos (Nosotros)
+export function AboutSection({ showDirectors = false, featuredOnly = false }) {
   const titleRef = useRef(null);
   const titleInView = useInView(titleRef, { once: true, margin: '-80px' });
 
@@ -241,17 +242,20 @@ export function AboutSection({ showDirectors = false }) {
 
     (async () => {
       try {
-        const data = await directivosApi.getFeatured();
+        const data = featuredOnly
+          ? await directivosApi.getFeatured()
+          : await directivosApi.getAll();
+
         if (!cancelled) {
           setFeaturedDirectors(data.length > 0 ? data : DEFAULT_DIRECTORS);
         }
       } catch {
-        // Fallback: caché local filtrado por featured=true
         try {
           const cached = JSON.parse(localStorage.getItem('softlab_directors') ?? '[]');
-          const onlyFeatured = cached.filter((d) => d.featured);
+          // En caché también respeta featuredOnly
+          const filtered = featuredOnly ? cached.filter((d) => d.featured) : cached;
           if (!cancelled) {
-            setFeaturedDirectors(onlyFeatured.length > 0 ? onlyFeatured : DEFAULT_DIRECTORS);
+            setFeaturedDirectors(filtered.length > 0 ? filtered : DEFAULT_DIRECTORS);
           }
         } catch {
           if (!cancelled) setFeaturedDirectors(DEFAULT_DIRECTORS);
@@ -262,7 +266,7 @@ export function AboutSection({ showDirectors = false }) {
     })();
 
     return () => { cancelled = true; };
-  }, [showDirectors]);
+  }, [showDirectors, featuredOnly]);
 
   const directorsToShow = featuredDirectors;
 

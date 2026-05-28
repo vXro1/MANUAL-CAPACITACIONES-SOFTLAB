@@ -45,7 +45,7 @@ export function HomePage() {
     <main id="main-content" style={{ minHeight: '100vh' }}>
       <HeroSection slides={heroPhotos ?? []} />
       <FeaturedSection />
-      <AboutSection showDirectors={true} />
+      <AboutSection showDirectors={true} featuredOnly={true} />
       <EventsSection />
       <ParticipantsSection
         featuredOnly

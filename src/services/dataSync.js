@@ -8,6 +8,8 @@ import { manualesApi, participantesApi, galeriaApi, eventosApi, categoriasEvento
 import { directivosApi } from './directivosApi';
 import { normalizeManual, normalizeParticipant, normalizeGalleryImage, normalizeEvento } from './normalizers';
 
+
+
 const KEYS = {
   MANUALS:      'softlab_manuals',
   PARTICIPANTS: 'softlab_participants',
@@ -87,10 +89,10 @@ export async function syncManuales() {
 }
 
 export async function syncParticipantes() {
-  const data = await participantesApi.getAll();
-  save(KEYS.PARTICIPANTS, data.map(normalizeParticipant));
+  const raw = await participantesApi.getAll();
+  const normalized = (raw ?? []).map(normalizeParticipant);
+  participantsRepository.saveAll(normalized); 
 }
-
 export async function syncGaleria() {
   const data = await galeriaApi.getAll();
   save(KEYS.GALLERY, data.map(normalizeGalleryImage));
