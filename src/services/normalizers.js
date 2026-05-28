@@ -1,6 +1,25 @@
 // Shared field normalizers — API returns Spanish keys, components expect English.
 // Applied in apiService.js (all callers) and kept in sync with dataSync.js.
 
+// ─── Helpers internos ─────────────────────────────────────────────────────────
+
+function toStr(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (typeof val === 'object') {
+    return val.nombre ?? val.name ?? val.label ?? val.titulo ?? val.title ?? String(val.id ?? '');
+  }
+  return String(val);
+}
+
+function toStrArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(toStr).filter(Boolean);
+}
+
+// ─── Normalizers ──────────────────────────────────────────────────────────────
+
 export function normalizeManual(m) {
   return {
     id:            String(m.id),
@@ -27,39 +46,55 @@ export function normalizeManual(m) {
 }
 
 export function normalizeParticipant(p) {
-  const primaryRole = p.role ?? p.rol ?? '';
-  const rolesFromApi = Array.isArray(p.roles) ? p.roles : null;
-  const roles = rolesFromApi ?? (primaryRole ? [primaryRole] : []);
+  const primaryRole = toStr(p.role ?? p.rol ?? '');
+
+  const rawRoles = Array.isArray(p.roles)
+    ? p.roles
+    : Array.isArray(p.roles_adicionales)
+      ? p.roles_adicionales
+      : null;
+  const roles = rawRoles ? toStrArray(rawRoles) : (primaryRole ? [primaryRole] : []);
+
+  const rawSkills = (() => {
+    const s = p.skills ?? p.habilidades;
+    if (Array.isArray(s)) return s;
+    if (typeof s === 'string') {
+      try { const parsed = JSON.parse(s); return Array.isArray(parsed) ? parsed : []; }
+      catch { return s ? [s] : []; }
+    }
+    return [];
+  })();
+  const skills = toStrArray(rawSkills);
 
   return {
-    id:         String(p.id),
-    name:       p.name     ?? p.nombre   ?? '',
-    role:       primaryRole,
+    id:       String(p.id),
+    name:     toStr(p.name     ?? p.nombre   ?? ''),
+    role:     primaryRole,
     roles,
-    career:     p.career   ?? p.carrera  ?? '',
-    semester:   p.semestre ?? p.semester ?? null,
-    bio:        p.bio      ?? '',
-    skills:     p.skills   ?? p.habilidades ?? [],
-    linkedin:   p.linkedin ?? '',
-    github:     p.github   ?? '',
-    email:      p.email    ?? '',
-    photo:      p.foto_path ?? p.photo   ?? null,
-    featured:   !!(p.featured ?? false),
-    proyectos:  (p.proyectos ?? []).map((pr) => ({
-      id:          String(pr.id),
-      titulo:      pr.titulo      ?? '',
-      descripcion: pr.descripcion ?? null,
+    career:   toStr(p.career   ?? p.carrera  ?? ''),
+    semester: toStr(p.semestre ?? p.semester ?? ''),
+    bio:      toStr(p.bio      ?? ''),
+    skills,
+    linkedin: toStr(p.linkedin ?? ''),
+    github:   toStr(p.github   ?? ''),
+    email:    toStr(p.email    ?? ''),
+    photo:    p.foto_path ?? p.photo ?? null,
+    featured: !!(p.featured ?? false),
+    proyectos: (p.proyectos ?? []).map((pr) => ({
+      id:          String(pr.id ?? ''),
+      titulo:      toStr(pr.titulo      ?? ''),
+      descripcion: toStr(pr.descripcion ?? ''),
       url_link:    pr.url_link    ?? null,
       imagen_path: pr.imagen_path ?? null,
       tipo:        pr.url_link ? 'link' : 'imagen',
     })),
     actividades: (p.actividades ?? []).map((a) => ({
-      tipo:      a.tipo,
-      id:        String(a.id),
-      titulo:    a.titulo    ?? a.title    ?? '',
-      fecha:     a.fecha     ?? a.date     ?? null,
-      categoria: a.categoria ?? a.category ?? null,
-      rol:       a.rol       ?? null,
+      tipo:      toStr(a.tipo      ?? ''),
+      id:        String(a.id       ?? ''),
+      titulo:    toStr(a.titulo    ?? a.title    ?? ''),
+      fecha:     toStr(a.fecha     ?? a.date     ?? ''),
+      categoria: toStr(a.categoria ?? a.category ?? ''),
+      rol:       toStr(a.rol       ?? ''),
     })),
   };
 }
@@ -85,8 +120,8 @@ export function normalizeEvento(ev) {
     category:         ev.category       ?? ev.categoria   ?? '',
     participantIds:   (ev.participantIds ?? ev.participant_ids ?? []).map(String),
     participantRoles: (ev.participantRoles ?? []).map((pr) => ({
-      participante_id: String(pr.participante_id),
-      rol:             pr.rol ?? null,
+      participante_id: String(pr.participante_id ?? ''),
+      rol:             toStr(pr.rol ?? ''),
     })),
     directivoRoles:   (ev.directivoRoles ?? []).map((dr) => ({
       directivo_id: String(dr.directivo_id),
@@ -94,12 +129,12 @@ export function normalizeEvento(ev) {
     })),
     directivoIds:     (ev.directivoIds ?? []).map(String),
     gallery:          (ev.gallery ?? []).map((img) => ({
-      id:    String(img.id),
+      id:    String(img.id ?? ''),
       src:   img.src        ?? img.imagen_path ?? '',
       title: img.title      ?? img.titulo      ?? '',
       _serverImage: true,
     })),
-    coverImageId:     ev.coverImageId   ?? ev.cover_image_id ?? null,
-    createdAt:        ev.createdAt      ?? ev.created_at  ?? '',
+    coverImageId: ev.coverImageId ?? ev.cover_image_id ?? null,
+    createdAt:    ev.createdAt    ?? ev.created_at      ?? '',
   };
 }

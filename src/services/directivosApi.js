@@ -1,35 +1,55 @@
 import { getToken } from './apiService';
 
 const ENDPOINT = 'https://semillerosoftlab.com/api-backend/directivos.php';
+const LS_KEY   = 'softlab_directors';
 
-function withToken(url) {
+// ─── Cliente interno ──────────────────────────────────────────────────────────
+
+/**
+ * Adjunta el token de admin de tres formas (header, query param, campo POST)
+ * para sobrevivir a los proxies de Hostinger que eliminan headers en multipart.
+ * Para peticiones JSON normales basta con el header; los otros dos son fallback.
+ */
+function buildUrl(base, extraParams = {}) {
   const token = getToken();
-  if (!token) return url;
-  const sep = url.includes('?') ? '&' : '?';
-  return url + sep + '_token=' + encodeURIComponent(token);
+  const url   = new URL(base);
+  Object.entries(extraParams).forEach(([k, v]) => url.searchParams.set(k, v));
+  if (token) url.searchParams.set('_token', token);
+  return url.toString();
 }
 
+function authHeaders() {
+  const token = getToken();
+  const h = { 'Content-Type': 'application/json' };
+  if (token) h['X-Admin-Token'] = token;
+  return h;
+}
+
+/**
+ * Petición JSON genérica.
+ * El backend devuelve el objeto directamente (no envuelto en { ok, data }).
+ * En caso de error HTTP el body contiene { error: "..." }.
+ */
 async function request(url, options = {}) {
   let res;
   try {
-    res = await fetch(withToken(url), {
+    res = await fetch(url, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
+      headers: { ...authHeaders(), ...(options.headers ?? {}) },
     });
   } catch {
-    throw new Error('No se pudo conectar al servidor. Verifica que el backend esté activo.');
+    throw new Error('No se pudo conectar al servidor. Verifica tu conexión.');
   }
 
-  const text = await res.text();
   let data;
   try {
-    data = JSON.parse(text);
+    data = await res.json();
   } catch {
-    const preview = text.slice(0, 300).replace(/<[^>]*>/g, ' ').trim();
-    console.error('[directivosApi] Respuesta no-JSON desde', url, '\n', text.slice(0, 500));
+    // Respuesta no-JSON: PHP devolvió HTML (error 500, error de sintaxis, etc.)
+    const preview = (await res.text?.())?.slice(0, 200).replace(/<[^>]*>/g, ' ').trim();
     throw new Error(
-      `El servidor devolvió una respuesta inesperada (código ${res.status}).\n` +
-      `Respuesta: ${preview}`
+      `El servidor devolvió una respuesta inesperada (HTTP ${res.status}).` +
+      (preview ? `\nDetalle: ${preview}` : ''),
     );
   }
 
@@ -40,65 +60,74 @@ async function request(url, options = {}) {
   return data;
 }
 
+// ─── API pública ──────────────────────────────────────────────────────────────
+
 export const directivosApi = {
-  /** Trae TODOS los directivos (usado en el panel de admin) */
+  /** Trae TODOS los directivos (panel admin) */
   getAll() {
-    return request(ENDPOINT);
+    return request(buildUrl(ENDPOINT));
   },
 
+  /** Solo los marcados como featured (portada pública) */
   getFeatured() {
-    return request(`${ENDPOINT}?featured=1`);
+    return request(buildUrl(ENDPOINT, { featured: '1' }));
   },
 
   getById(id) {
-    return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`);
+    return request(buildUrl(ENDPOINT, { id }));
   },
 
   create(data) {
-    return request(ENDPOINT, {
+    return request(buildUrl(ENDPOINT), {
       method: 'POST',
-      body: JSON.stringify(data),
+      body:   JSON.stringify(data),
     });
   },
 
   update(id, data) {
-    return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`, {
+    return request(buildUrl(ENDPOINT, { id }), {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body:   JSON.stringify(data),
     });
   },
 
   delete(id) {
-    return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`, {
+    return request(buildUrl(ENDPOINT, { id }), {
       method: 'DELETE',
     });
   },
 
- 
+  /**
+   * Invierte el flag `featured` del directivo indicado.
+   * @param {string|number} id
+   * @param {boolean} currentFeatured  — valor actual; se envía el opuesto
+   */
   toggleFeatured(id, currentFeatured) {
-    return request(`${ENDPOINT}?id=${encodeURIComponent(id)}`, {
+    return request(buildUrl(ENDPOINT, { id }), {
       method: 'PUT',
-      body: JSON.stringify({ featured: !currentFeatured }),
+      body:   JSON.stringify({ featured: !currentFeatured }),
     });
   },
 };
 
-const LS_KEY = 'softlab_directors';
+// ─── Caché local (localStorage) ───────────────────────────────────────────────
 
 export function getFromLS() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    return JSON.parse(localStorage.getItem(LS_KEY) ?? '[]');
   } catch {
     return [];
   }
 }
 
-/** Sincroniza todos los directivos en caché local (para el admin) */
+/**
+ * Descarga todos los directivos y los guarda en localStorage.
+ * Si hay error de red, devuelve lo que haya en caché.
+ */
 export async function syncDirectivos() {
   try {
     const data = await directivosApi.getAll();
-    try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch { /* cuota llena */ }
     return data;
   } catch (err) {
     console.warn('[directivosApi] Sin conexión, usando caché:', err.message);
@@ -106,11 +135,14 @@ export async function syncDirectivos() {
   }
 }
 
+/**
+ * Devuelve los directivos destacados.
+ * Fallback: filtra el caché local.
+ */
 export async function syncDirectivosFeatured() {
   try {
     return await directivosApi.getFeatured();
   } catch {
-    // Fallback: filtra del caché local solo los marcados como featured
     return getFromLS().filter((d) => d.featured);
   }
 }

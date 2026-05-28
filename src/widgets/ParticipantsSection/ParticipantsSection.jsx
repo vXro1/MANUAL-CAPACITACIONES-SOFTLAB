@@ -10,9 +10,63 @@ import { toSlug } from '@/shared/lib/toSlug';
 
 const EASE = [0.22, 1, 0.36, 1];
 
-/* ─── Role config ──────────────────────────────────────────────────────── */
+/* ─── Helpers de normalización ──────────────────────────────────────── */
+
+/**
+ * Convierte cualquier valor a string seguro para renderizar.
+ * Si es objeto, intenta sacar .nombre, .name o .label.
+ */
+function toStr(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'object') return val.nombre ?? val.name ?? val.label ?? '';
+  return String(val);
+}
+
+/**
+ * Normaliza un array que puede contener strings u objetos.
+ * Devuelve siempre string[].
+ */
+function normalizeArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(toStr).filter(Boolean);
+}
+
+/**
+ * Normaliza un participante que viene de la API PHP,
+ * asegurando que todos los campos sean tipos primitivos seguros.
+ */
+function normalizeParticipant(raw) {
+  return {
+    ...raw,
+    name:     toStr(raw.name     ?? raw.nombre ?? ''),
+    role:     toStr(raw.role     ?? raw.rol    ?? ''),
+    career:   toStr(raw.career   ?? raw.carrera ?? ''),
+    semester: toStr(raw.semester ?? raw.semestre ?? ''),
+    bio:      toStr(raw.bio      ?? ''),
+    photo:    toStr(raw.photo    ?? raw.foto_path ?? ''),
+    featured: Boolean(raw.featured),
+    // Arrays: pueden venir como JSON strings o arrays de objetos
+    skills: normalizeArray(
+      typeof raw.skills === 'string'
+        ? tryParse(raw.skills)
+        : (raw.skills ?? raw.habilidades ?? [])
+    ),
+    roles: normalizeArray(
+      typeof raw.roles === 'string'
+        ? tryParse(raw.roles)
+        : (raw.roles ?? raw.roles_adicionales ?? [])
+    ),
+  };
+}
+
+function tryParse(str) {
+  try { return JSON.parse(str); } catch { return []; }
+}
+
+/* ─── Role config ──────────────────────────────────────────────────── */
 const ROLE_CONFIG = {
-  // Directivos
   Coordinador:               { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
   Profesor:                  { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
   Docente:                   { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
@@ -20,16 +74,12 @@ const ROLE_CONFIG = {
   'Docente Investigador':    { bg: '#EBF0FF', color: '#1640AE', border: '#C0CFFA' },
   'Director del Semillero':  { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
   'Co-Director del Semillero': { bg: '#E0E8FF', color: '#0F2F8A', border: '#B8CAF5' },
-  // Investigadores (legacy)
   Investigador:              { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
   'Co-Investigador':         { bg: '#EEF3FF', color: '#1A3FAA', border: '#C7D7F8' },
   'Investigador Principal':  { bg: '#E8EDFF', color: '#142F8A', border: '#BCC8F6' },
-  // Estudiantes
   Estudiante:                { bg: '#F0F5FF', color: '#2D5CC0', border: '#C5D3F6' },
-  // Ponentes
   Ponente:                   { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
   Conferencista:             { bg: '#EDF2FF', color: '#2151C2', border: '#BFCEF8' },
-  // Colaboradores
   'Auxiliar de Investigación': { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
   'Colaborador Externo':     { bg: '#F4F7FF', color: '#4F7BE8', border: '#CCDAF8' },
   default:                   { bg: '#F2F5FF', color: '#3B6FE8', border: '#C8D6F8' },
@@ -46,11 +96,12 @@ function getInitials(name = '') {
 }
 
 function getRoles(participant) {
+  // roles ya normalizado = string[]
   if (Array.isArray(participant.roles) && participant.roles.length > 0) return participant.roles;
   return participant.role ? [participant.role] : [];
 }
 
-/* ─── Grupos de roles con metadatos visuales ─────────────────────────── */
+/* ─── Grupos de roles ────────────────────────────────────────────────── */
 const ROLE_GROUPS = [
   {
     key: 'directivos',
@@ -219,25 +270,28 @@ function ParticipantCard({ participant, onClick, index }) {
               fontFamily: 'DM Sans, sans-serif',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {participant.career}{participant.semester ? ` · Sem. ${participant.semester}` : ''}
+              {participant.career}
+              {participant.semester ? ` · Sem. ${participant.semester}` : ''}
             </p>
           )}
         </div>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-        {/* Rol principal */}
-        <span style={{
-          padding: '3px 10px', borderRadius: 999,
-          fontSize: 10.5, fontWeight: 700,
-          background: roleStyle.bg, color: roleStyle.color,
-          border: `1px solid ${roleStyle.border}`,
-          fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.02em',
-          whiteSpace: 'nowrap',
-        }}>
-          {primaryRole}
-        </span>
-        {/* Todos los roles adicionales */}
+        {/* Rol principal — ✅ siempre string por normalizeParticipant */}
+        {primaryRole && (
+          <span style={{
+            padding: '3px 10px', borderRadius: 999,
+            fontSize: 10.5, fontWeight: 700,
+            background: roleStyle.bg, color: roleStyle.color,
+            border: `1px solid ${roleStyle.border}`,
+            fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+          }}>
+            {primaryRole}
+          </span>
+        )}
+        {/* Roles adicionales — ✅ string[] */}
         {extraRoles.map((role) => (
           <span key={role} style={{
             padding: '3px 9px', borderRadius: 999,
@@ -249,8 +303,8 @@ function ParticipantCard({ participant, onClick, index }) {
             {role}
           </span>
         ))}
-        {/* Todas las habilidades */}
-        {participant.skills?.map((skill) => (
+        {/* Skills — ✅ string[] gracias a normalizeArray */}
+        {participant.skills.map((skill) => (
           <span key={skill} style={{
             padding: '3px 10px', borderRadius: 999,
             fontSize: 10.5, fontWeight: 500,
@@ -357,12 +411,14 @@ function ParticipantModal({ participant, onClose }) {
                 fontFamily: 'DM Sans, sans-serif',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {participant.career}{participant.semester ? ` · Sem. ${participant.semester}` : ''}
+                {participant.career}
+                {participant.semester ? ` · Sem. ${participant.semester}` : ''}
               </p>
             )}
           </div>
         </div>
 
+        {/* bio ya es string seguro */}
         {participant.bio && (
           <p style={{
             fontSize: 13.5, color: '#475569', lineHeight: 1.7,
@@ -405,33 +461,19 @@ function RoleGroupHeader({ group, count, index }) {
       initial={{ opacity: 0, y: 24 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: index * 0.08, ease: EASE }}
-      style={{
-        marginBottom: 16,
-        marginTop: index === 0 ? 0 : 28,
-        position: 'relative',
-      }}
+      style={{ marginBottom: 16, marginTop: index === 0 ? 0 : 28, position: 'relative' }}
     >
-      {/* Línea decorativa superior animada */}
       <motion.div
         initial={{ width: 0 }}
         animate={inView ? { width: 56 } : {}}
         transition={{ duration: 0.6, delay: index * 0.08 + 0.1, ease: EASE }}
         style={{
-          height: 4,
-          borderRadius: 99,
+          height: 4, borderRadius: 99,
           background: `linear-gradient(90deg, ${group.accent}, ${group.accent}00)`,
           marginBottom: 16,
         }}
       />
-
-      {/* Contenedor principal con flex */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 18,
-        flexWrap: 'wrap',
-      }}>
-        {/* Icono grande y bonito */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap' }}>
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={inView ? { scale: 1, opacity: 1 } : {}}
@@ -446,8 +488,6 @@ function RoleGroupHeader({ group, count, index }) {
         >
           <Icon size={26} color={group.accent} strokeWidth={1.8} />
         </motion.div>
-
-        {/* Textos principales */}
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
           <motion.h2
             initial={{ opacity: 0, x: -10 }}
@@ -456,16 +496,11 @@ function RoleGroupHeader({ group, count, index }) {
             style={{
               fontFamily: 'Syne, sans-serif',
               fontSize: 'clamp(22px, 3vw, 38px)',
-              fontWeight: 800,
-              color: '#0A0F1E',
-              margin: 0,
-              letterSpacing: '-0.8px',
-              lineHeight: 1.1,
+              fontWeight: 800, color: '#0A0F1E',
+              margin: 0, letterSpacing: '-0.8px', lineHeight: 1.1,
               background: `linear-gradient(135deg, ${group.accent}, ${group.accent}dd)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text', WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              backgroundSize: '200% auto',
             }}
           >
             {group.label}
@@ -475,34 +510,22 @@ function RoleGroupHeader({ group, count, index }) {
             animate={inView ? { opacity: 1 } : {}}
             transition={{ duration: 0.5, delay: index * 0.08 + 0.15 }}
             style={{
-              fontSize: 13,
-              color: '#64748B',
-              margin: '6px 0 0',
-              fontFamily: 'DM Sans, sans-serif',
-              fontWeight: 500,
-              letterSpacing: '0.3px',
+              fontSize: 13, color: '#64748B', margin: '6px 0 0',
+              fontFamily: 'DM Sans, sans-serif', fontWeight: 500, letterSpacing: '0.3px',
             }}
           >
             {group.subtitle}
           </motion.p>
         </div>
-
-        {/* Contador */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={inView ? { opacity: 1, scale: 1 } : {}}
           transition={{ duration: 0.5, delay: index * 0.08 + 0.2 }}
           style={{
-            padding: '8px 18px',
-            borderRadius: 999,
-            background: group.accent,
-            color: '#fff',
-            fontSize: 14,
-            fontWeight: 700,
-            fontFamily: 'Syne, sans-serif',
-            flexShrink: 0,
-            boxShadow: `0 6px 16px ${group.accent}40`,
-            letterSpacing: '-0.3px',
+            padding: '8px 18px', borderRadius: 999,
+            background: group.accent, color: '#fff',
+            fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif',
+            flexShrink: 0, boxShadow: `0 6px 16px ${group.accent}40`, letterSpacing: '-0.3px',
           }}
         >
           {count}
@@ -538,11 +561,9 @@ export function ParticipantsSection({
     participantesApi.getAll()
       .then(data => {
         if (!cancelled) {
-          setAllParticipants(data ?? []);
-          console.log('Participantes cargados:', data);
-          if (data && data.length > 0) {
-            console.log('Roles encontrados:', [...new Set(data.flatMap(p => getRoles(p)))]);
-          }
+          // ✅ CORRECCIÓN CLAVE: normalizar cada participante al llegar de la API
+          const normalized = (data ?? []).map(normalizeParticipant);
+          setAllParticipants(normalized);
         }
       })
       .catch((err) => {
@@ -580,14 +601,9 @@ export function ParticipantsSection({
       }))
       .filter(({ members }) => members.length > 0);
 
-    if (groups.length === 0) {
-      console.warn('No se encontraron grupos. Participantes totales:', participants.length);
-      console.warn('Roles en participantes:', participants.map(p => ({ name: p.name, roles: getRoles(p) })));
-      return null;
-    }
+    if (groups.length === 0) return null;
 
     let globalIndex = 0;
-
     const sectionPadTop = paddingTop ?? 'clamp(40px, 6vw, 72px)';
 
     return (
@@ -603,17 +619,13 @@ export function ParticipantsSection({
       >
         <div
           style={{
-            maxWidth: 1200,
-            margin: '0 auto',
+            maxWidth: 1200, margin: '0 auto',
             padding: '0 clamp(20px, 5vw, 48px)',
-            position: 'relative',
-            zIndex: 1,
-            boxSizing: 'border-box',
-            width: '100%',
+            position: 'relative', zIndex: 1,
+            boxSizing: 'border-box', width: '100%',
           }}
           className="participants-container"
         >
-          {/* Título principal */}
           <div ref={titleRef} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 4, height: 36, borderRadius: 2, background: 'linear-gradient(180deg, #1A3FAA, #3B6FE8)', flexShrink: 0 }} />
             <div>
@@ -645,7 +657,6 @@ export function ParticipantsSection({
             </div>
           </div>
 
-          {/* Grupos */}
           {groups.map(({ group, members }, gi) => {
             const startIndex = globalIndex;
             globalIndex += members.length;
@@ -656,18 +667,12 @@ export function ParticipantsSection({
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))',
-                    gap: 14,
-                    marginBottom: 0,
+                    gap: 14, marginBottom: 0,
                   }}
                   className="participants-grid"
                 >
                   {members.map((p, i) => (
-                    <ParticipantCard
-                      key={p.id}
-                      participant={p}
-                      index={startIndex + i}
-                      onClick={setSelected}
-                    />
+                    <ParticipantCard key={p.id} participant={p} index={startIndex + i} onClick={setSelected} />
                   ))}
                 </div>
               </div>
@@ -676,9 +681,7 @@ export function ParticipantsSection({
         </div>
 
         <AnimatePresence>
-          {selected && (
-            <ParticipantModal participant={selected} onClose={() => setSelected(null)} />
-          )}
+          {selected && <ParticipantModal participant={selected} onClose={() => setSelected(null)} />}
         </AnimatePresence>
       </section>
     );
@@ -686,6 +689,7 @@ export function ParticipantsSection({
 
   /* ── Modo original (compact / sin groupByRole) ── */
   const normalPadTop = paddingTop ?? (isCompact ? 'clamp(32px, 5vw, 56px)' : 'clamp(40px, 6vw, 72px)');
+
   return (
     <section
       aria-label="Investigadores del semillero"
@@ -699,17 +703,21 @@ export function ParticipantsSection({
     >
       <div
         style={{
-          maxWidth: 1200,
-          margin: '0 auto',
+          maxWidth: 1200, margin: '0 auto',
           padding: '0 clamp(20px, 5vw, 48px)',
-          position: 'relative',
-          zIndex: 1,
-          boxSizing: 'border-box',
-          width: '100%',
+          position: 'relative', zIndex: 1,
+          boxSizing: 'border-box', width: '100%',
         }}
         className="participants-container"
       >
-        <div ref={titleRef} style={{ marginBottom: isCompact ? 24 : 36, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div
+          ref={titleRef}
+          style={{
+            marginBottom: isCompact ? 24 : 36,
+            display: 'flex', alignItems: 'flex-end',
+            justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+          }}
+        >
           <div>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -753,8 +761,7 @@ export function ParticipantsSection({
                   textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
                   border: '1.5px solid rgba(26,63,170,0.18)',
                   background: 'rgba(238,243,255,0.5)',
-                  transition: 'background 0.18s',
-                  whiteSpace: 'nowrap',
+                  transition: 'background 0.18s', whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#eef3ff'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(238,243,255,0.5)'; }}
@@ -782,9 +789,7 @@ export function ParticipantsSection({
       </div>
 
       <AnimatePresence>
-        {selected && (
-          <ParticipantModal participant={selected} onClose={() => setSelected(null)} />
-        )}
+        {selected && <ParticipantModal participant={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
     </section>
   );
