@@ -40,8 +40,29 @@ if ($method === 'POST') {
     $stmt->execute([$eventoId]);
     if (!$stmt->fetch()) err('Evento no encontrado', 404);
 
-    $imgUrl = uploadFile('imagen', 'eventos_galeria', $ALLOWED_IMG, MAX_IMG);
-    if (!$imgUrl) err('Se requiere una imagen');
+    // Modo 1: copiar desde URL interna (evita CORS del browser)
+    if (!empty($_POST['src_url'])) {
+        $srcUrl = trim($_POST['src_url']);
+
+        if (strpos($srcUrl, UPLOAD_URL) !== 0) err('URL de origen no permitida');
+
+        $srcPath = str_replace(UPLOAD_URL, UPLOAD_DIR, $srcUrl);
+        if (!file_exists($srcPath)) err('Imagen de origen no encontrada en el servidor');
+
+        $ext     = strtolower(pathinfo($srcPath, PATHINFO_EXTENSION)) ?: 'jpg';
+        $name    = bin2hex(random_bytes(16)) . '.' . $ext;
+        $destDir = UPLOAD_DIR . 'eventos_galeria/';
+
+        if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+        if (!copy($srcPath, $destDir . $name)) err('No se pudo copiar la imagen en el servidor');
+
+        $imgUrl = UPLOAD_URL . 'eventos_galeria/' . $name;
+
+    // Modo 2: subida normal de archivo
+    } else {
+        $imgUrl = uploadFile('imagen', 'eventos_galeria', $ALLOWED_IMG, MAX_IMG);
+        if (!$imgUrl) err('Se requiere una imagen o src_url');
+    }
 
     $titulo = trim($_POST['titulo'] ?? '');
 

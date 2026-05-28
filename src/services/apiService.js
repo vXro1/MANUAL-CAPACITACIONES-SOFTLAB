@@ -261,6 +261,13 @@ export const eventosGaleriaApi = {
     fd.append('titulo', titulo);
     return requestForm('/eventos_galeria.php', fd, 'POST');
   },
+  copyFromUrl(eventoId, srcUrl, titulo = '') {
+    const fd = new FormData();
+    fd.append('evento_id', String(eventoId));
+    fd.append('src_url',   srcUrl);
+    fd.append('titulo',    titulo);
+    return requestForm('/eventos_galeria.php', fd, 'POST');
+  },
   delete(id) { return request(`/eventos_galeria.php?id=${id}`, { method: 'DELETE' }); },
 };
 

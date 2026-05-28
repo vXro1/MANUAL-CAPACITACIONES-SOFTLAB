@@ -665,15 +665,9 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
         const newImages = form.gallery.filter((g) => g._file);
         await Promise.all(newImages.map((g) => eventosGaleriaApi.upload(eventId, g._file, g.title).catch(() => {})));
         const galleryRefs = form.gallery.filter((g) => g._fromGallery);
-        await Promise.all(galleryRefs.map(async (g) => {
-          try {
-            const res  = await fetch(g.src);
-            const blob = await res.blob();
-            const ext  = blob.type.split('/')[1] || 'jpg';
-            const file = new File([blob], `${g.title || 'imagen'}.${ext}`, { type: blob.type });
-            await eventosGaleriaApi.upload(eventId, file, g.title);
-          } catch {}
-        }));
+        await Promise.all(galleryRefs.map((g) =>
+          eventosGaleriaApi.copyFromUrl(eventId, g.src, g.title).catch(() => {})
+        ));
         await syncEventos().catch(() => {});
       } else {
         eventsRepository.save({
