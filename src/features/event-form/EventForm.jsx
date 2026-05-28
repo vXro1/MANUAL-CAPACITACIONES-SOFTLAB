@@ -496,8 +496,19 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
 
       {value.length > 0 && (
         <>
-          <p style={{ fontSize: 11, color: '#94A3B8' }}>Haz clic en ★ para definir la imagen de portada del evento.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ fontSize: 11, color: '#94A3B8', margin: 0 }}>
+              Haz clic en <Star size={10} style={{ display: 'inline', verticalAlign: 'middle', color: '#F59E0B' }} /> para definir la portada del evento.
+            </p>
+            {coverImageId && (
+              <button type="button" onClick={() => onSetCover?.(null)}
+                style={{ fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                Quitar portada
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
             <AnimatePresence>
               {value.map((img) => {
                 const isCover = img.id === coverImageId;
@@ -508,38 +519,66 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.85 }}
                     transition={{ duration: .2 }}
-                    style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#F1F5F9', aspectRatio: '1' }}
+                    style={{
+                      borderRadius: 12, overflow: 'hidden', background: '#F1F5F9',
+                      border: `2px solid ${isCover ? ACCENT : '#E2E8F0'}`,
+                      boxShadow: isCover ? `0 0 0 3px ${BG}` : 'none',
+                      display: 'flex', flexDirection: 'column',
+                      transition: 'border-color .2s, box-shadow .2s',
+                    }}
                   >
-                    <img src={img.src} alt={img.title || 'Imagen'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    {isCover && (
-                      <span style={{
-                        position: 'absolute', top: 4, left: 4, background: ACCENT, color: '#fff',
-                        fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        textTransform: 'uppercase', letterSpacing: '.04em',
-                      }}>★ Portada</span>
-                    )}
-                    <div
-                      style={{ position: 'absolute', inset: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'background .2s' }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(0,0,0,.4)';
-                        e.currentTarget.querySelectorAll('button').forEach((b) => (b.style.opacity = '1'));
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.querySelectorAll('button').forEach((b) => (b.style.opacity = '0'));
-                      }}
-                    >
-                      <button type="button" onClick={() => onSetCover?.(isCover ? null : img.id)}
-                        aria-label={isCover ? 'Quitar portada' : 'Establecer como portada'}
-                        style={{ width: 28, height: 28, borderRadius: '50%', background: isCover ? '#F59E0B' : 'rgba(255,255,255,.25)', color: '#fff', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Star size={13} fill={isCover ? '#fff' : 'none'} />
-                      </button>
-                      <button type="button" onClick={() => removeImage(img)}
+                    {/* Thumbnail */}
+                    <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden' }}>
+                      <img src={img.src} alt={img.title || 'Imagen'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      {isCover && (
+                        <span style={{
+                          position: 'absolute', top: 5, left: 5,
+                          background: ACCENT, color: '#fff',
+                          fontSize: 8, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                          textTransform: 'uppercase', letterSpacing: '.05em',
+                        }}>★ Portada</span>
+                      )}
+                      {/* Botón eliminar — hover */}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(img)}
                         aria-label={`Eliminar imagen ${img.title}`}
-                        style={{ width: 28, height: 28, borderRadius: '50%', background: '#EF4444', color: '#fff', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Trash2 size={13} />
+                        style={{
+                          position: 'absolute', top: 5, right: 5,
+                          width: 22, height: 22, borderRadius: '50%',
+                          background: '#EF4444', color: '#fff', border: 'none',
+                          cursor: 'pointer', opacity: 0, transition: 'opacity .2s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onFocus={(e)     => { e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+                        onBlur={(e)      => { e.currentTarget.style.opacity = '0'; }}
+                      >
+                        <Trash2 size={11} />
                       </button>
                     </div>
+
+                    {/* Barra inferior — selección portada siempre visible */}
+                    <button
+                      type="button"
+                      onClick={() => onSetCover?.(isCover ? null : img.id)}
+                      aria-label={isCover ? 'Quitar portada' : 'Establecer como portada'}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        padding: '6px 8px', border: 'none', cursor: 'pointer',
+                        background: isCover ? ACCENT : '#F8FAFC',
+                        color: isCover ? '#fff' : '#94A3B8',
+                        fontSize: 10, fontWeight: 600,
+                        transition: 'background .2s, color .2s',
+                        width: '100%',
+                      }}
+                      onMouseEnter={(e) => { if (!isCover) { e.currentTarget.style.background = BG; e.currentTarget.style.color = ACCENT; } }}
+                      onMouseLeave={(e) => { if (!isCover) { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.color = '#94A3B8'; } }}
+                    >
+                      <Star size={10} fill={isCover ? '#fff' : 'none'} />
+                      {isCover ? 'Portada actual' : 'Usar como portada'}
+                    </button>
                   </motion.div>
                 );
               })}

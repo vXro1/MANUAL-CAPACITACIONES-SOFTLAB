@@ -101,11 +101,12 @@ function parseEvento($row) {
     );
 
     // Aliases amigables para el frontend
-    $row['title']       = $row['titulo'];
-    $row['description'] = $row['descripcion'] ?? '';
-    $row['date']        = $row['fecha'];
-    $row['category']    = $row['categoria'];
-    $row['createdAt']   = $row['creado_en'];
+    $row['title']        = $row['titulo'];
+    $row['description']  = $row['descripcion'] ?? '';
+    $row['date']         = $row['fecha'];
+    $row['category']     = $row['categoria'];
+    $row['createdAt']    = $row['creado_en'];
+    $row['coverImageId'] = $row['cover_image_id'] ? (string)$row['cover_image_id'] : null;
 
     return $row;
 }
@@ -148,8 +149,8 @@ if ($method === 'POST') {
     if (empty($data['categoria'])) err('La categoría es obligatoria');
 
     $stmt = db()->prepare('
-        INSERT INTO eventos (titulo, descripcion, fecha, categoria)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO eventos (titulo, descripcion, fecha, categoria, cover_image_id)
+        VALUES (?, ?, ?, ?, ?)
     ');
 
     $stmt->execute([
@@ -157,6 +158,7 @@ if ($method === 'POST') {
         trim($data['descripcion'] ?? ''),
         $data['fecha'],
         $data['categoria'],
+        isset($data['coverImageId']) && $data['coverImageId'] !== '' ? (int)$data['coverImageId'] : null,
     ]);
 
     $newId = (int)db()->lastInsertId();
@@ -214,15 +216,20 @@ if ($method === 'PUT') {
         ? (json_decode($_POST['data'], true) ?? [])
         : bodyJson();
 
+    $newCoverId = array_key_exists('coverImageId', $data)
+        ? ($data['coverImageId'] !== '' && $data['coverImageId'] !== null ? (int)$data['coverImageId'] : null)
+        : ($old['cover_image_id'] ?? null);
+
     db()->prepare('
         UPDATE eventos
-        SET titulo = ?, descripcion = ?, fecha = ?, categoria = ?
+        SET titulo = ?, descripcion = ?, fecha = ?, categoria = ?, cover_image_id = ?
         WHERE id = ?
     ')->execute([
-        $data['titulo']     ?? $old['titulo'],
+        $data['titulo']      ?? $old['titulo'],
         $data['descripcion'] ?? $old['descripcion'],
-        $data['fecha']      ?? $old['fecha'],
-        $data['categoria']  ?? $old['categoria'],
+        $data['fecha']       ?? $old['fecha'],
+        $data['categoria']   ?? $old['categoria'],
+        $newCoverId,
         $id,
     ]);
 
