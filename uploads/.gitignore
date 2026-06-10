@@ -1,0 +1,5 @@
+# Archivos subidos por usuarios — nunca rastrear, nunca limpiar con git clean
+*
+!.gitignore
+!.htaccess
+!_trash/
