@@ -371,9 +371,7 @@ if ($method === 'PUT') {
         MAX_IMG
     );
 
-    if ($fotoUrl) {
-        removeFile($old['foto_path']);
-    }
+    // NOTA: foto vieja se elimina DESPUÉS del UPDATE exitoso (ver más abajo)
 
     $stmt = db()->prepare('
         UPDATE participantes
@@ -447,6 +445,11 @@ if ($method === 'PUT') {
 
         $id
     ]);
+
+    // Mover foto vieja a papelera SOLO si el UPDATE fue exitoso
+    if ($fotoUrl && !empty($old['foto_path'])) {
+        removeFile($old['foto_path']);
+    }
 
     $row = db()
         ->query("SELECT * FROM participantes WHERE id = {$id}")
@@ -546,18 +549,20 @@ if ($action === 'proyecto_update') {
         ? (trim($data['url_link']) ?: null)
         : $oldProyecto['url_link'];
 
-    $imagenPath = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
-    if ($imagenPath) {
-        removeFile($oldProyecto['imagen_path']);
-    } else {
-        $imagenPath = $oldProyecto['imagen_path'];
-    }
+    $newImagenPath  = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
+    $oldImagenPath  = $oldProyecto['imagen_path'];
+    $imagenPath     = $newImagenPath ?? $oldImagenPath;
 
     db()->prepare('
         UPDATE participante_proyectos
         SET titulo=?, descripcion=?, url_link=?, imagen_path=?
         WHERE id=?
     ')->execute([$titulo, $descripcion, $urlLink, $imagenPath, $proyectoId]);
+
+    // Mover imagen vieja a papelera SOLO si el UPDATE fue exitoso
+    if ($newImagenPath && !empty($oldImagenPath)) {
+        removeFile($oldImagenPath);
+    }
 
     $pid = $id ?? (int)$oldProyecto['participante_id'];
     $row = db()->query("SELECT * FROM participantes WHERE id = {$pid}")->fetch();

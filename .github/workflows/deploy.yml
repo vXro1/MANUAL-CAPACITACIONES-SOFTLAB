@@ -29,11 +29,17 @@ jobs:
         run: npm run build
 
       # Junta dist/ + api-backend/ en una carpeta _deploy/
+      # uploads/ NO va en git, pero incluimos su .htaccess para que Hostinger
+      # no elimine el directorio en deploys con rsync/clean.
       - name: Prepare deploy folder
         run: |
           mkdir -p _deploy
           cp -r dist/. _deploy/
           cp -r api-backend _deploy/api-backend
+          mkdir -p _deploy/uploads
+          cp uploads/.htaccess _deploy/uploads/.htaccess
+          mkdir -p _deploy/uploads/_trash
+          cp uploads/_trash/.htaccess _deploy/uploads/_trash/.htaccess
 
       # Publica _deploy/ como rama "deploy" (Hostinger jalará esta rama)
       - name: Publish to deploy branch

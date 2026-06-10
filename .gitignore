@@ -15,6 +15,9 @@ dist-ssr
 # Archivos subidos por usuarios — viven SOLO en el servidor, nunca en el repo
 uploads/*
 !uploads/.htaccess
+!uploads/_trash/
+uploads/_trash/*
+!uploads/_trash/.htaccess
 
 # Editor directories and files
 .vscode/*

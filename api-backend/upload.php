@@ -1,32 +1,17 @@
 <?php
 
-header('Content-Type: application/json');
+// upload.php es un endpoint legado; todos los uploads deben realizarse a través
+// de los endpoints específicos (galeria.php, manuales.php, etc.) que usan
+// uploadFile() de config.php. Este archivo se mantiene como fallback pero
+// requiere autenticación de admin.
 
-// ─────────────────────────────────────────────
-// CORS
-// ─────────────────────────────────────────────
+require_once __DIR__ . '/config.php';
 
-$allowedOrigins = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://semillerosoftlab.com'
-];
+// Reemplazar headers manuales con la función cors() centralizada
+cors();
 
-if (
-    isset($_SERVER['HTTP_ORIGIN']) &&
-    in_array($_SERVER['HTTP_ORIGIN'], $allowedOrigins)
-) {
-
-    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-    header('Vary: Origin');
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+// Verificar autenticación de admin (igual que el resto de endpoints)
+requireAdmin();
 
 // ─────────────────────────────────────────────
 // CONFIGURACIÓN

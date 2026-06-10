@@ -167,9 +167,31 @@ function uploadFile($field, $subdir, $allowed, $maxSize) {
     return UPLOAD_URL . $subdir . '/' . $name;
 }
 
-// ─── Eliminar archivo del servidor ────────────────────────────────────────────
+// ─── Mover archivo a papelera (nunca borrar directamente) ─────────────────────
+// Los archivos eliminados van a uploads/_trash/ con timestamp para recuperación.
+// La eliminación real puede hacerse manualmente desde el servidor si es necesario.
 function removeFile($url) {
     if (empty($url) || strpos($url, UPLOAD_URL) !== 0) return;
     $path = str_replace(UPLOAD_URL, UPLOAD_DIR, $url);
-    if (file_exists($path)) @unlink($path);
+    if (!file_exists($path)) return;
+
+    $trashDir = UPLOAD_DIR . '_trash/';
+    if (!is_dir($trashDir)) {
+        @mkdir($trashDir, 0755, true);
+    }
+    // Proteger la papelera contra acceso web directo
+    $htaccess = $trashDir . '.htaccess';
+    if (!file_exists($htaccess)) {
+        @file_put_contents($htaccess, "Deny from all\n");
+    }
+
+    // Nombre único: timestamp + random + nombre original (para trazabilidad)
+    $safename = date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '_' . basename($path);
+    if (!@rename($path, $trashDir . $safename)) {
+        // Fallback: si rename falla (ej. sistemas de archivos distintos), copiar y borrar
+        if (@copy($path, $trashDir . $safename)) {
+            @unlink($path);
+        }
+        // Si todo falla, el archivo permanece en su lugar (preferible a perderlo)
+    }
 }

@@ -335,14 +335,8 @@ if ($method === 'PUT') {
         MAX_IMG
     );
 
-    // Eliminar archivos viejos
-    if ($pdfUrl) {
-        removeFile($old['pdf_path']);
-    }
-
-    if ($imgUrl) {
-        removeFile($old['imagen_portada']);
-    }
+    // NOTA: los archivos viejos se eliminan DESPUÉS de que el UPDATE en DB sea exitoso
+    // (ver más abajo). Esto evita pérdida de datos si el UPDATE falla.
 
     $old_extra = json_decode($old['datos_extra'] ?? '{}', true) ?? [];
 
@@ -432,6 +426,14 @@ if ($method === 'PUT') {
         $data['auxiliaresIds'] ?? ($old_extra['auxiliaresIds'] ?? []),
         $data['participantes'] ?? []
     );
+
+    // Mover archivos viejos a papelera SOLO si el UPDATE fue exitoso
+    if ($pdfUrl && !empty($old['pdf_path'])) {
+        removeFile($old['pdf_path']);
+    }
+    if ($imgUrl && !empty($old['imagen_portada'])) {
+        removeFile($old['imagen_portada']);
+    }
 
     $row = db()
         ->query("SELECT * FROM manuales WHERE id = {$id}")
