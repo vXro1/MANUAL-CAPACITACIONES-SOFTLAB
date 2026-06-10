@@ -222,12 +222,12 @@ export function GallerySection({ photos: propPhotos = null }) {
 
   const photos = propPhotos !== null ? propPhotos : fallbackPhotos;
 
-  if (photos.length === 0) return null;
+  const hasPhotos = photos.length > 0;
 
   // Show up to 9 in the grid; lightbox accesses all
   const VISIBLE = 9;
-  const visiblePhotos = photos.slice(0, VISIBLE);
-  const hiddenCount = Math.max(0, photos.length - VISIBLE);
+  const visiblePhotos = hasPhotos ? photos.slice(0, VISIBLE) : [];
+  const hiddenCount = hasPhotos ? Math.max(0, photos.length - VISIBLE) : 0;
 
   return (
     <>
@@ -288,11 +288,11 @@ export function GallerySection({ photos: propPhotos = null }) {
 
           {/* ── Main grid: photos left, reasons right ── */}
           <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'start' }}
+            style={{ display: 'grid', gridTemplateColumns: hasPhotos ? '1fr 1fr' : '1fr', gap: 56, alignItems: 'start' }}
             className="gallery-main-grid"
           >
-            {/* Photos */}
-            <motion.div
+            {/* Photos — only rendered when photos are available */}
+            {hasPhotos && <motion.div
               initial={{ opacity: 0, x: -24 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -432,7 +432,7 @@ export function GallerySection({ photos: propPhotos = null }) {
                   <Images size={13} aria-hidden="true" /> Ver galería completa
                 </Link>
               </motion.div>
-            </motion.div>
+            </motion.div>}
 
             {/* Reason cards — light style */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

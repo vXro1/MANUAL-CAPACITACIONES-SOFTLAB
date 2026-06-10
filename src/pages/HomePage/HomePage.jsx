@@ -29,14 +29,14 @@ export function HomePage() {
     galeriaApi.getSection('join')
       .then(data => {
         if (!cancelled) {
-          setJoinPhotos(
-            (data ?? [])
-              .filter(img => img.src)
-              .map(img => ({ src: img.src, alt: img.title || 'Foto del semillero' }))
-          );
+          const mapped = (data ?? [])
+            .filter(img => img.src)
+            .map(img => ({ src: img.src, alt: img.title || 'Foto del semillero' }));
+          // Keep null when empty so GallerySection falls back to featured images
+          setJoinPhotos(mapped.length > 0 ? mapped : null);
         }
       })
-      .catch(() => { if (!cancelled) setJoinPhotos([]); });
+      .catch(() => { if (!cancelled) setJoinPhotos(null); });
 
     return () => { cancelled = true; };
   }, []);
