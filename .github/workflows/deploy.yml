@@ -29,8 +29,9 @@ jobs:
         run: npm run build
 
       # Junta dist/ + api-backend/ en una carpeta _deploy/
-      # uploads/ NO va en git, pero incluimos su .htaccess para que Hostinger
-      # no elimine el directorio en deploys con rsync/clean.
+      # uploads/ solo lleva .htaccess y .gitignore para que:
+      #   1. El directorio se preserve en Hostinger incluso con git reset --hard
+      #   2. git clean -fd no borre las imágenes (están en el patrón de .gitignore)
       - name: Prepare deploy folder
         run: |
           mkdir -p _deploy
@@ -38,17 +39,22 @@ jobs:
           cp -r api-backend _deploy/api-backend
           mkdir -p _deploy/uploads
           cp uploads/.htaccess _deploy/uploads/.htaccess
+          cp uploads/.gitignore _deploy/uploads/.gitignore
           mkdir -p _deploy/uploads/_trash
           cp uploads/_trash/.htaccess _deploy/uploads/_trash/.htaccess
+          cp uploads/_trash/.gitignore _deploy/uploads/_trash/.gitignore
 
-      # Publica _deploy/ como rama "deploy" (Hostinger jalará esta rama)
+      # Publica _deploy/ como rama "deploy" (Hostinger jalará esta rama).
+      # force_orphan: false (por defecto) para que Hostinger pueda hacer
+      # git pull normal; con force_orphan:true haría checkout fresco y
+      # borraría los archivos subidos en uploads/.
       - name: Publish to deploy branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: _deploy
           publish_branch: deploy
-          force_orphan: true
+          force_orphan: false
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com
           commit_message: "deploy: ${{ github.sha }}"

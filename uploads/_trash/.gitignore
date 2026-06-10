@@ -1,0 +1,4 @@
+# Papelera de archivos eliminados — nunca rastrear
+*
+!.gitignore
+!.htaccess

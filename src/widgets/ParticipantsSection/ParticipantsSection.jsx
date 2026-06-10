@@ -82,9 +82,17 @@ function getInitials(name = '') {
   return name.slice(0, 2).toUpperCase();
 }
 
+function toRoleStr(r) {
+  if (typeof r === 'string') return r;
+  if (r && typeof r === 'object') return r.nombre ?? r.name ?? r.label ?? String(r.id ?? '');
+  return '';
+}
+
 function getRoles(participant) {
-  if (Array.isArray(participant.roles) && participant.roles.length > 0) return participant.roles;
-  return participant.role ? [participant.role] : [];
+  const raw = Array.isArray(participant.roles) && participant.roles.length > 0
+    ? participant.roles
+    : participant.role ? [participant.role] : [];
+  return raw.map(toRoleStr).filter(Boolean);
 }
 
 /* ─── Grupos de roles ────────────────────────────────────────────────── */
@@ -287,17 +295,21 @@ function ParticipantCard({ participant, onClick, index }) {
             {role}
           </span>
         ))}
-        {participant.skills.map((skill) => (
-          <span key={skill} style={{
-            padding: '3px 10px', borderRadius: 999,
-            fontSize: 10.5, fontWeight: 500,
-            background: '#F8FAFC', color: '#475569',
-            border: '1px solid #E5E7EB', fontFamily: 'DM Sans, sans-serif',
-            whiteSpace: 'nowrap',
-          }}>
-            {skill}
-          </span>
-        ))}
+        {(participant.skills ?? []).map((skill) => {
+          const label = typeof skill === 'string' ? skill : (skill?.nombre ?? skill?.name ?? '');
+          if (!label) return null;
+          return (
+            <span key={label} style={{
+              padding: '3px 10px', borderRadius: 999,
+              fontSize: 10.5, fontWeight: 500,
+              background: '#F8FAFC', color: '#475569',
+              border: '1px solid #E5E7EB', fontFamily: 'DM Sans, sans-serif',
+              whiteSpace: 'nowrap',
+            }}>
+              {label}
+            </span>
+          );
+        })}
       </div>
     </motion.button>
   );
