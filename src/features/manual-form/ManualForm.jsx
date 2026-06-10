@@ -519,7 +519,10 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
     const coverValue = form.cover;
     // CoverImageField ahora entrega el File directamente (sin roundtrip base64)
     const coverFile  = coverValue instanceof File ? coverValue : undefined;
-    const coverUrl   = typeof coverValue === 'string' ? coverValue : undefined;
+    // No enviamos de vuelta URLs de portadas subidas (imagen_portada) como cover —
+    // eso poluciona datos_extra['cover'] y causa que el servidor muestre la imagen vieja.
+    const rawCoverUrl = typeof coverValue === 'string' ? coverValue : undefined;
+    const coverUrl    = rawCoverUrl?.includes('/uploads/portadas/') ? undefined : rawCoverUrl;
 
     const pdfValue = form.pdf;
     const pdfFile  = pdfValue instanceof File ? pdfValue : undefined;

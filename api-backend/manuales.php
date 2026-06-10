@@ -99,7 +99,9 @@ function parseManual($row) {
     $row['speakerId']     = $extra['speakerId']     ?? null;
     $row['speakerIds']    = $extra['speakerIds']    ?? ($extra['speakerId'] ? [$extra['speakerId']] : []);
     $row['institution']   = $extra['institution']   ?? null;
-    $row['cover']         = $extra['cover']         ?? null;
+    // imagen_portada (archivo subido) y cover (URL de galería/externa) son mutuamente excluyentes.
+    // Si hay archivo subido, ignoramos datos_extra['cover'] para evitar que URL viejas tomen prioridad.
+    $row['cover']         = empty($row['imagen_portada']) ? ($extra['cover'] ?? null) : null;
     $row['objectives']    = $extra['objectives']    ?? [];
     $row['auxiliaresIds'] = $extra['auxiliaresIds'] ?? [];
 
@@ -219,7 +221,7 @@ if ($method === 'POST') {
         'speakerId'     => $data['speakerId']     ?? null,
         'speakerIds'    => $data['speakerIds']    ?? ($data['speakerId'] ? [$data['speakerId']] : []),
         'institution'   => $data['institution']   ?? null,
-        'cover'         => $data['cover']         ?? null,
+        'cover'         => $imgUrl ? null : ($data['cover'] ?? null),
         'objectives'    => $data['objectives']    ?? [],
         'auxiliaresIds' => $data['auxiliaresIds'] ?? [],
     ], JSON_UNESCAPED_UNICODE);
@@ -348,7 +350,7 @@ if ($method === 'PUT') {
         'speakerId'     => $data['speakerId']     ?? $old_extra['speakerId']     ?? null,
         'speakerIds'    => $data['speakerIds']    ?? $old_extra['speakerIds']    ?? ($old_extra['speakerId'] ? [$old_extra['speakerId']] : []),
         'institution'   => $data['institution']   ?? $old_extra['institution']   ?? null,
-        'cover'         => $data['cover']         ?? $old_extra['cover']         ?? null,
+        'cover'         => $imgUrl ? null : ($data['cover'] ?? $old_extra['cover'] ?? null),
         'objectives'    => $data['objectives']    ?? $old_extra['objectives']    ?? [],
         'auxiliaresIds' => $data['auxiliaresIds'] ?? $old_extra['auxiliaresIds'] ?? [],
     ], JSON_UNESCAPED_UNICODE);
