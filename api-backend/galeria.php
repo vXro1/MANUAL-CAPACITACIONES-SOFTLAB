@@ -124,7 +124,7 @@ if ($method === 'POST') {
     $stmt->execute([
         $data['title']    ?? $data['titulo']   ?? null,
         $imgUrl,
-        (int)!empty($data['featured'] ?? $data['destacada']),
+        (int)!empty($data['featured'] ?? $data['destacada'] ?? null),
     ]);
 
     $newId = (int)db()->lastInsertId();
