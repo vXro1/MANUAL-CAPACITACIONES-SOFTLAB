@@ -1,6 +1,7 @@
 import { manuals as defaultManuals } from '@/data/manuals';
 import { participants as defaultParticipants } from '@/data/participants';
 import { speakers as defaultSpeakers } from '@/data/speakers';
+import { normalizeParticipant } from '@/services/normalizers';
 
 const KEYS = {
   MANUALS:          'softlab_manuals',
@@ -72,7 +73,7 @@ export const manualsRepository = {
 
 export const participantsRepository = {
   getAll() {
-    return getItem(KEYS.PARTICIPANTS, defaultParticipants);
+    return getItem(KEYS.PARTICIPANTS, defaultParticipants).map(normalizeParticipant);
   },
 
   getById(id) {
