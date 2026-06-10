@@ -108,7 +108,7 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
         linkedin: participant.linkedin ?? '',
         github:   participant.github   ?? '',
       });
-      setSkills(participant.skills ?? []);
+      setSkills((participant.skills ?? []).map((s) => typeof s === 'string' ? s : (s?.nombre ?? s?.name ?? '')).filter(Boolean));
       setPhoto(participant.photo  ?? null);
       // Roles adicionales: roles[1..] si vienen del API, o arreglo vacío
       const allRoles = participant.roles ?? [];
@@ -445,13 +445,17 @@ export function ParticipantForm({ isOpen, onClose, participant, onSuccess }) {
                       style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', border: '1.5px solid #E2E8F0', borderRadius: 10, background: '#FAFAFA', minHeight: 44, alignItems: 'center', cursor: 'text' }}
                       onClick={() => document.getElementById('skill-field-p')?.focus()}
                     >
-                      {skills.map((sk) => (
-                        <span key={sk} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: BG, color: ACCENT, border: `1px solid ${BORDER}` }}>
-                          {sk}
-                          <button onClick={() => setSkills((s) => s.filter((x) => x !== sk))}
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                        </span>
-                      ))}
+                      {skills.map((sk) => {
+                        const label = typeof sk === 'string' ? sk : (sk?.nombre ?? sk?.name ?? '');
+                        if (!label) return null;
+                        return (
+                          <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: BG, color: ACCENT, border: `1px solid ${BORDER}` }}>
+                            {label}
+                            <button onClick={() => setSkills((s) => s.filter((x) => x !== sk))}
+                              style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                          </span>
+                        );
+                      })}
                       <input
                         id="skill-field-p"
                         value={skillInput}

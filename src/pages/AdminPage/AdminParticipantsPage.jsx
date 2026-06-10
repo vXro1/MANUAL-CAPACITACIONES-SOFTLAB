@@ -68,9 +68,11 @@ function ParticipantRow({ participant, index, onEdit, onDelete, onToggleFeatured
       {/* Skills */}
       <td className="px-5 py-4 hidden lg:table-cell">
         <div className="flex gap-1 flex-wrap">
-          {(participant.skills ?? []).slice(0, 3).map((s) => (
-            <Badge key={s} variant="slate" className="text-[10px]">{s}</Badge>
-          ))}
+          {(participant.skills ?? []).slice(0, 3).map((s) => {
+            const label = typeof s === 'string' ? s : (s?.nombre ?? s?.name ?? '');
+            if (!label) return null;
+            return <Badge key={label} variant="slate" className="text-[10px]">{label}</Badge>;
+          })}
           {(participant.skills ?? []).length > 3 && (
             <Badge variant="slate" className="text-[10px]">
               +{participant.skills.length - 3}
