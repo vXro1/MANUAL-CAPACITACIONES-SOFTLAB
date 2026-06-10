@@ -1,0 +1,367 @@
+/* ─────────────────────────────────────────────────────
+   RESPONSIVE — Softlab Manuales
+   Breakpoints globales y utilidades responsive.
+   Mobile-first approach.
+───────────────────────────────────────────────────── */
+
+/* ── Breakpoints de referencia ──
+   xs:  < 480px   (móvil pequeño)
+   sm:  480–767px (móvil grande)
+   md:  768–1023px (tablet)
+   lg:  1024–1279px (laptop)
+   xl:  ≥ 1280px  (desktop)
+─────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  .nav-inner      { padding: 0 20px !important; }
+  .nav-desktop    { display: none !important; }
+  .nav-cta        { display: none !important; }
+  .nav-hamburger  { display: flex !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════════ */
+
+/* Tablet: reorganización inteligente */
+@media (max-width: 960px) {
+  .hero-layout {
+    grid-template-columns: 1fr !important;
+    gap: clamp(32px, 5vw, 48px) !important;
+  }
+
+  /* Carousel siempre debajo del texto en tablet/móvil */
+  .hero-visual {
+    order: 2 !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+}
+
+/* Mobile grande */
+@media (max-width: 640px) {
+  .hero-layout {
+    padding: 18px 20px 36px !important;
+    gap: 28px !important;
+  }
+
+  /* Botones CTA — full width en móvil */
+  .hero-ctas {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .hero-ctas > a,
+  .hero-ctas > div {
+    width: 100% !important;
+  }
+  .hero-ctas > a > button,
+  .hero-ctas > div > button {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Mobile pequeño */
+@media (max-width: 420px) {
+  .hero-layout {
+    padding: 14px 16px 32px !important;
+    gap: 24px !important;
+  }
+
+  /* Stats — colapsar a 2 columnas en móvil pequeño */
+  .hero-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding-top: 16px !important;
+  }
+}
+
+/* Extra pequeño */
+@media (max-width: 360px) {
+  .hero-layout {
+    padding: 12px 14px 28px !important;
+  }
+  /* Stats — 1 columna en pantallas muy pequeñas */
+  .hero-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   FEATURED / CAROUSEL
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* altura fija para que el position:absolute de Framer Motion funcione */
+  .carousel-wrapper   { height: 560px !important; }
+
+  .carousel-slide-inner {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 200px auto;
+  }
+  .carousel-image-side { order: -1; height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .carousel-wrapper { height: 520px !important; }
+}
+
+@media (max-width: 380px) {
+  .carousel-wrapper { height: 560px !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   GALLERY SECTION (widget homepage)
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .gallery-main-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+  .photo-grid        { grid-template-columns: 1fr 1fr !important; }
+  .photo-grid > div:first-child {
+    grid-row: auto !important;
+    min-height: 200px !important;
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .photo-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENTS SECTION (widget homepage)
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .events-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 580px) {
+  /* minmax(280px) causaría overflow en viewports pequeños — forzar 1 col */
+  .events-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   MANUAL DETAIL PAGE
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .manual-body-grid { grid-template-columns: 1fr !important; }
+  .manual-hero-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Botón PDF en hero: en móvil va al final en columna */
+@media (max-width: 900px) {
+  .manual-hero-grid > *:last-child {
+    align-self: flex-start;
+    width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENT DETAIL PAGE — portada
+═══════════════════════════════════════════════════ */
+
+.event-detail-cover {
+  height: 380px;
+}
+
+@media (max-width: 768px) {
+  .event-detail-cover {
+    height: clamp(200px, 45vw, 300px);
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .event-detail-cover { height: 220px; }
+}
+
+/* ═══════════════════════════════════════════════════
+   GALLERY PAGE
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  .gp-grid-large { columns: 3 200px; }
+}
+
+@media (max-width: 860px) {
+  .gp-grid-large,
+  .gp-grid-medium { columns: 2 180px; }
+  .gp-grid-small  { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .gp-grid-large,
+  .gp-grid-medium { columns: 2 140px; column-gap: 8px; }
+  .gp-grid-small  { grid-template-columns: 1fr; }
+  .gp-grid-few img { height: 220px; }
+  .gp-card { border-radius: 10px; }
+}
+
+@media (max-width: 420px) {
+  .gp-grid-large,
+  .gp-grid-medium { columns: 2; column-gap: 6px; }
+  .gp-grid-few    { grid-template-columns: 1fr; }
+  .gp-grid-few img { height: 200px; }
+}
+
+@media (max-width: 380px) {
+  .gp-grid-large,
+  .gp-grid-medium { columns: 1; }
+}
+
+/* ═══════════════════════════════════════════════════
+   ADMIN SIDEBAR
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .admin-sidebar       { transform: translateX(-100%) !important; }
+  .admin-sidebar.open  { transform: translateX(0) !important; }
+  .admin-main          { margin-left: 0 !important; }
+}
+
+@media (max-width: 900px) {
+  .dash-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 768px) {
+  .admin-gallery-top { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   ABOUT PAGE / ABOUT SECTION
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .directors-grid { flex-direction: column !important; }
+}
+
+@media (max-width: 860px) {
+  /* Colapsar grid 2col antes de que las columnas sean demasiado estrechas */
+  .about-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   PARTICIPANTS SECTION
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  .participants-grid-compact { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+@media (max-width: 900px) {
+  .participants-grid         { grid-template-columns: repeat(2, 1fr) !important; }
+  .participants-grid-compact { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* En móvil ancho (≤640px) la tarjeta tiene min 260px — forzar 1 col explícitamente */
+@media (max-width: 640px) {
+  .participants-grid         { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .participants-grid-compact { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 400px) {
+  .participants-grid-compact { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .footer-grid                   { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
+  .footer-grid > div:first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 480px) {
+  .footer-grid   { grid-template-columns: 1fr !important; }
+  .footer-bottom {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 8px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   CTA SECTION
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .cta-container { padding: 0 20px !important; }
+}
+
+/* Labels decorativos del CTA — se apilan en pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .cta-features {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .cta-features { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   PARTICIPANT DETAIL PAGE
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .participant-body-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   UTILIDADES RESPONSIVE
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  .sl-hide-mobile { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .sl-show-mobile-only { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   DISPOSITIVOS TÁCTILES — elimina efectos hover
+   que requieren ratón y no tienen sentido en touch
+═══════════════════════════════════════════════════ */
+
+@media (hover: none) {
+  /* Gallery page cards — muestra acciones sin hover */
+  .gp-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+  .gp-card:hover .gp-overlay {
+    background: rgba(6, 12, 28, 0.38) !important;
+  }
+  .gp-card:hover .gp-actions {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Gallery section widget */
+  .photo-item:hover .photo-overlay {
+    background: rgba(0, 0, 0, 0.22) !important;
+  }
+  .photo-item:hover .zoom-btn {
+    opacity: 0.85 !important;
+  }
+
+  /* Cards hover lift — sin desplazamiento en touch */
+  .sl-card-hover:hover {
+    transform: none !important;
+  }
+}

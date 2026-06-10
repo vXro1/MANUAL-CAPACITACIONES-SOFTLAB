@@ -1,0 +1,208 @@
+/* ─────────────────────────────────────────────────────
+   ANIMATIONS — Softlab Manuales
+   Keyframes globales + clases utilitarias de animación.
+   Principio: fluidas, elegantes, no invasivas.
+───────────────────────────────────────────────────── */
+
+/* ── Keyframes ── */
+
+@keyframes sl-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sl-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sl-slide-down {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sl-slide-in-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes sl-slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes sl-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Burbujas flotantes del hero */
+@keyframes sl-float {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  33%       { transform: translateY(-22px) scale(1.03); }
+  66%       { transform: translateY(-10px) scale(0.98); }
+}
+
+@keyframes sl-float-reverse {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  33%       { transform: translateY(18px) scale(0.97); }
+  66%       { transform: translateY(8px) scale(1.02); }
+}
+
+@keyframes sl-float-slow {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  25%       { transform: translateY(-14px) translateX(8px); }
+  50%       { transform: translateY(-6px) translateX(-6px); }
+  75%       { transform: translateY(-18px) translateX(4px); }
+}
+
+@keyframes sl-pulse-soft {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.75; transform: scale(1.06); }
+}
+
+@keyframes sl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Generic spin — used by admin pages */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sl-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes sl-count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Clases de animación ── */
+
+.sl-animate-fade-in {
+  animation: sl-fade-in var(--duration-slow) var(--ease-out) both;
+}
+
+.sl-animate-slide-up {
+  animation: sl-slide-up var(--duration-slow) var(--ease-out) both;
+}
+
+.sl-animate-slide-down {
+  animation: sl-slide-down var(--duration-base) var(--ease-out) both;
+}
+
+.sl-animate-slide-left {
+  animation: sl-slide-in-left var(--duration-slow) var(--ease-out) both;
+}
+
+.sl-animate-slide-right {
+  animation: sl-slide-in-right var(--duration-slow) var(--ease-out) both;
+}
+
+.sl-animate-scale-in {
+  animation: sl-scale-in var(--duration-base) var(--ease-out) both;
+}
+
+.sl-animate-float {
+  animation: sl-float 7s ease-in-out infinite;
+}
+
+.sl-animate-float-reverse {
+  animation: sl-float-reverse 9s ease-in-out infinite;
+}
+
+.sl-animate-float-slow {
+  animation: sl-float-slow 11s ease-in-out infinite;
+}
+
+.sl-animate-pulse-soft {
+  animation: sl-pulse-soft 5s ease-in-out infinite;
+}
+
+.sl-animate-spin {
+  animation: sl-spin 0.7s linear infinite;
+}
+
+/* ── Delays reutilizables ── */
+.sl-delay-100  { animation-delay: 100ms; }
+.sl-delay-200  { animation-delay: 200ms; }
+.sl-delay-300  { animation-delay: 300ms; }
+.sl-delay-400  { animation-delay: 400ms; }
+.sl-delay-500  { animation-delay: 500ms; }
+.sl-delay-700  { animation-delay: 700ms; }
+.sl-delay-1000 { animation-delay: 1000ms; }
+
+/* ── Hover lift — filter:drop-shadow es GPU-compositable, box-shadow no ── */
+.sl-hover-lift {
+  transition: transform var(--transition-base), filter var(--transition-base);
+}
+.sl-hover-lift:hover {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 8px 24px rgba(26,63,170,0.20));
+}
+
+/* Pulse dot (indicator azul activo) */
+@keyframes sl-pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+/* Pulse ring (expanding ring animation) */
+@keyframes sl-pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Shimmer move (for gradient text) */
+@keyframes sl-shimmer-move {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Gradient border rotation */
+@keyframes sl-rotate {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Reveal beam sweep */
+@keyframes sl-beam {
+  0%   { left: -30%; opacity: 0; }
+  15%  { opacity: 0.6; }
+  85%  { opacity: 0.6; }
+  100% { left: 130%; opacity: 0; }
+}
+
+/* ── Animation utility classes ── */
+
+.sl-animate-pulse-dot {
+  animation: sl-pulse-dot 2s ease-out infinite;
+}
+
+.sl-animate-pulse-ring {
+  animation: sl-pulse-ring 1.8s ease-out infinite;
+}
+
+.sl-animate-shimmer-text {
+  background: linear-gradient(90deg, #1A3FAA 0%, #4F7BE8 25%, #93C5FD 50%, #4F7BE8 75%, #1A3FAA 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sl-shimmer-move 5s linear infinite;
+}
+
+/* Reduce motion — respeta preferencias del usuario */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

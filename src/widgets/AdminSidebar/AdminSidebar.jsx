@@ -2,13 +2,13 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   BookOpen,
-  Plus,
   Users,
   LogOut,
   FlaskConical,
   ChevronRight,
-  UserPlus,
   X,
+  Images,
+  ExternalLink,
 } from 'lucide-react';
 import { adminAuthRepository } from '@/storage/localStorageRepository';
 import { cn } from '@/shared/lib/cn';
@@ -19,20 +19,41 @@ const NAV_GROUPS = [
     items: [
       { label: 'Panel', href: '/panel-softlab-admin', icon: LayoutDashboard, end: true },
       { label: 'Manuales', href: '/panel-softlab-admin/manuales', icon: BookOpen },
-      { label: 'Nuevo manual', href: '/panel-softlab-admin/manuales/nuevo', icon: Plus },
     ],
   },
   {
     label: 'Equipo',
     items: [
       { label: 'Participantes', href: '/panel-softlab-admin/participantes', icon: Users },
-      { label: 'Agregar participante', href: '/panel-softlab-admin/participantes/nuevo', icon: UserPlus },
+    ],
+  },
+  {
+    label: 'Galería',
+    items: [
+      { label: 'Imágenes', href: '/panel-softlab-admin/galeria', icon: Images },
+      { label: 'Ver galería pública', href: '/galeria', icon: ExternalLink, external: true },
     ],
   },
 ];
 
 function SidebarItem({ item, onClose }) {
   const Icon = item.icon;
+
+  if (item.external) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+      >
+        <Icon size={17} aria-hidden="true" />
+        <span className="flex-1">{item.label}</span>
+      </a>
+    );
+  }
+
   return (
     <NavLink
       to={item.href}

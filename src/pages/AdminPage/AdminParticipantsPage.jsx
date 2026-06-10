@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, X, Users, BookOpen, Mail } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Users, Star } from 'lucide-react';
 import { participantsRepository } from '@/storage/localStorageRepository';
-import { isImageIDBKey, deleteImage, getRawKey } from '@/storage/imageStorageService';
+import { participantesApi } from '@/services/apiService';
+import { syncParticipantes } from '@/services/dataSync';
 import { ParticipantForm, PARTICIPANT_ROLES } from '@/features/participant-form/ParticipantForm';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
@@ -23,7 +24,7 @@ const ROLE_COLORS = {
   'Colaborador Externo': 'slate',
 };
 
-function ParticipantRow({ participant, index, onEdit, onDelete }) {
+function ParticipantRow({ participant, index, onEdit, onDelete, onToggleFeatured }) {
   return (
     <motion.tr
       initial={{ opacity: 0, y: 6 }}
@@ -67,9 +68,11 @@ function ParticipantRow({ participant, index, onEdit, onDelete }) {
       {/* Skills */}
       <td className="px-5 py-4 hidden lg:table-cell">
         <div className="flex gap-1 flex-wrap">
-          {(participant.skills ?? []).slice(0, 3).map((s) => (
-            <Badge key={s} variant="slate" className="text-[10px]">{s}</Badge>
-          ))}
+          {(participant.skills ?? []).slice(0, 3).map((s) => {
+            const label = typeof s === 'string' ? s : (s?.nombre ?? s?.name ?? '');
+            if (!label) return null;
+            return <Badge key={label} variant="slate" className="text-[10px]">{label}</Badge>;
+          })}
           {(participant.skills ?? []).length > 3 && (
             <Badge variant="slate" className="text-[10px]">
               +{participant.skills.length - 3}
@@ -81,6 +84,21 @@ function ParticipantRow({ participant, index, onEdit, onDelete }) {
       {/* Actions */}
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onToggleFeatured(participant)}
+            title={participant.featured ? 'Quitar de destacados' : 'Marcar como destacado'}
+            aria-label={participant.featured ? `Quitar destacado: ${participant.name}` : `Destacar: ${participant.name}`}
+            className="p-1.5 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-amber-500"
+            style={{
+              color: participant.featured ? '#F59E0B' : undefined,
+            }}
+          >
+            <Star
+              size={15}
+              fill={participant.featured ? '#F59E0B' : 'none'}
+              className={participant.featured ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}
+            />
+          </button>
           <button
             onClick={() => onEdit(participant)}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors focus-visible:outline-2 focus-visible:outline-brand-600"
@@ -139,7 +157,7 @@ export function AdminParticipantsPage() {
     return matchSearch && matchRole;
   });
 
-  const presentRoles = ['Todos', ...new Set(participants.map((p) => p.role).filter(Boolean))];
+  const presentRoles = ['Todos', ...new Set(participants.map((p) => typeof p.role === 'string' ? p.role : String(p.role ?? '')).filter(Boolean))];
 
   const openAdd = () => { setEditTarget(null); setFormOpen(true); };
   const openEdit = (p) => { setEditTarget(p); setFormOpen(true); };
@@ -150,15 +168,34 @@ export function AdminParticipantsPage() {
     closeForm();
   };
 
+  const handleToggleFeatured = async (participant) => {
+    // Optimistic update — flip star immediately so UI responds without waiting for network
+    setParticipants(prev =>
+      prev.map(p => p.id === participant.id ? { ...p, featured: !p.featured } : p)
+    );
+    try {
+      await participantesApi.toggleFeatured(participant.id);
+    } catch (err) {
+      console.error('Error al cambiar destacado:', err);
+      // Revert on API failure
+      setParticipants(prev =>
+        prev.map(p => p.id === participant.id ? { ...p, featured: !p.featured } : p)
+      );
+      return;
+    }
+    // Sync localStorage in background; errors are non-fatal (optimistic state is already correct)
+    syncParticipantes().then(reload).catch(() => {});
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      if (deleteTarget.photo && isImageIDBKey(deleteTarget.photo)) {
-        await deleteImage(getRawKey(deleteTarget.photo)).catch(() => {});
-      }
-      participantsRepository.delete(deleteTarget.id);
+      await participantesApi.delete(deleteTarget.id);
+      await syncParticipantes();
       reload();
+    } catch (err) {
+      console.error('Error al eliminar participante:', err);
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -256,6 +293,7 @@ export function AdminParticipantsPage() {
                       index={i}
                       onEdit={openEdit}
                       onDelete={setDeleteTarget}
+                      onToggleFeatured={handleToggleFeatured}
                     />
                   ))}
                 </AnimatePresence>
@@ -265,30 +303,13 @@ export function AdminParticipantsPage() {
         </div>
       )}
 
-      {/* Info banner */}
-      {participants.length > 0 && (
-        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-brand-50 border border-brand-100 text-xs text-brand-700">
-          <BookOpen size={14} className="shrink-0 mt-0.5 text-brand-500" />
-          <p>
-            Las imágenes de perfil se almacenan directamente en el navegador mediante IndexedDB.
-            Son persistentes mientras no se limpie el almacenamiento del navegador.
-          </p>
-        </div>
-      )}
-
-      {/* Form Modal */}
-      <Modal
+      {/* Form Modal — auto-contenido con tabs */}
+      <ParticipantForm
         isOpen={formOpen}
         onClose={closeForm}
-        title={editTarget ? `Editar: ${editTarget.name}` : 'Nuevo participante'}
-        size="lg"
-      >
-        <ParticipantForm
-          participant={editTarget}
-          onSuccess={handleFormSuccess}
-          onCancel={closeForm}
-        />
-      </Modal>
+        participant={editTarget}
+        onSuccess={handleFormSuccess}
+      />
 
       {/* Delete confirm modal */}
       <Modal

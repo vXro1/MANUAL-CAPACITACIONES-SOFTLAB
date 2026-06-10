@@ -1,0 +1,55 @@
+# ─── CORS para PDFs (permite visor desde cualquier origen) ───────────────────
+<IfModule mod_headers.c>
+  <FilesMatch "\.pdf$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Range"
+  </FilesMatch>
+</IfModule>
+
+# ─── MIME types (ForceType para máxima compatibilidad con LiteSpeed) ─────────
+<FilesMatch "\.js$">
+    ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.mjs$">
+    ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.css$">
+    ForceType text/css
+</FilesMatch>
+
+AddType application/javascript .js .mjs
+AddType text/css               .css
+AddType image/svg+xml          .svg
+AddType application/json       .json
+AddType font/woff2             .woff2
+AddType font/woff              .woff
+
+# ─── Compresión ───────────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/javascript text/css text/html application/json
+</IfModule>
+
+# ─── Cache de assets estáticos ────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/css              "access plus 1 year"
+  ExpiresByType image/svg+xml        "access plus 1 month"
+</IfModule>
+
+# ─── React Router (SPA fallback) ─────────────────────────────────────────────
+Options -MultiViews
+RewriteEngine On
+
+# 1. Dejar pasar peticiones a /api-backend/ (PHP backend)
+RewriteCond %{REQUEST_URI} ^/api-backend/
+RewriteRule ^ - [L]
+
+# 2. Dejar pasar archivos y carpetas que existen en disco
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 3. Todo lo demás → index.html (React Router)
+RewriteRule ^ /index.html [L]

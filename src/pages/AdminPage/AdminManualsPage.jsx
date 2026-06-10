@@ -3,17 +3,21 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, BookOpen, Star, Search, Eye } from 'lucide-react';
 import { manualsRepository } from '@/storage/localStorageRepository';
+import { manualesApi } from '@/services/apiService';
+import { syncManuales } from '@/services/dataSync';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Modal } from '@/shared/ui/Modal';
 import { ManualForm } from '@/features/manual-form/ManualForm';
 import { formatDate } from '@/shared/lib/formatDate';
 
+
 export function AdminManualsPage() {
-  const [manuals, setManuals] = useState(() => manualsRepository.getAll());
-  const [search, setSearch] = useState('');
-  const [editManual, setEditManual] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+  const [manuals,     setManuals]     = useState(() => manualsRepository.getAll());
+  const [search,      setSearch]      = useState('');
+  const [createOpen,  setCreateOpen]  = useState(false);
+  const [editManual,  setEditManual]  = useState(null);
+  const [deleteId,    setDeleteId]    = useState(null);
 
   const reload = () => setManuals(manualsRepository.getAll());
 
@@ -24,15 +28,32 @@ export function AdminManualsPage() {
       m.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = (id) => {
-    manualsRepository.delete(id);
-    reload();
+  const handleDelete = async (id) => {
+    try {
+      await manualesApi.delete(id);
+      await syncManuales();
+      reload();
+    } catch (err) {
+      console.error('Error al eliminar manual:', err);
+    }
     setDeleteId(null);
   };
 
-  const handleToggleFeatured = (manual) => {
-    manualsRepository.save({ ...manual, featured: !manual.featured });
-    reload();
+  const handleToggleFeatured = async (manual) => {
+    try {
+      await manualesApi.update(manual.id, {
+        titulo: manual.title,
+        categoria: manual.category,
+        descripcion: manual.description,
+        autor_ids: manual.authorIds,
+        fecha: manual.date,
+        destacado: !manual.featured,
+      });
+      await syncManuales();
+      reload();
+    } catch (err) {
+      console.error('Error al actualizar manual:', err);
+    }
   };
 
   return (
@@ -42,9 +63,7 @@ export function AdminManualsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Manuales</h1>
           <p className="text-sm text-slate-500 mt-1">{manuals.length} manuales registrados</p>
         </div>
-        <Link to="/panel-softlab-admin/manuales/nuevo">
-          <Button icon={Plus}>Nuevo manual</Button>
-        </Link>
+        <Button icon={Plus} onClick={() => setCreateOpen(true)}>Nuevo manual</Button>
       </div>
 
       {/* Search */}
@@ -93,7 +112,12 @@ export function AdminManualsPage() {
                       <div className="flex items-center gap-3">
                         {manual.cover && (
                           <div className="w-10 h-7 rounded overflow-hidden bg-slate-100 shrink-0 hidden sm:block">
-                            <img src={manual.cover} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={manual.cover}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+                            />
                           </div>
                         )}
                         <div>
@@ -165,21 +189,20 @@ export function AdminManualsPage() {
         )}
       </div>
 
-      {/* Edit Modal */}
-      <Modal
+      {/* Create modal */}
+      <ManualForm
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => { reload(); setCreateOpen(false); }}
+      />
+
+      {/* Edit modal */}
+      <ManualForm
         isOpen={!!editManual}
         onClose={() => setEditManual(null)}
-        title="Editar manual"
-        size="xl"
-      >
-        {editManual && (
-          <ManualForm
-            manual={editManual}
-            onSuccess={() => { reload(); setEditManual(null); }}
-            onCancel={() => setEditManual(null)}
-          />
-        )}
-      </Modal>
+        manual={editManual}
+        onSuccess={() => { reload(); setEditManual(null); }}
+      />
 
       {/* Delete confirm */}
       <Modal

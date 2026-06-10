@@ -1,0 +1,496 @@
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { X, ChevronLeft, ChevronRight, Download, ZoomIn, Images, Search } from 'lucide-react';
+import { galeriaApi } from '@/services/apiService';
+
+// ─── Utilidades ───────────────────────────────────────────────────────────────
+function downloadImage(url, title) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (title || 'softlab').replace(/[^\w\s-]/g, '') || 'softlab';
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ─── Hook: carga la imagen solo cuando el elemento entra al viewport ──────────
+function useImageLoaded(src, containerRef) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!src || !containerRef?.current) return;
+    setLoaded(false);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        const img = new Image();
+        img.onload  = () => setLoaded(true);
+        img.onerror = () => setLoaded(false);
+        img.src = src;
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [src, containerRef]);
+
+  return loaded;
+}
+
+// ─── Mobile Action Sheet ──────────────────────────────────────────────────────
+function MobileActionSheet({ photo, onZoom, onDownload, onClose }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9998,
+        background: 'rgba(3,7,18,0.82)',
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 34, stiffness: 400 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(180deg, #141e35 0%, #0D1525 100%)',
+          borderRadius: '24px 24px 0 0',
+          padding: '0 20px 32px',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderBottom: 'none',
+          boxShadow: '0 -24px 72px rgba(0,0,0,0.55)',
+        }}
+      >
+        <div style={{ width: 40, height: 4, borderRadius: 9, background: 'rgba(255,255,255,0.2)', margin: '14px auto 20px' }} />
+
+        <div style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 16, background: '#0d1525', boxShadow: '0 4px 28px rgba(0,0,0,0.45)', maxHeight: '44vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src={photo.src} alt={photo.title || 'Imagen'} style={{ width: '100%', maxHeight: '44vh', objectFit: 'contain', display: 'block' }} loading="eager" />
+        </div>
+
+        {photo.title && (
+          <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 600, margin: '0 0 16px', textAlign: 'center', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {photo.title}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <button onClick={onZoom} style={{ flex: 1, padding: '15px 12px', borderRadius: 16, background: 'linear-gradient(135deg, #1A3FAA 0%, #2755dd 100%)', color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'DM Sans, sans-serif', boxShadow: '0 4px 22px rgba(26,63,170,0.4)', WebkitTapHighlightColor: 'transparent' }}>
+            <ZoomIn size={18} strokeWidth={2.4} /> Ver en grande
+          </button>
+          <button onClick={onDownload} style={{ flex: 1, padding: '15px 12px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', color: '#fff', fontSize: 15, fontWeight: 700, border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'DM Sans, sans-serif', WebkitTapHighlightColor: 'transparent' }}>
+            <Download size={18} strokeWidth={2.4} /> Descargar
+          </button>
+        </div>
+
+        <button onClick={onClose} style={{ width: '100%', padding: '13px', borderRadius: 16, background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.38)', fontSize: 14, fontWeight: 500, border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', WebkitTapHighlightColor: 'transparent' }}>
+          Cancelar
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+function Lightbox({ photos, startIndex, onClose }) {
+  const [current, setCurrent] = useState(startIndex);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const count = photos.length;
+  const thumbsRef = useRef(null);
+  const touchStartX = useRef(null);
+
+  const go = useCallback((n) => {
+    setImgLoaded(false);
+    setCurrent(((n % count) + count) % count);
+  }, [count]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape')     onClose();
+      if (e.key === 'ArrowLeft')  go(current - 1);
+      if (e.key === 'ArrowRight') go(current + 1);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [current, go, onClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
+    if (!thumbsRef.current) return;
+    const btn = thumbsRef.current.children[current];
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [current]);
+
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 48) go(current + (delta < 0 ? 1 : -1));
+    touchStartX.current = null;
+  };
+
+  const photo = photos[current];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(3,7,18,0.98)', display: 'flex', flexDirection: 'column' }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Visor de imagen"
+    >
+      {/* Header */}
+      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', flexShrink: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Images size={12} color="rgba(255,255,255,0.5)" />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif' }}>{current + 1} <span style={{ opacity: 0.4 }}>/</span> {count}</span>
+          </div>
+          {photo.title && (
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, maxWidth: 'clamp(100px, 30vw, 300px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {photo.title}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => downloadImage(photo.src, photo.title)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 9, background: '#1A3FAA', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'opacity 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+          >
+            <Download size={14} /> Descargar
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </div>
+
+      {/* Main image */}
+      <div
+        style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(52px, 8vw, 72px)' }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {!imgLoaded && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#fff', borderRadius: '50%', animation: 'sl-spin 0.7s linear infinite' }} />
+          </div>
+        )}
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={current}
+            src={photo.src}
+            alt={photo.title || `Imagen ${current + 1}`}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: imgLoaded ? 1 : 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            onLoad={() => setImgLoaded(true)}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 10, boxShadow: '0 40px 100px rgba(0,0,0,0.7)', userSelect: 'none' }}
+            draggable={false}
+          />
+        </AnimatePresence>
+
+        {count > 1 && (
+          <>
+            {[
+              { side: 'left',  delta: -1, icon: ChevronLeft,  label: 'Imagen anterior' },
+              { side: 'right', delta: +1, icon: ChevronRight, label: 'Imagen siguiente' },
+            ].map(({ side, delta, icon: Icon, label }) => (
+              <button
+                key={side}
+                onClick={() => go(current + delta)}
+                aria-label={label}
+                style={{ position: 'absolute', [side]: 12, top: '50%', transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, transform 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; e.currentTarget.style.transform = `translateY(-50%) scale(1.08)`; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+              >
+                <Icon size={22} />
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* Thumbnails — lazy loading, evita descargar todas al abrir el lightbox */}
+      {count > 1 && (
+        <div
+          ref={thumbsRef}
+          onClick={e => e.stopPropagation()}
+          style={{ display: 'flex', gap: 6, padding: '10px 20px 14px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0, justifyContent: count <= 8 ? 'center' : 'flex-start', background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+        >
+          {photos.map((p, i) => (
+            <button
+              key={p.src || i}
+              onClick={() => go(i)}
+              aria-label={`Ver imagen ${i + 1}`}
+              style={{ flexShrink: 0, width: 56, height: 40, borderRadius: 6, overflow: 'hidden', padding: 0, cursor: 'pointer', border: i === current ? '2px solid #fff' : '2px solid transparent', opacity: i === current ? 1 : 0.35, transition: 'all 0.2s', transform: i === current ? 'scale(1.05)' : 'scale(1)' }}
+            >
+              <img src={p.src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Card — imagen invisible hasta que entra al viewport y carga ──────────────
+function GalleryCard({ photo, index, onOpen, onBroken }) {
+  const ref     = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '0px 0px -60px 0px' });
+  const [showSheet, setShowSheet] = useState(false);
+  // Pasa ref al hook — la imagen solo se descarga cuando el card entra al viewport
+  const loaded = useImageLoaded(photo.src, ref);
+
+  const handleClick = () => {
+    if (!loaded) return;
+    if (window.matchMedia('(hover: none)').matches) {
+      setShowSheet(true);
+    } else {
+      onOpen(index);
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 32 }}
+        animate={isInView && loaded ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.56, delay: Math.min(index * 0.045, 0.4), ease: [0.22, 1, 0.36, 1] }}
+        onClick={handleClick}
+        role={loaded ? 'button' : undefined}
+        tabIndex={loaded ? 0 : undefined}
+        aria-label={loaded ? `Ver imagen ${index + 1}` : undefined}
+        onKeyDown={e => e.key === 'Enter' && handleClick()}
+        className="gp-card"
+        style={!loaded ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+      >
+        <motion.img
+          src={photo.src}
+          alt={`Fotografía del semillero Softlab ${index + 1}`}
+          loading="lazy"
+          decoding="async"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: loaded ? 1 : 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            width: '100%',
+            display: 'block',
+            borderRadius: 16,
+            visibility: loaded ? 'visible' : 'hidden',
+          }}
+          onError={() => onBroken(photo.src)}
+        />
+
+        {loaded && (
+          <div className="gp-overlay">
+            <div className="gp-actions">
+              <div className="gp-btn" aria-hidden="true">
+                <ZoomIn size={20} color="#1A3FAA" strokeWidth={2.2} />
+              </div>
+              <div
+                className="gp-btn gp-btn-dl"
+                aria-hidden="true"
+                onClick={e => { e.stopPropagation(); downloadImage(photo.src, photo.title); }}
+              >
+                <Download size={20} color="#1A3FAA" strokeWidth={2.2} />
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      <AnimatePresence>
+        {showSheet && (
+          <MobileActionSheet
+            photo={photo}
+            onZoom={() => { setShowSheet(false); onOpen(index); }}
+            onDownload={() => { downloadImage(photo.src, photo.title); setShowSheet(false); }}
+            onClose={() => setShowSheet(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ─── GalleryPage ──────────────────────────────────────────────────────────────
+export function GalleryPage() {
+  const [photos, setPhotos] = useState([]);
+  const [search, setSearch] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [brokenSrcs, setBrokenSrcs] = useState(new Set());
+
+  const handleBroken = useCallback((src) => {
+    setBrokenSrcs(prev => new Set([...prev, src]));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    galeriaApi.getAll()
+      .then(data => {
+        if (!cancelled) {
+          setPhotos((data ?? []).map(img => ({
+            src:   img.src,
+            title: img.title || img.titulo || '',
+          })).filter(p => p.src));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  /* Memoizar búsqueda y filtrado — no re-computar en cada render */
+  const searchLower = useMemo(() => search.trim().toLowerCase(), [search]);
+
+  const filtered = useMemo(() => {
+    const base = searchLower
+      ? photos.filter(p => p.title.toLowerCase().includes(searchLower))
+      : photos;
+    return base.filter(p => !brokenSrcs.has(p.src));
+  }, [photos, searchLower, brokenSrcs]);
+
+  const count = filtered.length;
+  const colLabel = count === 0 ? '' : count === 1 ? '1 imagen' : `${count} imágenes`;
+
+  const gridClass = useMemo(() => {
+    if (count <= 2)  return 'few';
+    if (count <= 5)  return 'small';
+    if (count <= 12) return 'medium';
+    return 'large';
+  }, [count]);
+
+  return (
+    <main id="main-content" style={{ minHeight: '100vh', background: '#f8fafc' }}>
+
+      {/* ── Hero ── */}
+      <section style={{
+        position: 'relative', overflow: 'hidden',
+        padding: 'clamp(80px,12vw,130px) clamp(20px,6vw,64px) clamp(56px,8vw,88px)',
+        background: 'linear-gradient(145deg, #040810 0%, #0D1C50 50%, #172d8a 100%)',
+      }}>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.032) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,140,255,0.16) 0%, transparent 68%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-30%', left: '8%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,63,170,0.2) 0%, transparent 68%)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
+          <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#93C5FD', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}>
+            Semillero Softlab
+          </motion.p>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.58, delay: 0.07 }} style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(36px,6vw,68px)', fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1.08, margin: '0 0 18px' }}>
+            Galería de<br />
+            <span style={{ background: 'linear-gradient(90deg, #93C5FD 0%, #c7dcff 60%, #fff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>momentos</span>
+          </motion.h1>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.18 }} style={{ fontSize: 16, color: 'rgba(255,255,255,0.52)', margin: '0 0 32px', fontFamily: 'DM Sans, sans-serif', maxWidth: 480, lineHeight: 1.65 }}>
+            Capacitaciones, sesiones de trabajo y momentos del equipo. Descarga las imágenes que quieras.
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.28 }} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            {count > 0 && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.13)' }}>
+                <Images size={14} color="rgba(255,255,255,0.6)" />
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>{colLabel}</span>
+              </div>
+            )}
+            {count > 6 && (
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar imagen…"
+                  style={{ paddingLeft: 34, paddingRight: 14, height: 38, borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.07)', color: '#fff', fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none', minWidth: 200 }}
+                />
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Galería ── */}
+      <section style={{
+        padding: 'clamp(32px,5vw,64px) clamp(16px,4vw,48px) clamp(64px,8vw,100px)',
+        maxWidth: 1440,
+        margin: '0 auto',
+      }}>
+
+        {count === 0 && photos.length === 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '100px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+            <div style={{ width: 80, height: 80, borderRadius: 22, background: 'rgba(26,63,170,0.06)', border: '1px solid rgba(26,63,170,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Images size={34} color="rgba(26,63,170,0.3)" />
+            </div>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 700, color: '#94A3B8', margin: 0 }}>Aún no hay imágenes</h2>
+            <p style={{ fontSize: 14, color: '#CBD5E1', margin: 0, fontFamily: 'DM Sans, sans-serif' }}>El administrador del sitio aún no ha subido fotos a la galería.</p>
+          </motion.div>
+        )}
+
+        {count === 0 && photos.length > 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <p style={{ color: '#94A3B8', fontFamily: 'DM Sans, sans-serif', fontSize: 15 }}>Sin resultados para "{search}"</p>
+            <button onClick={() => setSearch('')} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 99, background: 'rgba(26,63,170,0.07)', border: '1px solid rgba(26,63,170,0.15)', color: '#1A3FAA', cursor: 'pointer', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+              Limpiar búsqueda
+            </button>
+          </motion.div>
+        )}
+
+        {count > 0 && (
+          <div className={`gp-grid gp-grid-${gridClass}`}>
+            {filtered.map((photo, i) => (
+              <GalleryCard
+                key={photo.src}
+                photo={photo}
+                index={i}
+                onOpen={setLightboxIndex}
+                onBroken={handleBroken}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <AnimatePresence>
+        {lightboxIndex !== null && filtered.length > 0 && (
+          <Lightbox
+            photos={filtered}
+            startIndex={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+          />
+        )}
+      </AnimatePresence>
+
+    </main>
+  );
+}
