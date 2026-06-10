@@ -1,0 +1,16 @@
+# Desactiva el SPA fallback dentro de /uploads/
+# Los archivos se sirven directamente; si no existen → 404 real (no index.html)
+RewriteEngine Off
+
+# CORS para imágenes
+<IfModule mod_headers.c>
+  <FilesMatch "\.(jpg|jpeg|png|webp|gif|svg|avif)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+  </FilesMatch>
+  <FilesMatch "\.pdf$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Range"
+  </FilesMatch>
+</IfModule>

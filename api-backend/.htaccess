@@ -1,0 +1,17 @@
+# OBSOLETO: la configuración correcta ahora está en public/.htaccess
+# que Vite copia automáticamente al dist/ durante el build.
+# Este archivo es solo referencia; NO es necesario subirlo manualmente.
+Options -MultiViews
+RewriteEngine On
+
+# 1. Dejar pasar peticiones a la carpeta /api/ directamente (PHP)
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^ - [L]
+
+# 2. Dejar pasar archivos y carpetas que existen (assets del build de React)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 3. Todo lo demás → index.html (React Router)
+RewriteRule ^ /index.html [L]

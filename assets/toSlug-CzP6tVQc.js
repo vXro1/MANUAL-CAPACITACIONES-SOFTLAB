@@ -1,0 +1,1 @@
+function e(e=``){return e.normalize(`NFD`).replace(/[̀-ͯ]/g,``).toLowerCase().trim().replace(/[^a-z0-9 ]/g,``).replace(/ +/g,`-`)}export{e as t};
