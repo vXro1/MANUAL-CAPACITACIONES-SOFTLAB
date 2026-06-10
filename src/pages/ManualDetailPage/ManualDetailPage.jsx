@@ -235,7 +235,12 @@ function EvidenceLightbox({ images, startIndex, onClose }) {
                 transform: i === current ? 'scale(1.06)' : 'scale(1)',
               }}
             >
-              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img
+                src={src}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+              />
             </button>
           ))}
         </div>
@@ -246,6 +251,10 @@ function EvidenceLightbox({ images, startIndex, onClose }) {
 
 /* ─── Evidence image card ───────────────────────────────────── */
 function EvidenceCard({ src, index, onOpen }) {
+  const [imgErr, setImgErr] = useState(false);
+
+  if (imgErr) return null;
+
   return (
     <motion.div
       variants={fadeUp}
@@ -264,6 +273,7 @@ function EvidenceCard({ src, index, onOpen }) {
         style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.55s cubic-bezier(0.22,1,0.36,1)' }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+        onError={() => setImgErr(true)}
       />
       {/* Zoom overlay */}
       <div
@@ -377,7 +387,12 @@ export function ManualDetailPage() {
         >
           {manual.cover && (
             <div style={{ position: 'absolute', inset: 0, opacity: 0.045 }}>
-              <img src={manual.cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img
+                src={manual.cover}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+              />
             </div>
           )}
 

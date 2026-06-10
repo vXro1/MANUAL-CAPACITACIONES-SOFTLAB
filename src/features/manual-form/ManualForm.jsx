@@ -129,22 +129,40 @@ function PDFUploadField({ value, onChange }) {
 }
 
 // ─── CoverImageField ──────────────────────────────────────────────────────────
+// value puede ser: null | File (archivo recién seleccionado) | string (URL del servidor)
 function CoverImageField({ value, onChange, onPickFromGallery }) {
-  const isBase64 = typeof value === 'string' && value.startsWith('data:');
-  const isUrl    = typeof value === 'string' && !isBase64 && value.length > 0;
-  const [mode,     setMode]     = useState(isUrl ? 'url' : 'file');
-  const [urlInput, setUrlInput] = useState(isUrl ? value : '');
+  const isFile = value instanceof File;
+  const isUrl  = typeof value === 'string' && value.length > 0;
+  const [mode,       setMode]       = useState(isUrl ? 'url' : 'file');
+  const [urlInput,   setUrlInput]   = useState(isUrl ? value : '');
+  const [previewSrc, setPreviewSrc] = useState(null);
+  const [previewErr, setPreviewErr] = useState(false);
 
-  const preview = (isBase64 || isUrl) ? value : null;
+  // Genera object URL para el preview cuando value es un File.
+  // Revoca la URL anterior al cambiar para evitar memory leaks.
+  useEffect(() => {
+    if (!(value instanceof File)) { setPreviewSrc(null); return; }
+    const url = URL.createObjectURL(value);
+    setPreviewSrc(url);
+    setPreviewErr(false);
+    return () => URL.revokeObjectURL(url);
+  }, [value]);
+
+  const displayPreview = isFile ? previewSrc : (isUrl ? value : null);
+  const hasFile = isFile;
+  const hasUrl  = isUrl;
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes.'); return; }
-    if (file.size > 5 * 1024 * 1024) { alert(`La imagen supera el límite de 5 MB (tiene ${(file.size / 1024 / 1024).toFixed(1)} MB).`); e.target.value = ''; return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target.result);
-    reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`La imagen supera el límite de 5 MB (tiene ${(file.size / 1024 / 1024).toFixed(1)} MB).`);
+      e.target.value = '';
+      return;
+    }
+    // Pasa el File directamente — sin conversión a base64
+    onChange(file);
   };
 
   const handleUrl = (e) => { setUrlInput(e.target.value); onChange(e.target.value || null); };
@@ -183,18 +201,18 @@ function CoverImageField({ value, onChange, onPickFromGallery }) {
           <label style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             gap: 10, padding: '18px 16px', borderRadius: 12,
-            border: `2px dashed ${isBase64 ? '#86EFAC' : isUrl ? BORDER : '#E2E8F0'}`,
-            background: isBase64 ? '#F0FDF4' : isUrl ? BG : '#F8FAFC',
+            border: `2px dashed ${hasFile ? '#86EFAC' : hasUrl ? BORDER : '#E2E8F0'}`,
+            background: hasFile ? '#F0FDF4' : hasUrl ? BG : '#F8FAFC',
             cursor: 'pointer', transition: 'all .15s',
           }}>
             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-            {isBase64 ? (
+            {hasFile ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#15803D' }}>
                 <CheckCircle size={20} style={{ color: '#22C55E' }} />
-                <span style={{ fontSize: 13, fontWeight: 500 }}>✓ Imagen lista para guardar</span>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>✓ {value.name} ({(value.size / 1024 / 1024).toFixed(1)} MB)</span>
                 <span style={{ fontSize: 11, color: '#16A34A' }}>Haz clic para reemplazar</span>
               </div>
-            ) : isUrl ? (
+            ) : hasUrl ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: ACCENT }}>
                 <CheckCircle size={20} style={{ color: ACCENT }} />
                 <span style={{ fontSize: 13, fontWeight: 500 }}>Portada guardada en servidor</span>
@@ -206,7 +224,7 @@ function CoverImageField({ value, onChange, onPickFromGallery }) {
                   <ImageIcon size={20} style={{ color: '#94A3B8' }} />
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Haz clic para seleccionar imagen</span>
-                <span style={{ fontSize: 11, color: '#94A3B8' }}>PNG, JPG, WEBP · máx. 3 MB</span>
+                <span style={{ fontSize: 11, color: '#94A3B8' }}>PNG, JPG, WEBP · máx. 5 MB</span>
               </div>
             )}
           </label>
@@ -217,15 +235,54 @@ function CoverImageField({ value, onChange, onPickFromGallery }) {
           />
         )}
 
-        {preview && (
+        {/* Preview — solo muestra si carga correctamente */}
+        {displayPreview && !previewErr && (
           <div style={{ position: 'relative', width: 88, height: 88, borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E2E8F0', background: '#F1F5F9', flexShrink: 0 }}>
-            <img src={preview} alt="Vista previa portada" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img
+              src={displayPreview}
+              alt="Vista previa portada"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={() => setPreviewErr(true)}
+            />
             <button type="button" onClick={clear}
               style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,.55)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="Quitar portada"><X size={10} /></button>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── EvidenceThumb ────────────────────────────────────────────────────────────
+function EvidenceThumb({ src, onRemove }) {
+  const [imgErr, setImgErr] = useState(false);
+  return (
+    <div
+      style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#F1F5F9', aspectRatio: '16/9' }}
+      onMouseEnter={e => { const btn = e.currentTarget.querySelector('button'); if (btn) btn.style.opacity = '1'; }}
+      onMouseLeave={e => { const btn = e.currentTarget.querySelector('button'); if (btn) btn.style.opacity = '0'; }}
+    >
+      {!imgErr ? (
+        <img
+          src={src}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={() => setImgErr(true)}
+        />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ImageIcon size={20} color="#CBD5E1" />
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        style={{ position: 'absolute', top: 4, right: 4, padding: 4, borderRadius: 6, background: 'rgba(0,0,0,.55)', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0, transition: 'opacity .2s', display: 'flex' }}
+        aria-label="Eliminar imagen"
+      >
+        <X size={12} />
+      </button>
     </div>
   );
 }
@@ -459,18 +516,10 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
     if (Object.keys(errs).length) { setErrors(errs); setActiveTab('general'); return; }
     setSaving(true); setSaveError('');
 
-    const coverValue   = form.cover;
-    const coverIsBase64 = typeof coverValue === 'string' && coverValue.startsWith('data:');
-    const coverUrl      = typeof coverValue === 'string' && !coverIsBase64 ? coverValue : undefined;
-    let coverFile;
-    if (coverIsBase64) {
-      const [header, b64] = coverValue.split(',');
-      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-      const binary = atob(b64);
-      const bytes  = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      coverFile = new File([bytes], 'portada.jpg', { type: mime });
-    }
+    const coverValue = form.cover;
+    // CoverImageField ahora entrega el File directamente (sin roundtrip base64)
+    const coverFile  = coverValue instanceof File ? coverValue : undefined;
+    const coverUrl   = typeof coverValue === 'string' ? coverValue : undefined;
 
     const pdfValue = form.pdf;
     const pdfFile  = pdfValue instanceof File ? pdfValue : undefined;
@@ -777,18 +826,11 @@ export function ManualForm({ isOpen, onClose, manual, onSuccess }) {
                           {galleryItems.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
                               {galleryItems.map((item, i) => (
-                                <div key={`${item}-${i}`}
-                                  style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#F1F5F9', aspectRatio: '16/9' }}
-                                  onMouseEnter={(e) => { e.currentTarget.querySelector('button').style.opacity = '1'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.querySelector('button').style.opacity = '0'; }}
-                                >
-                                  <img src={item} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  <button type="button" onClick={() => setGalleryItems((p) => p.filter((_, idx) => idx !== i))}
-                                    style={{ position: 'absolute', top: 4, right: 4, padding: 4, borderRadius: 6, background: 'rgba(0,0,0,.55)', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0, transition: 'opacity .2s', display: 'flex' }}
-                                    aria-label="Eliminar imagen">
-                                    <X size={12} />
-                                  </button>
-                                </div>
+                                <EvidenceThumb
+                                  key={`${item}-${i}`}
+                                  src={item}
+                                  onRemove={() => setGalleryItems((p) => p.filter((_, idx) => idx !== i))}
+                                />
                               ))}
                             </div>
                           )}

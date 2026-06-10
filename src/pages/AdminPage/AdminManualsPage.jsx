@@ -112,7 +112,12 @@ export function AdminManualsPage() {
                       <div className="flex items-center gap-3">
                         {manual.cover && (
                           <div className="w-10 h-7 rounded overflow-hidden bg-slate-100 shrink-0 hidden sm:block">
-                            <img src={manual.cover} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={manual.cover}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+                            />
                           </div>
                         )}
                         <div>
