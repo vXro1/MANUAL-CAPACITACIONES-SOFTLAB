@@ -419,3 +419,47 @@
   background:
     linear-gradient(180deg, #F0F4FF 0%, #F6F8FF 60%, #F8FAFC 100%);
 }
+
+/* ── Navbar link hover (no pseudo-selectors in inline style) ── */
+
+.nav-link-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link-item::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #1A3FAA, #3B82F6);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link-item:hover::after {
+  transform: scaleX(1);
+}
+
+.nav-link-item:hover {
+  color: #1A3FAA !important;
+  background: rgba(238,243,255,0.70) !important;
+}
+
+/* ── Manual card deep hover ── */
+
+.sl-card-deep-hover {
+  transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.28s cubic-bezier(0.22,1,0.36,1),
+              border-color 0.28s ease;
+}
+
+.sl-card-deep-hover:hover {
+  transform: translateY(-8px) scale(1.008);
+  box-shadow: 0 24px 56px rgba(26,63,170,0.16), 0 4px 16px rgba(26,63,170,0.08);
+  border-color: rgba(99,140,255,0.35) !important;
+}

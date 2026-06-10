@@ -34,9 +34,9 @@
     gap: clamp(32px, 5vw, 48px) !important;
   }
 
-  /* Carousel siempre centrado en tablet/móvil */
+  /* Carousel siempre debajo del texto en tablet/móvil */
   .hero-visual {
-    order: -1 !important;
+    order: 2 !important;
     width: 100% !important;
     align-items: center !important;
   }
@@ -45,8 +45,8 @@
 /* Mobile grande */
 @media (max-width: 640px) {
   .hero-layout {
-    padding: 44px 20px 80px !important;
-    gap: 32px !important;
+    padding: 18px 20px 36px !important;
+    gap: 28px !important;
   }
 
   /* Botones CTA — full width en móvil */
@@ -69,8 +69,8 @@
 /* Mobile pequeño */
 @media (max-width: 420px) {
   .hero-layout {
-    padding: 32px 16px 52px !important;
-    gap: 28px !important;
+    padding: 14px 16px 32px !important;
+    gap: 24px !important;
   }
 
   /* Stats — colapsar a 2 columnas en móvil pequeño */
@@ -84,7 +84,7 @@
 /* Extra pequeño */
 @media (max-width: 360px) {
   .hero-layout {
-    padding: 28px 14px 44px !important;
+    padding: 12px 14px 28px !important;
   }
   /* Stats — 1 columna en pantallas muy pequeñas */
   .hero-stats {

@@ -29,8 +29,8 @@ function resolveLayer(relPos, isMobile) {
   if (abs === 0) return {
     x: '0%', y: '0%', scale: 1, opacity: 1, zIndex: 30, rotateY: 0,
     brightness: 1, blur: 0,
-    boxShadow: '0 20px 56px -6px rgba(59,130,246,0.22), 0 6px 18px rgba(15,23,42,0.07)',
-    border: '1px solid rgba(59,130,246,0.16)',
+    boxShadow: '0 28px 80px -8px rgba(37,99,235,0.32), 0 8px 28px rgba(15,23,42,0.12), 0 0 0 1.5px rgba(59,130,246,0.18)',
+    border: '1.5px solid rgba(59,130,246,0.22)',
     clickable: false,
   };
 
@@ -38,12 +38,12 @@ function resolveLayer(relPos, isMobile) {
     const xPct = isMobile ? sign * 64 : sign * 52;
     return {
       x: `${xPct}%`, y: '1.5%',
-      scale: isMobile ? 0.74 : 0.80,
-      opacity: isMobile ? 0.48 : 0.62,
+      scale: isMobile ? 0.76 : 0.83,
+      opacity: isMobile ? 0.52 : 0.72,
       zIndex: 10, rotateY: sign * -10,
-      brightness: 0.80, blur: 0.6,
-      boxShadow: '0 6px 22px rgba(15,23,42,0.06)',
-      border: '1px solid rgba(203,213,225,0.38)',
+      brightness: 0.84, blur: 0.3,
+      boxShadow: '0 8px 28px rgba(15,23,42,0.08)',
+      border: '1px solid rgba(203,213,225,0.45)',
       clickable: true,
     };
   }
@@ -52,7 +52,7 @@ function resolveLayer(relPos, isMobile) {
     const xPct = isMobile ? sign * 110 : sign * 92;
     return {
       x: `${xPct}%`, y: '3%',
-      scale: 0.62, opacity: 0.20,
+      scale: 0.64, opacity: 0.24,
       zIndex: 0, rotateY: sign * -20,
       brightness: 0.64, blur: 1.8,
       boxShadow: 'none', border: '1px solid transparent',
@@ -71,24 +71,29 @@ function resolveLayer(relPos, isMobile) {
 }
 
 /* ─── Nav button — sin backdropFilter ───────────────────────────────────── */
-function NavBtn({ onClick, label, children }) {
+function NavBtn({ onClick, label, children, dark = false }) {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.08, backgroundColor: 'rgba(239,246,255,0.98)' }}
+      whileHover={{
+        scale: 1.08,
+        backgroundColor: dark ? 'rgba(96,165,250,0.18)' : 'rgba(239,246,255,0.98)',
+      }}
       whileTap={{ scale: 0.91 }}
       aria-label={label}
       style={{
         width: 34, height: 34, padding: 0,
         borderRadius: 10,
-        border: '1px solid rgba(203,213,225,0.68)',
-        background: 'rgba(248,250,255,0.96)',
-        color: '#334155',
+        border: dark ? '1px solid rgba(96,165,250,0.28)' : '1px solid rgba(203,213,225,0.68)',
+        background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(248,250,255,0.96)',
+        color: dark ? '#93C5FD' : '#334155',
         cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
+        boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.20)' : '0 2px 8px rgba(15,23,42,0.05)',
         flexShrink: 0,
         transition: 'background 0.14s',
+        backdropFilter: dark ? 'blur(8px)' : 'none',
+        WebkitBackdropFilter: dark ? 'blur(8px)' : 'none',
       }}
     >
       {children}
@@ -97,7 +102,7 @@ function NavBtn({ onClick, label, children }) {
 }
 
 /* ─── FocusCarousel ──────────────────────────────────────────────────────── */
-export function FocusCarousel({ items = [], autoplay = false, interval = 5000 }) {
+export function FocusCarousel({ items = [], autoplay = false, interval = 5000, dark = false }) {
   const [active,   setActive]   = useState(0);
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' ? window.innerWidth < 640 : false
@@ -160,7 +165,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
           style={{
             position: 'relative',
             width: '100%',
-            height: 'clamp(220px, 42vw, 340px)',
+            height: 'clamp(300px, 46vw, 500px)',
             overflow: 'hidden',
             borderRadius: 20,
             outline: 'none',
@@ -230,7 +235,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
                     src={item.image}
                     alt={item.alt ?? item.title ?? ''}
                     loading={i === 0 ? 'eager' : 'lazy'}
-                    fetchpriority={i === 0 ? 'high' : 'low'}
+                    fetchPriority={i === 0 ? 'high' : 'low'}
                     decoding={i === 0 ? 'sync' : 'async'}
                     style={{
                       position: 'absolute', inset: 0,
@@ -338,7 +343,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
         marginTop: 18,
       }}>
 
-        <NavBtn onClick={goPrev} label="Anterior">
+        <NavBtn onClick={goPrev} label="Anterior" dark={dark}>
           <ChevronLeft size={15} aria-hidden="true" />
         </NavBtn>
 
@@ -351,7 +356,9 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
               aria-label={`Ir a foto ${i + 1}`}
               animate={{
                 width: i === active ? 20 : 6,
-                backgroundColor: i === active ? '#1D4ED8' : 'rgba(100,116,139,0.26)',
+                backgroundColor: i === active
+                  ? (dark ? '#60A5FA' : '#1D4ED8')
+                  : (dark ? 'rgba(255,255,255,0.28)' : 'rgba(100,116,139,0.26)'),
               }}
               transition={SPRING_FAST}
               style={{
@@ -363,7 +370,7 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
           ))}
         </div>
 
-        <NavBtn onClick={goNext} label="Siguiente">
+        <NavBtn onClick={goNext} label="Siguiente" dark={dark}>
           <ChevronRight size={15} aria-hidden="true" />
         </NavBtn>
       </div>
@@ -376,9 +383,9 @@ export function FocusCarousel({ items = [], autoplay = false, interval = 5000 })
         fontSize: 10,
         fontWeight: 700,
         letterSpacing: '0.09em',
-        color: '#94A3B8',
+        color: dark ? 'rgba(186,214,254,0.50)' : '#94A3B8',
       }}>
-        <span style={{ color: '#1D4ED8' }}>
+        <span style={{ color: dark ? '#93C5FD' : '#1D4ED8' }}>
           {String(active + 1).padStart(2, '0')}
         </span>
         {' / '}

@@ -12,10 +12,6 @@ const EASE = [0.22, 1, 0.36, 1];
 
 /* ─── Helpers de normalización ──────────────────────────────────────── */
 
-/**
- * Convierte cualquier valor a string seguro para renderizar.
- * Si es objeto, intenta sacar .nombre, .name o .label.
- */
 function toStr(val) {
   if (val === null || val === undefined) return '';
   if (typeof val === 'string') return val;
@@ -24,19 +20,11 @@ function toStr(val) {
   return String(val);
 }
 
-/**
- * Normaliza un array que puede contener strings u objetos.
- * Devuelve siempre string[].
- */
 function normalizeArray(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.map(toStr).filter(Boolean);
 }
 
-/**
- * Normaliza un participante que viene de la API PHP,
- * asegurando que todos los campos sean tipos primitivos seguros.
- */
 function normalizeParticipant(raw) {
   return {
     ...raw,
@@ -47,7 +35,6 @@ function normalizeParticipant(raw) {
     bio:      toStr(raw.bio      ?? ''),
     photo:    toStr(raw.photo    ?? raw.foto_path ?? ''),
     featured: Boolean(raw.featured),
-    // Arrays: pueden venir como JSON strings o arrays de objetos
     skills: normalizeArray(
       typeof raw.skills === 'string'
         ? tryParse(raw.skills)
@@ -96,7 +83,6 @@ function getInitials(name = '') {
 }
 
 function getRoles(participant) {
-  // roles ya normalizado = string[]
   if (Array.isArray(participant.roles) && participant.roles.length > 0) return participant.roles;
   return participant.role ? [participant.role] : [];
 }
@@ -278,7 +264,6 @@ function ParticipantCard({ participant, onClick, index }) {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-        {/* Rol principal — ✅ siempre string por normalizeParticipant */}
         {primaryRole && (
           <span style={{
             padding: '3px 10px', borderRadius: 999,
@@ -291,7 +276,6 @@ function ParticipantCard({ participant, onClick, index }) {
             {primaryRole}
           </span>
         )}
-        {/* Roles adicionales — ✅ string[] */}
         {extraRoles.map((role) => (
           <span key={role} style={{
             padding: '3px 9px', borderRadius: 999,
@@ -303,7 +287,6 @@ function ParticipantCard({ participant, onClick, index }) {
             {role}
           </span>
         ))}
-        {/* Skills — ✅ string[] gracias a normalizeArray */}
         {participant.skills.map((skill) => (
           <span key={skill} style={{
             padding: '3px 10px', borderRadius: 999,
@@ -418,7 +401,6 @@ function ParticipantModal({ participant, onClose }) {
           </div>
         </div>
 
-        {/* bio ya es string seguro */}
         {participant.bio && (
           <p style={{
             fontSize: 13.5, color: '#475569', lineHeight: 1.7,
@@ -446,6 +428,97 @@ function ParticipantModal({ participant, onClose }) {
         </Link>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* ─── FeaturedStudentsBanner ─────────────────────────────────────────── */
+function FeaturedStudentsBanner({ count }) {
+  return (
+    <div style={{
+      gridColumn: '1 / -1',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 14,
+      margin: '4px 0 2px',
+      padding: '16px 22px',
+      borderRadius: 16,
+      background: 'linear-gradient(135deg, #0A1F6E 0%, #1A3FAA 55%, #2D5CC0 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Círculos decorativos de fondo */}
+      <div style={{
+        position: 'absolute', top: -24, right: 60,
+        width: 100, height: 100, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.05)', pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -14, right: 150,
+        width: 60, height: 60, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.04)', pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', top: '50%', right: 24,
+        transform: 'translateY(-50%)',
+        fontSize: 64, opacity: 0.04, pointerEvents: 'none',
+        fontFamily: 'Syne, sans-serif', fontWeight: 800, color: '#fff',
+        userSelect: 'none', lineHeight: 1,
+      }}>
+        ★
+      </div>
+
+      {/* Ícono */}
+      <div style={{
+        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+        background: 'rgba(255,255,255,0.13)',
+        border: '1.5px solid rgba(255,255,255,0.24)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Star size={20} fill="#FFD700" color="#FFD700" />
+      </div>
+
+      {/* Texto */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          margin: 0,
+          fontFamily: 'DM Sans, sans-serif',
+          fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.15em', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.60)',
+        }}>
+          Reconocimiento académico
+        </p>
+        <h3 style={{
+          margin: '3px 0 0',
+          fontFamily: 'Syne, sans-serif',
+          fontSize: 'clamp(16px, 2.5vw, 22px)',
+          fontWeight: 800,
+          letterSpacing: '-0.5px',
+          color: '#ffffff',
+          lineHeight: 1.15,
+        }}>
+          Estudiantes Destacados
+        </h3>
+      </div>
+
+      {/* Badge conteo */}
+      {count != null && count > 0 && (
+        <div style={{
+          padding: '6px 16px',
+          borderRadius: 999,
+          background: 'rgba(255,255,255,0.14)',
+          border: '1px solid rgba(255,255,255,0.26)',
+          fontSize: 12, fontWeight: 700,
+          color: '#ffffff',
+          fontFamily: 'Syne, sans-serif',
+          flexShrink: 0,
+          letterSpacing: '-0.1px',
+          whiteSpace: 'nowrap',
+        }}>
+          ✦ {count} destacado{count !== 1 ? 's' : ''}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -554,14 +627,13 @@ export function ParticipantsSection({
   const [allParticipants, setAllParticipants] = useState([]);
   const [selected, setSelected] = useState(null);
   const titleRef = useRef(null);
-  const titleInView = useInView(titleRef, { once: true, margin: '-80px' });
+  const titleInView = useInView(titleRef, { once: true, amount: 0 });
 
   useEffect(() => {
     let cancelled = false;
     participantesApi.getAll()
       .then(data => {
         if (!cancelled) {
-          // ✅ CORRECCIÓN CLAVE: normalizar cada participante al llegar de la API
           const normalized = (data ?? []).map(normalizeParticipant);
           setAllParticipants(normalized);
         }
@@ -660,6 +732,8 @@ export function ParticipantsSection({
           {groups.map(({ group, members }, gi) => {
             const startIndex = globalIndex;
             globalIndex += members.length;
+            const featuredCount = members.filter(p => p.featured).length;
+
             return (
               <div key={group.key}>
                 <RoleGroupHeader group={group} count={members.length} index={gi} />
@@ -671,8 +745,19 @@ export function ParticipantsSection({
                   }}
                   className="participants-grid"
                 >
+                  {/* Banner de Estudiantes Destacados: solo en el grupo estudiantes
+                      y solo si hay al menos un miembro featured */}
+                  {group.key === 'estudiantes' && featuredCount > 0 && (
+                    <FeaturedStudentsBanner count={featuredCount} />
+                  )}
+
                   {members.map((p, i) => (
-                    <ParticipantCard key={p.id} participant={p} index={startIndex + i} onClick={setSelected} />
+                    <ParticipantCard
+                      key={p.id}
+                      participant={p}
+                      index={startIndex + i}
+                      onClick={setSelected}
+                    />
                   ))}
                 </div>
               </div>
@@ -710,53 +795,91 @@ export function ParticipantsSection({
         }}
         className="participants-container"
       >
+        {/* ── Section header centrado ── */}
         <div
           ref={titleRef}
           style={{
-            marginBottom: isCompact ? 24 : 36,
-            display: 'flex', alignItems: 'flex-end',
-            justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+            marginBottom: isCompact ? 32 : 48,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', textAlign: 'center', gap: 0,
           }}
         >
-          <div>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={titleInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5 }}
-              style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: '#1A3FAA',
-                marginBottom: 8, fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
+          {/* Pill badge */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, ease: EASE }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '6px 16px 6px 10px',
+              borderRadius: 999,
+              background: 'rgba(26,63,170,0.07)',
+              border: '1px solid rgba(26,63,170,0.14)',
+              marginBottom: 18,
+            }}
+          >
+            <div style={{
+              width: 22, height: 22, borderRadius: 7,
+              background: 'linear-gradient(135deg, #1A3FAA, #3B6FE8)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <GraduationCap size={12} color="#fff" />
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.10em',
+              textTransform: 'uppercase', color: '#1A3FAA',
+              fontFamily: 'DM Sans, sans-serif',
+            }}>
               {sectionSubtitle ?? 'Comunidad'}
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, y: 16 }}
-              animate={titleInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-              style={{
-                fontFamily: 'Syne, sans-serif',
-                fontSize: isCompact ? 'clamp(20px, 2.8vw, 30px)' : 'clamp(22px, 3vw, 38px)',
-                fontWeight: 700, color: '#0A0F1E',
-                letterSpacing: '-1px', margin: 0,
-              }}
-            >
+            </span>
+          </motion.div>
+
+          {/* Título principal — motion.div wraps to avoid gradient-clip conflict */}
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.08, ease: EASE }}
+          >
+            <h2 style={{
+              fontFamily: 'Syne, sans-serif',
+              fontSize: isCompact ? 'clamp(26px, 3.2vw, 40px)' : 'clamp(28px, 3.8vw, 48px)',
+              fontWeight: 800, letterSpacing: '-1.5px',
+              lineHeight: 1.08, margin: 0,
+              background: 'linear-gradient(135deg, #0A1F6E 0%, #1A3FAA 45%, #3B6FE8 100%)',
+              backgroundClip: 'text', WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              color: '#1A3FAA', /* fallback si gradient-clip no soportado */
+            }}>
               {sectionTitle ?? 'Investigadores del semillero'}
-            </motion.h2>
-          </div>
+            </h2>
+          </motion.div>
+
+          {/* Línea decorativa */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.55, delay: 0.22, ease: EASE }}
+            style={{
+              marginTop: 14,
+              width: 48, height: 3, borderRadius: 99,
+              background: 'linear-gradient(90deg, #1A3FAA, #60A5FA)',
+              transformOrigin: 'center',
+            }}
+          />
 
           {hasMore && (
             <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={titleInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.30 }}
+              style={{ marginTop: 20 }}
             >
               <Link
                 to="/nosotros"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '9px 18px', borderRadius: 10,
+                  padding: '9px 20px', borderRadius: 10,
                   fontSize: 13, fontWeight: 600, color: '#1A3FAA',
                   textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
                   border: '1.5px solid rgba(26,63,170,0.18)',

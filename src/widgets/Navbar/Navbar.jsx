@@ -36,16 +36,15 @@ export function Navbar() {
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         transition: 'background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease',
-        /* backdropFilter solo cuando hay contenido debajo (scrolled) — ahorra GPU en top */
-        background: scrolled ? 'rgba(252,253,255,0.90)' : 'rgba(255,255,255,0.98)',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
+        background: scrolled ? 'rgba(250,252,255,0.88)' : 'rgba(252,253,255,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: scrolled
-          ? '1px solid rgba(26,63,170,0.09)'
-          : '1px solid rgba(230,235,245,0.80)',
+          ? '1px solid rgba(26,63,170,0.10)'
+          : '1px solid rgba(200,215,240,0.55)',
         boxShadow: scrolled
-          ? '0 1px 0 rgba(147,197,253,0.18), 0 4px 28px rgba(26,63,170,0.07)'
-          : 'none',
+          ? '0 1px 0 rgba(147,197,253,0.20), 0 4px 28px rgba(26,63,170,0.08)'
+          : '0 1px 0 rgba(200,220,255,0.20)',
       }}
     >
       <a
@@ -90,25 +89,27 @@ export function Navbar() {
             </motion.div>
           </Link>
 
-          {/* Nav Desktop — sin backdropFilter en links activos */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="nav-desktop" aria-label="Navegación principal">
+          {/* Nav Desktop */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }} className="nav-desktop" aria-label="Navegación principal">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.href}
                 to={link.href}
                 end={link.href === '/'}
                 style={({ isActive }) => ({
+                  position: 'relative',
                   padding: '8px 16px', borderRadius: 9,
                   fontSize: 14, fontWeight: isActive ? 600 : 500,
                   fontFamily: 'DM Sans, sans-serif',
                   textDecoration: 'none',
-                  transition: 'all 0.2s',
+                  transition: 'color 0.18s, background 0.18s',
                   color: isActive ? '#1A3FAA' : '#4B5563',
                   background: isActive ? 'rgba(238,243,255,0.92)' : 'transparent',
                   boxShadow: isActive
                     ? '0 0 0 1px rgba(26,63,170,0.12), 0 2px 8px rgba(26,63,170,0.08)'
                     : 'none',
                 })}
+                className="nav-link-item"
               >
                 {link.label}
               </NavLink>

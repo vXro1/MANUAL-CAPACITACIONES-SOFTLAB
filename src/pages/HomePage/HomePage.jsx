@@ -46,13 +46,13 @@ export function HomePage() {
       <HeroSection slides={heroPhotos ?? []} />
       <FeaturedSection />
       <AboutSection showDirectors={true} featuredOnly={true} />
-      <EventsSection />
       <ParticipantsSection
         featuredOnly
         skipPonentes
         sectionTitle="Estudiantes Destacados"
         sectionSubtitle="Reconocimiento"
       />
+      <EventsSection />
       <GallerySection photos={joinPhotos} />
     </main>
   );

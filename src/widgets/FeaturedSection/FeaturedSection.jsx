@@ -299,7 +299,7 @@ export function FeaturedSection() {
       aria-label="Manuales recientes"
       style={{
         padding: 'clamp(56px, 8vw, 88px) 0',
-        background: '#ffffff',
+        background: 'linear-gradient(180deg, #ECF3FF 0%, #F5F8FF 18%, #FFFFFF 52%)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -335,8 +335,8 @@ export function FeaturedSection() {
               transition={{ delay: 0.08 }}
               style={{
                 fontFamily: 'Syne, sans-serif',
-                fontSize: 'clamp(22px, 3vw, 36px)',
-                fontWeight: 800, letterSpacing: '-0.6px', lineHeight: 1.12,
+                fontSize: 'clamp(26px, 3.5vw, 44px)',
+                fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1.10,
                 color: '#0A0F1E', margin: 0,
               }}
             >
