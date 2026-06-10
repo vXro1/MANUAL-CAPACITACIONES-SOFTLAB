@@ -528,7 +528,11 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
                     }}
                   >
                     {/* Thumbnail */}
-                    <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden' }}>
+                    <div
+                      style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden' }}
+                      onMouseEnter={(e) => { const btn = e.currentTarget.querySelector('button[data-remove]'); if (btn) btn.style.opacity = '1'; }}
+                      onMouseLeave={(e) => { const btn = e.currentTarget.querySelector('button[data-remove]'); if (btn) btn.style.opacity = '0'; }}
+                    >
                       <img src={img.src} alt={img.title || 'Imagen'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       {isCover && (
                         <span style={{
@@ -538,8 +542,9 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
                           textTransform: 'uppercase', letterSpacing: '.05em',
                         }}>★ Portada</span>
                       )}
-                      {/* Botón eliminar — hover */}
+                      {/* Botón eliminar — aparece al hacer hover sobre cualquier parte de la imagen */}
                       <button
+                        data-remove
                         type="button"
                         onClick={() => removeImage(img)}
                         aria-label={`Eliminar imagen ${img.title}`}
@@ -550,10 +555,8 @@ function GalleryField({ value, onChange, onRemoveServerImage, coverImageId, onSe
                           cursor: 'pointer', opacity: 0, transition: 'opacity .2s',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        onFocus={(e)     => { e.currentTarget.style.opacity = '1'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
-                        onBlur={(e)      => { e.currentTarget.style.opacity = '0'; }}
+                        onFocus={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onBlur={(e)  => { e.currentTarget.style.opacity = '0'; }}
                       >
                         <Trash2 size={11} />
                       </button>
@@ -661,7 +664,12 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
           ? await eventosApi.update(event.id, payload)
           : await eventosApi.create(payload);
         const eventId = savedEvent.id;
-        await Promise.all(deletedGalleryIds.map((id) => eventosGaleriaApi.delete(id).catch(() => {})));
+        const deleteErrors = [];
+        await Promise.all(deletedGalleryIds.map((id) =>
+          eventosGaleriaApi.delete(id).catch((e) => {
+            deleteErrors.push(e?.message ?? `Error al eliminar imagen ${id}`);
+          })
+        ));
 
         // Upload new files and gallery copies; track temp-ID → real-ID mappings
         const idMap = new Map();
@@ -696,11 +704,16 @@ export function EventForm({ isOpen, onClose, event, onSuccess }) {
         await syncEventos().catch(() => {});
 
         // Throw after sync so the user sees why images failed (event itself was saved)
-        if (uploadErrors.length > 0) {
-          throw new Error(
-            `Evento guardado, pero ${uploadErrors.length === 1 ? 'una imagen no pudo subirse' : `${uploadErrors.length} imágenes no pudieron subirse`}. ` +
-            `Detalle: ${uploadErrors[0]}`
-          );
+        const allErrors = [...deleteErrors, ...uploadErrors];
+        if (allErrors.length > 0) {
+          const deleteMsg = deleteErrors.length > 0
+            ? `${deleteErrors.length} imagen${deleteErrors.length > 1 ? 'es no pudieron eliminarse' : ' no pudo eliminarse'}`
+            : '';
+          const uploadMsg = uploadErrors.length > 0
+            ? `${uploadErrors.length} imagen${uploadErrors.length > 1 ? 'es no pudieron subirse' : ' no pudo subirse'}`
+            : '';
+          const summary = [deleteMsg, uploadMsg].filter(Boolean).join(' y ');
+          throw new Error(`Evento guardado, pero ${summary}. Detalle: ${allErrors[0]}`);
         }
       } else {
         eventsRepository.save({

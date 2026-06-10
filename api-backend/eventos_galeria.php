@@ -48,16 +48,33 @@ if ($method === 'POST') {
         if (strpos($srcUrl, UPLOAD_URL) !== 0) err('URL de origen no permitida');
 
         $srcPath = str_replace(UPLOAD_URL, UPLOAD_DIR, $srcUrl);
-        if (!file_exists($srcPath)) err('Imagen de origen no encontrada en el servidor');
-
-        $ext     = strtolower(pathinfo($srcPath, PATHINFO_EXTENSION)) ?: 'jpg';
+        $ext     = strtolower(pathinfo($srcUrl, PATHINFO_EXTENSION)) ?: 'jpg';
         $name    = bin2hex(random_bytes(16)) . '.' . $ext;
         $destDir = UPLOAD_DIR . 'eventos_galeria/';
 
         if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
         if (!is_dir($destDir)) err('No se pudo crear directorio: ' . $destDir);
-        if (!copy($srcPath, $destDir . $name)) err('No se pudo copiar. src=' . $srcPath . ' dest=' . $destDir . $name);
-        if (!file_exists($destDir . $name)) err('Copia exitosa pero archivo no encontrado: ' . $destDir . $name);
+
+        $destPath = $destDir . $name;
+        $copied   = false;
+
+        // Intento 1: copiar desde disco (rápido, sin red)
+        if (file_exists($srcPath)) {
+            $copied = @copy($srcPath, $destPath);
+        }
+
+        // Intento 2: descargar vía HTTP (si el archivo no está en disco,
+        // p.ej. tras un deploy que limpió uploads/)
+        if (!$copied) {
+            $data = @file_get_contents($srcUrl);
+            if ($data !== false && strlen($data) > 0) {
+                $copied = (@file_put_contents($destPath, $data) !== false);
+            }
+        }
+
+        if (!$copied || !file_exists($destPath)) {
+            err('No se pudo obtener la imagen de origen. Sube la imagen directamente al evento.');
+        }
 
         $imgUrl = UPLOAD_URL . 'eventos_galeria/' . $name;
 
