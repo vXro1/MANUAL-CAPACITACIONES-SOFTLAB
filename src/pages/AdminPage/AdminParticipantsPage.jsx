@@ -157,7 +157,7 @@ export function AdminParticipantsPage() {
     return matchSearch && matchRole;
   });
 
-  const presentRoles = ['Todos', ...new Set(participants.map((p) => p.role).filter(Boolean))];
+  const presentRoles = ['Todos', ...new Set(participants.map((p) => typeof p.role === 'string' ? p.role : String(p.role ?? '')).filter(Boolean))];
 
   const openAdd = () => { setEditTarget(null); setFormOpen(true); };
   const openEdit = (p) => { setEditTarget(p); setFormOpen(true); };

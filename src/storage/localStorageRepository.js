@@ -73,7 +73,11 @@ export const manualsRepository = {
 
 export const participantsRepository = {
   getAll() {
-    return getItem(KEYS.PARTICIPANTS, defaultParticipants).map(normalizeParticipant);
+    const raw = getItem(KEYS.PARTICIPANTS, defaultParticipants);
+    return raw.flatMap((p) => {
+      try { return [normalizeParticipant(p)]; }
+      catch { return []; }
+    });
   },
 
   getById(id) {
