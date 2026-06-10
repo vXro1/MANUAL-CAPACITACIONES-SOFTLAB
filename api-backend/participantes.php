@@ -62,39 +62,78 @@ if ($method === 'POST' && isset($_GET['_method'])) {
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
 // ─────────────────────────────────────────────────────────────
+// HELPER — normalizar habilidades a array de strings
+// Soporta:
+//   • JSON array:  ["React","Node.js"]
+//   • JSON string: "React"
+//   • CSV plano:   "React, Node.js, Laravel"
+//   • NULL / vacío → []
+// ─────────────────────────────────────────────────────────────
+
+function normalizeHabilidades($raw): array {
+    if (empty($raw)) return [];
+
+    $raw = trim((string)$raw);
+
+    // Detectar JSON (empieza con [ o ")
+    if ($raw[0] === '[' || $raw[0] === '"') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            // Cada elemento puede ser string u objeto {nombre, name}
+            return array_values(array_filter(
+                array_map(function ($s) {
+                    if (is_string($s)) return trim($s);
+                    if (is_array($s))  return trim($s['nombre'] ?? $s['name'] ?? '');
+                    return '';
+                }, $decoded),
+                fn($s) => $s !== ''
+            ));
+        }
+        if (is_string($decoded)) {
+            return array_values(array_filter(
+                array_map('trim', explode(',', $decoded))
+            ));
+        }
+    }
+
+    // Fallback: CSV plano ("React, Node.js, Laravel")
+    return array_values(array_filter(
+        array_map('trim', explode(',', $raw))
+    ));
+}
+
+// ─────────────────────────────────────────────────────────────
 // PARSE PARTICIPANTE
 // ─────────────────────────────────────────────────────────────
 
 function parseParticipante($row, $includeActividades = false) {
 
-    $row['id']          = (string)$row['id'];
+    $row['id'] = (string)$row['id'];
 
-    $row['habilidades'] = json_decode(
-        $row['habilidades'] ?? '[]',
-        true
-    );
+    // ── Habilidades: soporta JSON array, JSON string y CSV plano ──
+    $row['habilidades'] = normalizeHabilidades($row['habilidades'] ?? '');
 
-    $row['semestre']    = $row['semestre'] !== null
+    $row['semestre'] = $row['semestre'] !== null
         ? (int)$row['semestre']
         : null;
 
     // Compatibilidad frontend React
-    $row['name']        = $row['nombre'];
-    $row['photo']       = $row['foto_path'];
-    $row['role']        = $row['rol'];
-    $row['career']      = $row['carrera'];
-    $row['skills']      = $row['habilidades'];
-    $row['featured']    = (bool)($row['featured'] ?? false);
+    $row['name']     = $row['nombre'];
+    $row['photo']    = $row['foto_path'];
+    $row['role']     = $row['rol'];
+    $row['career']   = $row['carrera'];
+    $row['skills']   = $row['habilidades'];   // siempre array de strings limpio
+    $row['featured'] = (bool)($row['featured'] ?? false);
 
     // Multi-rol: roles = [rol_principal, ...roles_adicionales]
-    $primaryRole      = trim((string)($row['rol'] ?? ''));
-    $addRaw           = json_decode($row['roles_adicionales'] ?? '[]', true);
-    $addRoles         = is_array($addRaw) ? $addRaw : [];
-    $allRoles         = array_values(array_filter(
+    $primaryRole = trim((string)($row['rol'] ?? ''));
+    $addRaw      = json_decode($row['roles_adicionales'] ?? '[]', true);
+    $addRoles    = is_array($addRaw) ? $addRaw : [];
+    $allRoles    = array_values(array_filter(
         array_merge([$primaryRole], $addRoles),
         fn($r) => !empty(trim((string)$r))
     ));
-    $row['roles']     = $allRoles;
+    $row['roles'] = $allRoles;
 
     // Proyectos del participante
     try {
@@ -114,7 +153,7 @@ function parseParticipante($row, $includeActividades = false) {
         $row['proyectos'] = [];
     }
 
-    // Historial de actividades (solo se carga en peticiones individuales o cuando se solicita)
+    // Historial de actividades (solo en peticiones individuales)
     if ($includeActividades) {
         $actividades = [];
 
@@ -176,8 +215,10 @@ function parseParticipante($row, $includeActividades = false) {
 
 if ($method === 'GET') {
 
+    $action = $_GET['action'] ?? null;
+
     // ── Todas las etiquetas de rol del sistema ──────────────────
-    if (($action ?? null) === 'roles') {
+    if ($action === 'roles') {
         $roles = [];
 
         $rows = db()->query("SELECT DISTINCT rol FROM participantes WHERE rol IS NOT NULL AND rol != ''")->fetchAll();
@@ -208,13 +249,8 @@ if ($method === 'GET') {
 
     // Obtener uno (incluye historial de actividades)
     if ($id) {
-
-        $stmt = db()->prepare(
-            'SELECT * FROM participantes WHERE id = ?'
-        );
-
+        $stmt = db()->prepare('SELECT * FROM participantes WHERE id = ?');
         $stmt->execute([$id]);
-
         $row = $stmt->fetch();
 
         if (!$row) {
@@ -231,7 +267,7 @@ if ($method === 'GET') {
         : 'SELECT * FROM participantes ORDER BY nombre ASC';
     $rows = db()->query($sql)->fetchAll();
 
-    ok(array_map(function($r) { return parseParticipante($r, false); }, $rows));
+    ok(array_map(function ($r) { return parseParticipante($r, false); }, $rows));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -254,6 +290,12 @@ if ($method === 'POST') {
         MAX_IMG
     );
 
+    // Normalizar habilidades recibidas desde el frontend
+    $habilidadesInput = $data['skills'] ?? $data['habilidades'] ?? [];
+    if (is_string($habilidadesInput)) {
+        $habilidadesInput = normalizeHabilidades($habilidadesInput);
+    }
+
     $stmt = db()->prepare('
         INSERT INTO participantes (
             nombre,
@@ -272,45 +314,21 @@ if ($method === 'POST') {
     ');
 
     $stmt->execute([
-
-        $data['name']
-            ?? $data['nombre']
-            ?? '',
-
-        $data['role']
-            ?? $data['rol']
-            ?? null,
-
-        $data['career']
-            ?? $data['carrera']
-            ?? null,
+        $data['name']   ?? $data['nombre'] ?? '',
+        $data['role']   ?? $data['rol']    ?? null,
+        $data['career'] ?? $data['carrera'] ?? null,
 
         !empty($data['semester'])
             ? (int)$data['semester']
-            : (
-                !empty($data['semestre'])
-                    ? (int)$data['semestre']
-                    : null
-            ),
+            : (!empty($data['semestre']) ? (int)$data['semestre'] : null),
 
-        $data['bio']
-            ?? null,
+        $data['bio'] ?? null,
 
-        json_encode(
-            $data['skills']
-                ?? $data['habilidades']
-                ?? [],
-            JSON_UNESCAPED_UNICODE
-        ),
+        json_encode($habilidadesInput, JSON_UNESCAPED_UNICODE),
 
-        $data['linkedin']
-            ?? null,
-
-        $data['github']
-            ?? null,
-
-        $data['email']
-            ?? null,
+        $data['linkedin'] ?? null,
+        $data['github']   ?? null,
+        $data['email']    ?? null,
 
         $fotoUrl,
 
@@ -321,10 +339,7 @@ if ($method === 'POST') {
     ]);
 
     $newId = (int)db()->lastInsertId();
-
-    $row = db()
-        ->query("SELECT * FROM participantes WHERE id = {$newId}")
-        ->fetch();
+    $row   = db()->query("SELECT * FROM participantes WHERE id = {$newId}")->fetch();
 
     ok(parseParticipante($row, true), 201);
 }
@@ -341,12 +356,8 @@ if ($method === 'PUT') {
         err('ID requerido');
     }
 
-    $stmt = db()->prepare(
-        'SELECT * FROM participantes WHERE id = ?'
-    );
-
+    $stmt = db()->prepare('SELECT * FROM participantes WHERE id = ?');
     $stmt->execute([$id]);
-
     $old = $stmt->fetch();
 
     if (!$old) {
@@ -371,7 +382,16 @@ if ($method === 'PUT') {
         MAX_IMG
     );
 
-    // NOTA: foto vieja se elimina DESPUÉS del UPDATE exitoso (ver más abajo)
+    // Normalizar habilidades: soporta array del frontend o string de la BD vieja
+    $habilidadesInput = $data['skills'] ?? $data['habilidades'] ?? null;
+    if ($habilidadesInput !== null) {
+        if (is_string($habilidadesInput)) {
+            $habilidadesInput = normalizeHabilidades($habilidadesInput);
+        }
+    } else {
+        // Mantener las que ya estaban en la BD (ya normalizadas)
+        $habilidadesInput = normalizeHabilidades($old['habilidades'] ?? '');
+    }
 
     $stmt = db()->prepare('
         UPDATE participantes
@@ -390,52 +410,24 @@ if ($method === 'PUT') {
         WHERE id=?
     ');
 
-    $semestre = $data['semester']
-        ?? $data['semestre']
-        ?? null;
+    $semestre = $data['semester'] ?? $data['semestre'] ?? null;
 
     $stmt->execute([
+        $data['name']   ?? $data['nombre']  ?? $old['nombre'],
+        $data['role']   ?? $data['rol']     ?? $old['rol'],
+        $data['career'] ?? $data['carrera'] ?? $old['carrera'],
 
-        $data['name']
-            ?? $data['nombre']
-            ?? $old['nombre'],
+        $semestre !== null ? (int)$semestre : $old['semestre'],
 
-        $data['role']
-            ?? $data['rol']
-            ?? $old['rol'],
+        $data['bio'] ?? $old['bio'],
 
-        $data['career']
-            ?? $data['carrera']
-            ?? $old['carrera'],
+        json_encode($habilidadesInput, JSON_UNESCAPED_UNICODE),
 
-        $semestre !== null
-            ? (int)$semestre
-            : $old['semestre'],
+        $data['linkedin'] ?? $old['linkedin'],
+        $data['github']   ?? $old['github'],
+        $data['email']    ?? $old['email'],
 
-        $data['bio']
-            ?? $old['bio'],
-
-        json_encode(
-            $data['skills']
-                ?? $data['habilidades']
-                ?? json_decode(
-                    $old['habilidades'] ?? '[]',
-                    true
-                ),
-            JSON_UNESCAPED_UNICODE
-        ),
-
-        $data['linkedin']
-            ?? $old['linkedin'],
-
-        $data['github']
-            ?? $old['github'],
-
-        $data['email']
-            ?? $old['email'],
-
-        $fotoUrl
-            ?? ($data['foto_path'] ?? $old['foto_path']),
+        $fotoUrl ?? ($data['foto_path'] ?? $old['foto_path']),
 
         json_encode(
             $data['roles_adicionales']
@@ -443,17 +435,15 @@ if ($method === 'PUT') {
             JSON_UNESCAPED_UNICODE
         ),
 
-        $id
+        $id,
     ]);
 
-    // Mover foto vieja a papelera SOLO si el UPDATE fue exitoso
+    // Eliminar foto vieja SOLO si el UPDATE fue exitoso y hay foto nueva
     if ($fotoUrl && !empty($old['foto_path'])) {
         removeFile($old['foto_path']);
     }
 
-    $row = db()
-        ->query("SELECT * FROM participantes WHERE id = {$id}")
-        ->fetch();
+    $row = db()->query("SELECT * FROM participantes WHERE id = {$id}")->fetch();
 
     ok(parseParticipante($row, true));
 }
@@ -470,31 +460,21 @@ if ($method === 'DELETE') {
         err('ID requerido');
     }
 
-    $stmt = db()->prepare(
-        'SELECT foto_path FROM participantes WHERE id = ?'
-    );
-
+    $stmt = db()->prepare('SELECT foto_path FROM participantes WHERE id = ?');
     $stmt->execute([$id]);
-
     $old = $stmt->fetch();
 
     if ($old) {
         removeFile($old['foto_path']);
     }
 
-    db()
-        ->prepare('DELETE FROM participantes WHERE id = ?')
-        ->execute([$id]);
+    db()->prepare('DELETE FROM participantes WHERE id = ?')->execute([$id]);
 
-    ok([
-        'deleted' => $id
-    ]);
+    ok(['deleted' => $id]);
 }
 
-
-
 // ─────────────────────────────────────────────────────────────
-// PROYECTOS — CRUD  (?action=proyecto_add|proyecto_update|proyecto_delete)
+// PROYECTOS — CRUD (?action=proyecto_add|proyecto_update|proyecto_delete)
 // ─────────────────────────────────────────────────────────────
 
 $action = $_GET['action'] ?? null;
@@ -534,9 +514,9 @@ if ($action === 'proyecto_update') {
     $proyectoId = isset($_GET['proyecto_id']) ? (int)$_GET['proyecto_id'] : null;
     if (!$proyectoId) err('proyecto_id requerido');
 
-    $old = db()->prepare('SELECT * FROM participante_proyectos WHERE id = ?');
-    $old->execute([$proyectoId]);
-    $oldProyecto = $old->fetch();
+    $stmtOld = db()->prepare('SELECT * FROM participante_proyectos WHERE id = ?');
+    $stmtOld->execute([$proyectoId]);
+    $oldProyecto = $stmtOld->fetch();
     if (!$oldProyecto) err('Proyecto no encontrado', 404);
 
     $data = json_decode($_POST['data'] ?? '{}', true) ?? [];
@@ -549,9 +529,9 @@ if ($action === 'proyecto_update') {
         ? (trim($data['url_link']) ?: null)
         : $oldProyecto['url_link'];
 
-    $newImagenPath  = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
-    $oldImagenPath  = $oldProyecto['imagen_path'];
-    $imagenPath     = $newImagenPath ?? $oldImagenPath;
+    $newImagenPath = uploadFile('imagen', 'proyectos_participantes', $ALLOWED_IMG, MAX_IMG);
+    $oldImagenPath = $oldProyecto['imagen_path'];
+    $imagenPath    = $newImagenPath ?? $oldImagenPath;
 
     db()->prepare('
         UPDATE participante_proyectos
@@ -559,7 +539,7 @@ if ($action === 'proyecto_update') {
         WHERE id=?
     ')->execute([$titulo, $descripcion, $urlLink, $imagenPath, $proyectoId]);
 
-    // Mover imagen vieja a papelera SOLO si el UPDATE fue exitoso
+    // Eliminar imagen vieja SOLO si se subió una nueva
     if ($newImagenPath && !empty($oldImagenPath)) {
         removeFile($oldImagenPath);
     }
@@ -590,7 +570,7 @@ if ($action === 'proyecto_delete') {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ERROR
+// MÉTODO NO PERMITIDO
 // ─────────────────────────────────────────────────────────────
 
 err('Método no permitido', 405);
