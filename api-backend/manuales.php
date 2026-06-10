@@ -423,7 +423,7 @@ if ($method === 'PUT') {
     // Actualizar participantes con roles en tabla relacional
     syncManualParticipantes(
         $id,
-        $data['speakerIds']    ?? ($data['speakerId'] ? [$data['speakerId']] : ($old_extra['speakerIds'] ?? [])),
+        $data['speakerIds']    ?? (($data['speakerId'] ?? null) ? [$data['speakerId']] : ($old_extra['speakerIds'] ?? [])),
         $data['autor_ids']     ?? json_decode($old['autor_ids'] ?? '[]', true),
         $data['auxiliaresIds'] ?? ($old_extra['auxiliaresIds'] ?? []),
         $data['participantes'] ?? []
